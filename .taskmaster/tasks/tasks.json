@@ -1,0 +1,50 @@
+[
+  {
+    "id": "1",
+    "title": "Consolidate Database Schema",
+    "description": "Analyze and merge the `contacts` and `profiles` tables into a single `users` table. Remove the `contacts_backup` table and standardize naming conventions.",
+    "status": "pending",
+    "priority": "high",
+    "dependencies": []
+  },
+  {
+    "id": "2",
+    "title": "Refactor Navigation System",
+    "description": "Replace the `getRouteFromSubitem` function with a more robust, centralized routing solution. Update all navigation components to use the new system.",
+    "status": "pending",
+    "priority": "high",
+    "dependencies": []
+  },
+  {
+    "id": "3",
+    "title": "Standardize UI Components",
+    "description": "Move composite components out of `components/ui`, create a `components/lib` directory for shared components, and establish clear UI guidelines.",
+    "status": "pending",
+    "priority": "medium",
+    "dependencies": []
+  },
+  {
+    "id": "4",
+    "title": "Implement a Consistent Data Access Layer",
+    "description": "Create a dedicated data access layer to handle all Supabase queries, replacing direct calls in components.",
+    "status": "pending",
+    "priority": "high",
+    "dependencies": ["1"]
+  },
+  {
+    "id": "5",
+    "title": "Refactor Page Layouts",
+    "description": "Create and use a set of standardized page layout components.",
+    "status": "pending",
+    "priority": "medium",
+    "dependencies": []
+  },
+  {
+    "id": "6",
+    "title": "Full Code Review and Cleanup",
+    "description": "Conduct a line-by-line review of the codebase, removing unused code and ensuring adherence to new style guidelines.",
+    "status": "pending",
+    "priority": "low",
+    "dependencies": ["1", "2", "3", "4", "5"]
+  }
+]

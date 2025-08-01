@@ -1,0 +1,276 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+
+  .dark {
+    /* Sophisticated gray-based dark theme - no pure blacks or whites */
+    --background: 220 13% 9%; /* Deep charcoal instead of pure black */
+    --foreground: 220 9% 92%; /* Soft off-white instead of pure white */
+    --card: 220 13% 11%; /* Slightly lighter charcoal for cards */
+    --card-foreground: 220 9% 92%;
+    --popover: 220 13% 11%;
+    --popover-foreground: 220 9% 92%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 220 13% 9%;
+    --secondary: 220 13% 14%; /* Medium dark gray for secondary elements */
+    --secondary-foreground: 220 9% 92%;
+    --muted: 220 13% 14%; /* Muted backgrounds in medium gray */
+    --muted-foreground: 220 9% 65%; /* Muted text in medium-light gray */
+    --accent: 220 13% 16%; /* Accent backgrounds slightly lighter */
+    --accent-foreground: 220 9% 92%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 220 9% 92%;
+    --border: 220 13% 18%; /* Subtle borders in light gray */
+    --input: 220 13% 14%; /* Input backgrounds */
+    --ring: 220 9% 85%; /* Focus rings in light gray */
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Ensure all main containers use the background color */
+  html {
+    @apply bg-background;
+  }
+
+  /* Custom scrollbar for dark mode */
+  .dark ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .dark ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: hsl(220 13% 25%); /* Medium gray for scrollbar */
+    border-radius: 4px;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: hsl(220 13% 35%); /* Lighter gray on hover */
+  }
+
+  /* Enhanced glass morphism effect for cards in dark mode */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .dark .glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* Enhanced shadows for dark mode - softer shadows */
+  .enhanced-shadow {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px
+      rgba(255, 255, 255, 0.05);
+  }
+
+  .dark .enhanced-shadow {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 0 0 1px
+      rgba(255, 255, 255, 0.05);
+  }
+
+  /* Enhanced glass morphism for badges and chips - gray-based */
+  .translucent-chip {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .dark .translucent-chip {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .translucent-chip:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .dark .translucent-chip:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+  }
+
+  /* Enhanced Perplexity-style button effects */
+  .perplexity-button {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark .perplexity-button {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .perplexity-button:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
+  .dark .perplexity-button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
+  .perplexity-button:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3), 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .dark .perplexity-button:focus {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Text selection with gray tones */
+  ::selection {
+    background: hsl(220 13% 85%);
+    color: hsl(220 13% 9%);
+  }
+
+  .dark ::selection {
+    background: hsl(220 13% 25%);
+    color: hsl(220 9% 92%);
+  }
+
+  /* Focus states with gray tones */
+  *:focus-visible {
+    outline: 2px solid hsl(220 13% 65%);
+    outline-offset: 2px;
+  }
+
+  .dark *:focus-visible {
+    outline: 2px solid hsl(220 13% 35%);
+    outline-offset: 2px;
+  }
+
+  /* Form-specific enhancements */
+  .form-section {
+    @apply glass-card backdrop-blur-xl p-6 rounded-lg;
+    @apply bg-card/60 dark:bg-card/40;
+    @apply border border-border/30 dark:border-white/[0.06];
+  }
+
+  .form-group {
+    @apply space-y-2;
+  }
+
+  .form-label {
+    @apply text-sm font-medium text-foreground/90;
+  }
+
+  /* Search input specific styling */
+  .search-input {
+    @apply perplexity-button backdrop-blur-md;
+    @apply bg-background/20 dark:bg-white/[0.02];
+    @apply border-0 placeholder:text-muted-foreground/60;
+    @apply focus:bg-background/30 dark:focus:bg-white/[0.04];
+  }
+}
+
+/* Additional utility classes for gray-based design */
+@layer utilities {
+  .text-soft-white {
+    color: hsl(220 9% 92%);
+  }
+
+  .text-medium-gray {
+    color: hsl(220 9% 65%);
+  }
+
+  .text-dark-gray {
+    color: hsl(220 13% 35%);
+  }
+
+  .bg-soft-black {
+    background-color: hsl(220 13% 9%);
+  }
+
+  .bg-charcoal {
+    background-color: hsl(220 13% 11%);
+  }
+
+  .bg-medium-gray {
+    background-color: hsl(220 13% 14%);
+  }
+
+  .border-subtle-gray {
+    border-color: hsl(220 13% 18%);
+  }
+
+  /* Form utilities */
+  .form-glass {
+    @apply glass-card backdrop-blur-xl;
+    @apply bg-card/60 dark:bg-card/40;
+    @apply border border-border/30 dark:border-white/[0.06];
+  }
+
+  .input-glass {
+    @apply perplexity-button backdrop-blur-md;
+    @apply bg-background/30 dark:bg-white/[0.03];
+    @apply border-0 hover:bg-background/40 dark:hover:bg-white/[0.06];
+    @apply focus:bg-background/50 dark:focus:bg-white/[0.08];
+  }
+}
