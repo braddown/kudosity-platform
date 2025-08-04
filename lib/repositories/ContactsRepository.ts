@@ -189,9 +189,9 @@ export class ContactsRepository extends BaseRepository<Contact> {
 
     if (error) {
       console.error('Error adding tags to contacts:', error)
-      return { data: null, error: { message: error.message, status: 500 } }
+      return this.createResponse(null, this.handleSupabaseError(error, 'addTagsToContacts'))
     }
-    return { data: null, error: null }
+    return this.createResponse(null)
   }
 
   /**
@@ -208,9 +208,9 @@ export class ContactsRepository extends BaseRepository<Contact> {
 
     if (error) {
       console.error('Error removing tags from contacts:', error)
-      return { data: null, error: { message: error.message, status: 500 } }
+      return this.createResponse(null, this.handleSupabaseError(error, 'removeTagsFromContacts'))
     }
-    return { data: null, error: null }
+    return this.createResponse(null)
   }
 
   /**
@@ -241,7 +241,7 @@ export class ContactsRepository extends BaseRepository<Contact> {
     const response = await this.executeQuery(query) as RepositoryResponse<any[]>
     
     if (response.error || !response.data) {
-      return { data: null, error: response.error }
+      return this.createResponse(null, response.error)
     }
 
     // Group by status and count
@@ -251,7 +251,7 @@ export class ContactsRepository extends BaseRepository<Contact> {
       return acc
     }, {})
 
-    return { data: stats, error: null }
+    return this.createResponse(stats)
   }
 
   /**

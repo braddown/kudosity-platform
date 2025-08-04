@@ -51,8 +51,9 @@ export async function DELETE(
     }
 
     // Remove the list tag from the contact
-    if (membership.lists?.name) {
-      const listTag = `list:${membership.lists.name.toLowerCase().replace(/\s+/g, '-')}`
+    // TODO: Fix type issue with membership.lists
+    if (membership.lists && typeof membership.lists === 'object' && 'name' in membership.lists) {
+      const listTag = `list:${(membership.lists as any).name.toLowerCase().replace(/\s+/g, '-')}`
       
       // Get current tags
       const { data: contact, error: getTagsError } = await supabase
@@ -131,8 +132,9 @@ export async function POST(
       }
 
       // Re-add the list tag to the contact
-      if (existingMembership.lists?.name) {
-        const listTag = `list:${existingMembership.lists.name.toLowerCase().replace(/\s+/g, '-')}`
+      // TODO: Fix type issue with existingMembership.lists
+      if (existingMembership.lists && typeof existingMembership.lists === 'object' && 'name' in existingMembership.lists) {
+        const listTag = `list:${(existingMembership.lists as any).name.toLowerCase().replace(/\s+/g, '-')}`
         
         const { data: contact, error: getTagsError } = await supabase
           .from('contacts')

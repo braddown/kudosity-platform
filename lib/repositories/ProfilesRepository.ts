@@ -142,7 +142,7 @@ export class ProfilesRepository extends BaseRepository<Profile, ProfileInsert, P
       }
 
       const currentTags = profileResponse.data.tags || []
-      const uniqueTags = [...new Set([...currentTags, ...newTags])]
+      const uniqueTags = Array.from(new Set([...currentTags, ...newTags]))
 
       return this.update(id, { tags: uniqueTags })
     } catch (error) {

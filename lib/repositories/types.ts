@@ -39,6 +39,7 @@ export interface RepositoryError {
 export interface QueryOptions {
   limit?: number
   offset?: number
+  page?: number
   orderBy?: string
   ascending?: boolean
   select?: string

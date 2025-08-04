@@ -12,7 +12,7 @@ export async function GET() {
 
     if (error) {
       console.error("Error fetching campaigns:", error)
-      return NextResponse.json({ error: error.message }, { status: error.status || 500 })
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     // Transform data to match the frontend expectations

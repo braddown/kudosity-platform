@@ -130,6 +130,26 @@ export abstract class BaseRepository<T, TInsert = Partial<T>, TUpdate = Partial<
     return query
   }
 
+  /**
+   * Execute a Supabase query and return standardized response
+   */
+  protected async executeQuery<TData>(
+    query: any,
+    operation: string = 'query'
+  ): Promise<RepositoryResponse<TData>> {
+    try {
+      const { data, error } = await query
+      
+      if (error) {
+        return this.createResponse(null, this.handleSupabaseError(error, operation))
+      }
+      
+      return this.createResponse(data as TData)
+    } catch (error) {
+      return this.createResponse(null, this.handleSupabaseError(error, operation))
+    }
+  }
+
   // IBaseRepository implementation
 
   /**

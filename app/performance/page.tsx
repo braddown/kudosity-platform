@@ -1,3 +1,5 @@
+"use client"
+
 import MainLayout from "@/components/MainLayout"
 import PerformanceClientWrapper from "@/components/PerformanceClientWrapper"
 import PageLayout from "@/components/layouts/PageLayout"

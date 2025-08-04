@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 import { useApiState, useMutationState } from "@/hooks/use-async-state"
 import {
   ChevronDown,
@@ -49,7 +49,9 @@ export default function ListsComponent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const fetchLists = () => {
+    setLoading(true)
+    setError(null)
     fetch('/api/lists')
       .then(response => {
         console.log('🌐 Fetch response:', response.status, response.statusText)
@@ -65,6 +67,12 @@ export default function ListsComponent() {
         setError(err.message)
         setLoading(false)
       })
+  }
+
+  const refetch = fetchLists
+
+  useEffect(() => {
+    fetchLists()
   }, [])
 
   // Debug logging

@@ -65,13 +65,13 @@ export async function GET(
     // Filter by search term if provided
     const filteredMembers = search
       ? members.filter(member => {
-          const contact = member.contact
+          const contact = member.contact as any
           const searchLower = search.toLowerCase()
           return (
-            contact.first_name?.toLowerCase().includes(searchLower) ||
-            contact.last_name?.toLowerCase().includes(searchLower) ||
-            contact.email?.toLowerCase().includes(searchLower) ||
-            contact.phone?.includes(search)
+            contact?.first_name?.toLowerCase().includes(searchLower) ||
+            contact?.last_name?.toLowerCase().includes(searchLower) ||
+            contact?.email?.toLowerCase().includes(searchLower) ||
+            contact?.phone?.includes(search)
           )
         })
       : members

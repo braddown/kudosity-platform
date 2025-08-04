@@ -70,7 +70,7 @@ export class CampaignsRepository extends BaseRepository<Campaign> {
       .eq('id', campaignId)
       .single()
 
-    return this.executeQuery(query) as Promise<RepositoryResponse<Campaign & { metrics?: any }>>
+    return this.executeQuery(query, 'getCampaignWithMetrics') as Promise<RepositoryResponse<Campaign & { metrics?: any }>>
   }
 
   /**
@@ -97,7 +97,13 @@ export class CampaignsRepository extends BaseRepository<Campaign> {
       query = query.range(from, to)
     }
 
-    return this.executeQuery(query) as Promise<RepositoryResponse<Campaign[]>>
+    const { data, error } = await query
+    
+    if (error) {
+      return this.createResponse(null, this.handleSupabaseError(error, 'getCampaignsByStatus'))
+    }
+    
+    return this.createResponse(data)
   }
 
   /**
@@ -124,7 +130,13 @@ export class CampaignsRepository extends BaseRepository<Campaign> {
       query = query.range(from, to)
     }
 
-    return this.executeQuery(query) as Promise<RepositoryResponse<Campaign[]>>
+    const { data, error } = await query
+    
+    if (error) {
+      return this.createResponse(null, this.handleSupabaseError(error, 'getCampaignsByCreator'))
+    }
+    
+    return this.createResponse(data)
   }
 
   /**
@@ -151,7 +163,13 @@ export class CampaignsRepository extends BaseRepository<Campaign> {
       query = query.range(from, to)
     }
 
-    return this.executeQuery(query) as Promise<RepositoryResponse<Campaign[]>>
+    const { data, error } = await query
+    
+    if (error) {
+      return this.createResponse(null, this.handleSupabaseError(error, 'searchCampaigns'))
+    }
+    
+    return this.createResponse(data)
   }
 
   /**
@@ -172,7 +190,13 @@ export class CampaignsRepository extends BaseRepository<Campaign> {
       query = query.order('created_at', { ascending: false })
     }
 
-    return this.executeQuery(query) as Promise<RepositoryResponse<Campaign[]>>
+    const { data, error } = await query
+    
+    if (error) {
+      return this.createResponse(null, this.handleSupabaseError(error, 'getCampaignsByChannel'))
+    }
+    
+    return this.createResponse(data)
   }
 
   /**
@@ -192,7 +216,13 @@ export class CampaignsRepository extends BaseRepository<Campaign> {
       .select()
       .single()
 
-    return this.executeQuery(query) as Promise<RepositoryResponse<Campaign>>
+    const { data, error } = await query
+    
+    if (error) {
+      return this.createResponse(null, this.handleSupabaseError(error, 'updatePerformanceMetrics'))
+    }
+    
+    return this.createResponse(data)
   }
 
   /**

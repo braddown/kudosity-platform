@@ -195,9 +195,9 @@ export class SegmentsRepository extends BaseRepository<Segment> {
    */
   public async refreshSegment(segmentId: string): Promise<RepositoryResponse<Segment>> {
     // Get the segment to access its filter criteria
-    const segmentResponse = await this.getById(segmentId)
+    const segmentResponse = await this.findById(segmentId)
     if (segmentResponse.error || !segmentResponse.data) {
-      return { data: null, error: segmentResponse.error }
+      return this.createResponse(null, segmentResponse.error)
     }
 
     const segment = segmentResponse.data
@@ -261,9 +261,9 @@ export class SegmentsRepository extends BaseRepository<Segment> {
    * Calculate actual segment size (execute the filter criteria)
    */
   public async calculateSegmentSize(segmentId: string): Promise<RepositoryResponse<number>> {
-    const segmentResponse = await this.getById(segmentId)
+    const segmentResponse = await this.findById(segmentId)
     if (segmentResponse.error || !segmentResponse.data) {
-      return { data: null, error: segmentResponse.error }
+      return this.createResponse(null, segmentResponse.error)
     }
 
     const segment = segmentResponse.data
@@ -278,13 +278,13 @@ export class SegmentsRepository extends BaseRepository<Segment> {
       
       if (error) {
         console.error('Error calculating segment size:', error)
-        return { data: null, error: { message: error.message, status: 500 } }
+        return this.createResponse(null, this.handleSupabaseError(error, 'calculateSegmentSize'))
       }
 
-      return { data: count || 0, error: null }
+      return this.createResponse(count || 0)
     } catch (error: any) {
       console.error('Error calculating segment size:', error)
-      return { data: null, error: { message: error.message, status: 500 } }
+      return this.createResponse(null, this.handleSupabaseError(error, 'calculateSegmentSize'))
     }
   }
 
@@ -296,9 +296,9 @@ export class SegmentsRepository extends BaseRepository<Segment> {
     newName: string,
     creatorId?: string
   ): Promise<RepositoryResponse<Segment>> {
-    const originalSegment = await this.getById(segmentId)
+    const originalSegment = await this.findById(segmentId)
     if (originalSegment.error || !originalSegment.data) {
-      return { data: null, error: originalSegment.error }
+      return this.createResponse(null, originalSegment.error)
     }
 
     const clonedSegmentData = {

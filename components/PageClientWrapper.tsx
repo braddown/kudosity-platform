@@ -1,7 +1,7 @@
 "use client"
 
 import type { ReactNode } from "react"
-import RootLayoutWrapper from "./RootLayoutWrapper"
+import { RootLayoutWrapper } from "./RootLayoutWrapper"
 
 interface PageClientWrapperProps {
   children: ReactNode

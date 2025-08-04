@@ -210,9 +210,9 @@ export class TemplatesRepository extends BaseRepository<Template> {
     versionData: Partial<Template>
   ): Promise<RepositoryResponse<Template>> {
     // Get the current template to increment version
-    const currentTemplate = await this.getById(templateId)
+    const currentTemplate = await this.findById(templateId)
     if (currentTemplate.error || !currentTemplate.data) {
-      return { data: null, error: currentTemplate.error }
+      return this.createResponse(null, currentTemplate.error)
     }
 
     const currentVersion = currentTemplate.data.version || '1.0'
@@ -295,7 +295,7 @@ export class TemplatesRepository extends BaseRepository<Template> {
     const response = await this.executeQuery(query) as RepositoryResponse<any[]>
     
     if (response.error || !response.data) {
-      return { data: null, error: response.error }
+      return this.createResponse(null, response.error)
     }
 
     // Calculate usage statistics
@@ -306,7 +306,7 @@ export class TemplatesRepository extends BaseRepository<Template> {
       lastUsed: response.data.length > 0 ? response.data[0].created_at : null,
     }
 
-    return { data: stats, error: null }
+    return this.createResponse(stats)
   }
 }
 
