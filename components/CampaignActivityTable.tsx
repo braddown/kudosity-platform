@@ -32,13 +32,13 @@ interface Campaign {
   created_at: string
   start_date: string
   end_date?: string | null
-  recipients: number
-  sent: number
-  delivered: number
-  opened: number
-  clicked: number
-  conversions: number
-  revenue: number
+  recipients: number | null | undefined
+  sent: number | null | undefined
+  delivered: number | null | undefined
+  opened: number | null | undefined
+  clicked: number | null | undefined
+  conversions: number | null | undefined
+  revenue: number | null | undefined
   creator: string
 }
 
@@ -84,16 +84,22 @@ export function CampaignActivityTable({ campaigns, loading, onRefresh }: Campaig
     return type === "broadcast" ? "bg-purple-100 text-purple-800" : "bg-indigo-100 text-indigo-800"
   }
 
-  const calculateOpenRate = (opened: number, delivered: number) => {
-    return delivered > 0 ? Math.round((opened / delivered) * 100) : 0
+  const calculateOpenRate = (opened: number | null | undefined, delivered: number | null | undefined) => {
+    const safeOpened = opened || 0
+    const safeDelivered = delivered || 0
+    return safeDelivered > 0 ? Math.round((safeOpened / safeDelivered) * 100) : 0
   }
 
-  const calculateClickRate = (clicked: number, opened: number) => {
-    return opened > 0 ? Math.round((clicked / opened) * 100) : 0
+  const calculateClickRate = (clicked: number | null | undefined, opened: number | null | undefined) => {
+    const safeClicked = clicked || 0
+    const safeOpened = opened || 0
+    return safeOpened > 0 ? Math.round((safeClicked / safeOpened) * 100) : 0
   }
 
-  const calculateConversionRate = (conversions: number, recipients: number) => {
-    return recipients > 0 ? Math.round((conversions / recipients) * 100) : 0
+  const calculateConversionRate = (conversions: number | null | undefined, recipients: number | null | undefined) => {
+    const safeConversions = conversions || 0
+    const safeRecipients = recipients || 0
+    return safeRecipients > 0 ? Math.round((safeConversions / safeRecipients) * 100) : 0
   }
 
   const handleViewDetails = (campaign: Campaign) => {
@@ -167,7 +173,7 @@ export function CampaignActivityTable({ campaigns, loading, onRefresh }: Campaig
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {campaigns.reduce((sum, c) => sum + c.recipients, 0).toLocaleString()}
+              {campaigns.reduce((sum, c) => sum + (c.recipients || 0), 0).toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">Across all campaigns</p>
           </CardContent>
@@ -179,7 +185,7 @@ export function CampaignActivityTable({ campaigns, loading, onRefresh }: Campaig
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{campaigns.reduce((sum, c) => sum + c.sent, 0).toLocaleString()}</div>
+            <div className="text-2xl font-bold">{campaigns.reduce((sum, c) => sum + (c.sent || 0), 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Total messages delivered</p>
           </CardContent>
         </Card>
@@ -191,7 +197,7 @@ export function CampaignActivityTable({ campaigns, loading, onRefresh }: Campaig
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${campaigns.reduce((sum, c) => sum + c.revenue, 0).toLocaleString()}
+              ${campaigns.reduce((sum, c) => sum + (c.revenue || 0), 0).toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">Campaign generated revenue</p>
           </CardContent>
@@ -245,8 +251,8 @@ export function CampaignActivityTable({ campaigns, loading, onRefresh }: Campaig
                   </TableCell>
                   <TableCell>
                     <div>
-                      <div className="font-medium">{campaign.recipients.toLocaleString()}</div>
-                      <div className="text-sm text-muted-foreground">{campaign.sent.toLocaleString()} sent</div>
+                      <div className="font-medium">{(campaign.recipients || 0).toLocaleString()}</div>
+                      <div className="text-sm text-muted-foreground">{(campaign.sent || 0).toLocaleString()} sent</div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -257,13 +263,13 @@ export function CampaignActivityTable({ campaigns, loading, onRefresh }: Campaig
                       </div>
                       <Progress value={calculateOpenRate(campaign.opened, campaign.delivered)} className="h-2" />
                       <div className="text-xs text-muted-foreground">
-                        {campaign.conversions} conversions (
+                        {campaign.conversions || 0} conversions (
                         {calculateConversionRate(campaign.conversions, campaign.recipients)}%)
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium">${campaign.revenue.toLocaleString()}</div>
+                    <div className="font-medium">${(campaign.revenue || 0).toLocaleString()}</div>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm text-muted-foreground">

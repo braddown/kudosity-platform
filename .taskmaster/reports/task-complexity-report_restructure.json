@@ -1,0 +1,77 @@
+{
+	"meta": {
+		"generatedAt": "2025-08-01T07:56:24.742Z",
+		"tasksAnalyzed": 8,
+		"totalTasks": 8,
+		"analysisCount": 8,
+		"thresholdScore": 5,
+		"projectName": "Taskmaster",
+		"usedResearch": true
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 1,
+			"taskTitle": "Create Unified Navigation System with useNavigation() Hook",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Break down the unified navigation system task into subtasks covering: (1) auditing and documenting all current navigation implementations, (2) designing a centralized navigation schema supporting all required features, (3) implementing the navigation config and utility functions, (4) developing the useNavigation() hook with permission filtering and active state logic, (5) refactoring each consumer (MainLayout, MainNav, Sidebar) to use the new system, (6) removing legacy navigation code, and (7) writing documentation and migration guides.",
+			"reasoning": "This task requires deep analysis of existing navigation logic, schema design for flexibility, implementation of a robust hook, refactoring multiple components, and comprehensive testing/documentation. It touches core app architecture and must ensure backward compatibility and extensibility, making it a high-complexity, multi-phase effort."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "Implement Centralized Database Access Layer with Repository Pattern",
+			"complexityScore": 9,
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "Expand this task into subtasks: (1) audit and document all current database access patterns, (2) design the ApiClient base class with authentication, error handling, and request/response formatting, (3) implement the BaseRepository and domain-specific repositories, (4) refactor components to use repositories, (5) implement a service locator or dependency injection mechanism, (6) update or create tests for all new layers, (7) document the new architecture and usage, and (8) enforce repository usage via code review or linting.",
+			"reasoning": "Centralizing data access with the repository pattern is a major refactor, requiring architectural design, implementation of reusable abstractions, migration of all data consumers, and robust testing. It impacts nearly all data flows and must be coordinated with other architectural changes, making it highly complex."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "Standardize Loading and Error State Patterns with Reusable Components",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Decompose this task into: (1) audit and document current loading/error/empty state patterns, (2) design and implement LoadingState, ErrorState, and EmptyState components, (3) develop the useAsyncData hook with standardized state management, (4) write documentation and usage examples, (5) refactor several key components to use the new patterns, and (6) ensure integration with the repository pattern and test coverage.",
+			"reasoning": "Standardizing UI state handling improves consistency and maintainability but requires careful design, refactoring, and coordination with data fetching patterns. The need for reusable hooks and components, plus integration with existing and future data layers, adds moderate-to-high complexity."
+		},
+		{
+			"taskId": 4,
+			"taskTitle": "Refactor Large Components and Fix Client/Server Component Boundaries",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Expand this task into: (1) audit and document large components and boundary violations, (2) define and document component architecture guidelines, (3) break down ProfilePage.tsx and similar components into focused modules, (4) fix client/server boundary issues and implement wrappers as needed, (5) establish and document naming conventions and patterns, (6) update imports, references, and tests, and (7) validate with code review and regression testing.",
+			"reasoning": "Refactoring large, monolithic components and correcting architectural violations is complex due to the risk of regressions, the need for clear separation of concerns, and the requirement to align with Next.js best practices. It demands careful planning, incremental changes, and thorough testing."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "Standardize Component Styling with shadcn/ui Design System",
+			"complexityScore": 6,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Break this task into: (1) audit and inventory all custom-styled components, (2) document shadcn/ui usage guidelines and standards, (3) refactor components to use shadcn/ui equivalents, (4) implement ESLint rules and PR template updates for enforcement, (5) conduct team knowledge sharing and create before/after examples, and (6) update documentation and track compliance.",
+			"reasoning": "While not as technically deep as architectural refactors, enforcing a design system across a large codebase is labor-intensive, requires coordination, and must be enforced through both code and process changes. The complexity is moderate, with risk mainly in coverage and consistency."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "Reorganize Project Structure for Better Modularity",
+			"complexityScore": 7,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Expand into: (1) audit and document current structure and pain points, (2) design and create the new directory structure, (3) move and refactor code into new directories, (4) configure TypeScript path mapping and Next.js support, (5) update all imports (with automation where possible), (6) update and create documentation for the new structure, and (7) validate with static analysis, build, and functional testing.",
+			"reasoning": "Restructuring a project for modularity is a significant undertaking, especially in a mature codebase. It requires careful planning, automated and manual code changes, and thorough validation to avoid breaking imports or introducing regressions."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "Implement Custom Hooks and Reusable Components for Common Operations",
+			"complexityScore": 7,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Decompose into: (1) design and implement useProfiles, useLogs, and enhanced useNavigation hooks, (2) create the standardized PageLayout component, (3) extract feature-specific hooks from complex components, (4) refactor existing components to use new hooks and layouts, (5) write documentation and usage examples, (6) add Storybook entries and tests, and (7) validate integration with repository and navigation systems.",
+			"reasoning": "Developing reusable hooks and layout components requires careful abstraction, alignment with existing patterns, and broad refactoring. The complexity is moderate-to-high due to the need for robust API design, integration, and documentation."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Implement Performance Optimizations and Code Splitting",
+			"complexityScore": 8,
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "Expand into: (1) audit and document current performance metrics and bottlenecks, (2) implement route-based and component-level code splitting, (3) optimize caching strategies at HTTP and client levels, (4) reduce bundle size via tree shaking and dependency analysis, (5) add performance monitoring and alerting, (6) optimize rendering performance (memoization, virtualization), (7) validate improvements with benchmarking and regression tests, and (8) document optimization strategies and results.",
+			"reasoning": "Performance optimization is a cross-cutting concern requiring deep analysis, targeted code changes, and ongoing monitoring. It involves both infrastructure and code-level improvements, with high impact and risk if not carefully managed."
+		}
+	]
+}
