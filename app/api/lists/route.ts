@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { listsRepository } from "@/lib/repositories"
 
 /**
  * GET /api/lists
  * Fetch all lists with optional filtering
+ * 
+ * Refactored to use Repository Pattern for cleaner, more maintainable code.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -12,45 +14,36 @@ export async function GET(request: NextRequest) {
     const creator_id = searchParams.get('creator_id')
     const search = searchParams.get('search')
 
-    let query = supabase
-      .from('lists')
-      .select(`
-        id,
-        name,
-        description,
-        creator_id,
-        type,
-        source,
-        contact_count,
-        tags,
-        shared,
-        created_at,
-        updated_at
-      `)
-      .order('created_at', { ascending: false })
-
-    // Apply filters
-    if (type) {
-      query = query.eq('type', type)
-    }
+    let result
     
-    if (creator_id) {
-      query = query.eq('creator_id', creator_id)
-    }
-
     if (search) {
-      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
+      // Use repository search method for text queries
+      result = await listsRepository.search(search, {
+        orderBy: 'created_at',
+        ascending: false
+      })
+    } else {
+      // Build filters object for standard queries
+      const filters: any = {}
+      if (type) filters.type = type
+      if (creator_id) filters.creator_id = creator_id
+
+      // Use repository findMany method
+      result = await listsRepository.findMany(filters, {
+        orderBy: 'created_at',
+        ascending: false
+      })
     }
 
-    const { data: lists, error } = await query
-
-    if (error) {
-      console.error('Error fetching lists:', error)
-      return NextResponse.json({ error: 'Failed to fetch lists' }, { status: 500 })
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error?.message || 'Failed to fetch lists' }, 
+        { status: 500 }
+      )
     }
 
     // Format the response to match the expected interface
-    const formattedLists = lists?.map(list => ({
+    const formattedLists = result.data?.map(list => ({
       id: list.id,
       name: list.name,
       description: list.description,
@@ -74,6 +67,8 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/lists
  * Create a new list
+ * 
+ * Refactored to use Repository Pattern with proper validation and error handling.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -85,52 +80,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'List name is required' }, { status: 400 })
     }
 
-    // Insert new list
-    const { data: newList, error } = await supabase
-      .from('lists')
-      .insert({
-        name: name.trim(),
-        description: description?.trim() || null,
-        type,
-        source,
-        tags,
-        shared,
-        creator_id,
-        contact_count: 0
-      })
-      .select(`
-        id,
-        name,
-        description,
-        creator_id,
-        type,
-        source,
-        contact_count,
-        tags,
-        shared,
-        created_at,
-        updated_at
-      `)
-      .single()
+    // Use repository create method
+    const result = await listsRepository.create({
+      name: name.trim(),
+      description: description?.trim() || null,
+      type,
+      source,
+      tags,
+      shared,
+      creator_id
+    })
 
-    if (error) {
-      console.error('Error creating list:', error)
-      return NextResponse.json({ error: 'Failed to create list' }, { status: 500 })
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error?.message || 'Failed to create list' }, 
+        { status: 500 }
+      )
     }
 
-    // Format response
+    // Format response to match expected interface
     const formattedList = {
-      id: newList.id,
-      name: newList.name,
-      description: newList.description,
-      member_count: newList.contact_count || 0,
-      created_at: newList.created_at,
-      updated_at: newList.updated_at,
-      type: newList.type,
-      source: newList.source,
-      tags: newList.tags || [],
-      shared: newList.shared || false,
-      creator_id: newList.creator_id
+      id: result.data!.id,
+      name: result.data!.name,
+      description: result.data!.description,
+      member_count: result.data!.contact_count || 0,
+      created_at: result.data!.created_at,
+      updated_at: result.data!.updated_at,
+      type: result.data!.type,
+      source: result.data!.source,
+      tags: result.data!.tags || [],
+      shared: result.data!.shared || false,
+      creator_id: result.data!.creator_id
     }
 
     return NextResponse.json(formattedList, { status: 201 })

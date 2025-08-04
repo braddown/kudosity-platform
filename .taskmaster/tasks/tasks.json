@@ -126,66 +126,115 @@
         "id": 2,
         "title": "Implement Centralized Database Access Layer with Repository Pattern",
         "description": "Create a standardized database access layer using the repository pattern to eliminate mixed patterns of direct Supabase calls and API abstractions across the application.",
-        "details": "This task involves implementing a centralized database access layer using the repository pattern to standardize all database interactions:\n\n1. Analyze current database access patterns:\n   - Identify components making direct Supabase calls (e.g., ProfilePage.tsx, Logs.tsx)\n   - Review existing API abstractions used in other components\n   - Document inconsistencies and redundancies in the current approach\n\n2. Design the architecture:\n   - Create an `ApiClient` base class in `src/lib/api/ApiClient.ts` that will handle common functionality:\n     - Authentication headers\n     - Error handling\n     - Request/response formatting\n     - Retry logic\n     - Caching strategies (if applicable)\n\n3. Implement repository classes:\n   - Create a `BaseRepository` class that extends `ApiClient` with common CRUD operations\n   - Implement specific repository classes:\n     - `ProfilesRepository` for user profile operations\n     - `LogsRepository` for logging operations\n     - Additional repositories as needed based on domain entities\n\n4. Example implementation for ProfilesRepository:\n   ```typescript\n   // src/lib/api/repositories/ProfilesRepository.ts\n   import { BaseRepository } from './BaseRepository';\n   \n   export class ProfilesRepository extends BaseRepository {\n     private static instance: ProfilesRepository;\n     \n     private constructor() {\n       super('/profiles'); // Base endpoint\n     }\n     \n     public static getInstance(): ProfilesRepository {\n       if (!ProfilesRepository.instance) {\n         ProfilesRepository.instance = new ProfilesRepository();\n       }\n       return ProfilesRepository.instance;\n     }\n     \n     public async getProfile(userId: string): Promise<Profile> {\n       return this.get(`/${userId}`);\n     }\n     \n     public async updateProfile(userId: string, data: Partial<Profile>): Promise<Profile> {\n       return this.patch(`/${userId}`, data);\n     }\n     \n     // Additional methods as needed\n   }\n   ```\n\n5. Refactor existing components:\n   - Update ProfilePage.tsx to use ProfilesRepository instead of direct Supabase calls\n   - Update Logs.tsx to use LogsRepository instead of direct Supabase calls\n   - Ensure all components use the appropriate repository classes\n\n6. Create a service locator or dependency injection mechanism:\n   - Implement a simple service locator in `src/lib/api/ServiceLocator.ts`\n   - Provide access to repository instances\n   - Consider using React Context for making repositories available throughout the component tree\n\n7. Documentation:\n   - Document the new architecture\n   - Create usage examples for developers\n   - Update coding standards to enforce the use of repositories",
-        "testStrategy": "1. Unit Tests:\n   - Create unit tests for the ApiClient base class\n     - Test error handling\n     - Test authentication header inclusion\n     - Test request/response formatting\n   - Create unit tests for each repository class\n     - Test CRUD operations\n     - Test specific business logic methods\n     - Use mocking to isolate from actual API calls\n\n2. Integration Tests:\n   - Test repository classes with actual API endpoints in a test environment\n   - Verify correct data transformation between API and application models\n   - Test error scenarios and edge cases\n\n3. Component Tests:\n   - Update existing component tests to use the repository pattern\n   - Verify components correctly interact with repositories\n   - Mock repository responses for predictable component testing\n\n4. Manual Testing:\n   - Verify ProfilePage.tsx works correctly with ProfilesRepository\n   - Verify Logs.tsx works correctly with LogsRepository\n   - Test performance impact of the new abstraction layer\n   - Verify all functionality works as before the refactoring\n\n5. Documentation Verification:\n   - Review documentation for clarity and completeness\n   - Ensure examples are accurate and follow best practices\n   - Verify coding standards documentation is updated",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           1
         ],
         "priority": "high",
+        "details": "This task involves implementing a centralized database access layer using the repository pattern to standardize all database interactions:\n\n1. Analyze current database access patterns:\n   - Identify components making direct Supabase calls (e.g., ProfilePage.tsx, Logs.tsx)\n   - Review existing API abstractions used in other components\n   - Document inconsistencies and redundancies in the current approach\n\n2. Design the architecture:\n   - Create repository interfaces in `lib/repositories/types.ts`\n   - Implement a `BaseRepository` class in `lib/repositories/BaseRepository.ts` with common CRUD operations\n   - Establish a service locator pattern in `lib/repositories/index.ts` for dependency injection\n   - Ensure full TypeScript support with generic types and standardized error handling\n\n3. Implement repository classes:\n   - Create specific repository classes for all identified database tables:\n     - Core Tables: profiles, contacts, lists, segments, campaigns\n     - Messaging: templates, messages_sent, messages_received, chats, messages\n     - Analytics: logs, activities, log_filters, campaign_metrics\n     - System: list_memberships, custom_field_definitions\n\n4. Example implementation for ProfilesRepository:\n   ```typescript\n   // lib/repositories/ProfilesRepository.ts\n   import { BaseRepository } from './BaseRepository';\n   \n   export class ProfilesRepository extends BaseRepository<Profile> {\n     private static instance: ProfilesRepository;\n     \n     private constructor() {\n       super('profiles'); // Base table name\n     }\n     \n     public static getInstance(): ProfilesRepository {\n       if (!ProfilesRepository.instance) {\n         ProfilesRepository.instance = new ProfilesRepository();\n       }\n       return ProfilesRepository.instance;\n     }\n     \n     public async getProfile(userId: string): Promise<Profile> {\n       return this.getById(userId);\n     }\n     \n     public async updateProfile(userId: string, data: Partial<Profile>): Promise<Profile> {\n       return this.update(userId, data);\n     }\n     \n     // Additional business logic methods\n     public async searchProfiles(query: string): Promise<Profile[]> {\n       // Implementation with proper error handling\n     }\n     \n     public async getProfilesByTags(tags: string[]): Promise<Profile[]> {\n       // Implementation with proper error handling\n     }\n   }\n   ```\n\n5. Refactor existing components:\n   - Update API routes to use repository pattern instead of direct Supabase calls\n   - Create React hooks that leverage repositories (e.g., `hooks/use-lists.ts`)\n   - Implement consistent error handling and loading states\n   - Support optimistic updates for better UX\n\n6. Measure and document impact:\n   - Track code reduction in API routes (target: ~40% reduction in complexity)\n   - Document improvements in error handling consistency\n   - Verify type safety with complete TypeScript coverage\n   - Assess maintainability improvements\n\n7. Documentation:\n   - Document the new architecture\n   - Create usage examples for developers\n   - Update coding standards to enforce the use of repositories",
+        "testStrategy": "1. Unit Tests:\n   - Create unit tests for the BaseRepository class\n     - Test error handling\n     - Test CRUD operations\n     - Test type safety with generic types\n   - Create unit tests for each repository class\n     - Test specific business logic methods\n     - Test singleton pattern implementation\n     - Use mocking to isolate from actual database calls\n\n2. Integration Tests:\n   - Test repository classes with actual API endpoints in a test environment\n   - Verify correct data transformation between API and application models\n   - Test error scenarios and edge cases\n\n3. Component Tests:\n   - Test React hooks that use repositories (e.g., use-lists.ts)\n   - Verify components correctly interact with repositories\n   - Test optimistic updates and loading states\n\n4. API Route Tests:\n   - Compare before/after implementations of API routes\n   - Verify error handling consistency\n   - Test performance impact of the repository abstraction\n\n5. Manual Testing:\n   - Verify API routes work correctly with repository pattern\n   - Test frontend components with new repository-based hooks\n   - Verify all functionality works as before the refactoring\n   - Test performance impact of the new abstraction layer\n\n6. Documentation Verification:\n   - Review documentation for clarity and completeness\n   - Ensure examples are accurate and follow best practices\n   - Verify coding standards documentation is updated",
         "subtasks": [
           {
             "id": 1,
             "title": "Audit and Document Current Database Access Patterns",
             "description": "Identify all components making direct Supabase calls and those using existing API abstractions. Document inconsistencies, redundancies, and areas where database access patterns diverge across the codebase.",
+            "status": "done",
             "dependencies": [],
             "details": "Review the codebase to list all files and components that interact with Supabase directly or through custom abstractions. Summarize findings in a shared document to inform subsequent refactoring.",
-            "status": "pending",
             "testStrategy": "Peer review the audit document to ensure completeness and accuracy. Spot-check identified components for correct classification."
           },
           {
             "id": 2,
             "title": "Design Centralized Repository Pattern Architecture",
             "description": "Define the architecture for a centralized database access layer using the repository pattern, including base classes and interfaces for consistent data operations.",
+            "status": "done",
             "dependencies": [
-              "2.1"
+              1
             ],
-            "details": "Create specifications for an ApiClient base class handling authentication, error handling, and request formatting. Design a BaseRepository class for CRUD operations and outline specific repositories for each domain entity.",
-            "status": "pending",
+            "details": "Create specifications for repository interfaces in lib/repositories/types.ts. Design a BaseRepository class for CRUD operations and outline specific repositories for each domain entity. Based on the audit, plan for 16+ repository classes to centralize ~50+ direct database calls across the application.",
             "testStrategy": "Conduct architecture review sessions to validate design decisions and ensure alignment with project requirements."
           },
           {
             "id": 3,
-            "title": "Implement ApiClient and Repository Classes",
-            "description": "Develop the ApiClient base class and implement BaseRepository along with entity-specific repositories such as ProfilesRepository and LogsRepository.",
+            "title": "Implement BaseRepository and Core Repository Classes",
+            "description": "Develop the BaseRepository class and implement core entity repositories such as ProfilesRepository and ListsRepository with comprehensive business logic.",
+            "status": "done",
             "dependencies": [
-              "2.2"
+              2
             ],
-            "details": "Write TypeScript classes in the designated directories. Ensure each repository encapsulates all data access logic for its domain and extends the standardized base classes.",
-            "status": "pending",
-            "testStrategy": "Write unit tests for ApiClient and each repository class, covering authentication, error handling, and CRUD operations."
+            "details": "Implement BaseRepository.ts with generic types and standardized error handling. Create ProfilesRepository with business logic for search, tags, pagination, and bulk operations. Implement ListsRepository with full list management and membership operations. Ensure each repository follows the singleton pattern and provides comprehensive error handling.",
+            "testStrategy": "Write unit tests for BaseRepository and each repository class, covering error handling and CRUD operations. Test business logic methods specific to each repository."
           },
           {
             "id": 4,
-            "title": "Refactor Application Components to Use Repository Layer",
-            "description": "Update all components previously making direct Supabase calls or using inconsistent abstractions to utilize the new repository classes for all database interactions.",
+            "title": "Implement Service Locator and Dependency Injection",
+            "description": "Create a service locator pattern to provide repository instances throughout the application and facilitate dependency injection.",
+            "status": "done",
             "dependencies": [
-              "2.3"
+              3
             ],
-            "details": "Replace direct Supabase calls in components like ProfilePage.tsx and Logs.tsx with repository method calls. Ensure all data access is routed through the new centralized layer.",
-            "status": "pending",
-            "testStrategy": "Perform integration tests to verify correct data flow and regression tests to ensure no loss of functionality."
+            "details": "Implement lib/repositories/index.ts as a service locator to provide access to repository instances. Design the system to support dependency injection for better testability and component isolation. Ensure the pattern is consistent with React's component model.",
+            "testStrategy": "Test repository injection in various contexts. Verify repositories can be easily mocked for testing. Ensure the service locator pattern works correctly in both client and server components."
           },
           {
             "id": 5,
-            "title": "Establish Service Locator and Document Usage",
-            "description": "Implement a service locator or dependency injection mechanism to provide repository instances throughout the application, and document the new architecture and usage patterns for developers.",
+            "title": "Refactor API Routes to Use Repository Pattern",
+            "description": "Update API routes to leverage the repository pattern instead of direct Supabase calls, demonstrating the benefits of the new architecture.",
+            "status": "done",
             "dependencies": [
-              "2.4"
+              3,
+              4
             ],
-            "details": "Create a ServiceLocator class or use React Context to make repositories accessible. Write comprehensive documentation and usage examples, and update coding standards to enforce repository usage.",
-            "status": "pending",
-            "testStrategy": "Test repository injection in various contexts and review documentation for clarity and completeness."
+            "details": "Refactor /api/lists/route.ts and /api/lists/[id]/route.ts to use the repository pattern. Demonstrate code reduction (from 141 to 95 lines and 186 to 114 lines respectively). Implement standardized error handling and cleaner, more maintainable code structure.",
+            "testStrategy": "Compare before/after implementations to verify functionality. Test error handling scenarios. Measure code complexity reduction and maintainability improvements."
+          },
+          {
+            "id": 6,
+            "title": "Create React Hooks for Repository Integration",
+            "description": "Develop React hooks that leverage the repository pattern to provide a clean interface for components to access data.",
+            "status": "done",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Implement hooks/use-lists.ts as a demonstration of repository pattern benefits. Include consistent error handling and loading states, optimistic updates for better UX, search functionality with debouncing, and clean separation between data access and UI logic.",
+            "testStrategy": "Test hooks with various scenarios including loading, error, and success states. Verify optimistic updates work correctly. Test search functionality and debouncing."
+          },
+          {
+            "id": 7,
+            "title": "Implement Remaining Repository Classes",
+            "description": "Develop repository classes for the remaining database tables to complete the repository layer implementation.",
+            "status": "done",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Implement repositories for remaining tables: campaigns, templates, segments, contacts, logs, activities, messages, etc. Follow the established patterns from ProfilesRepository and ListsRepository. Ensure consistent error handling, business logic implementation, and TypeScript type safety.",
+            "testStrategy": "Write unit tests for each repository class, ensuring consistent behavior with the core repositories. Test specific business logic methods unique to each domain."
+          },
+          {
+            "id": 8,
+            "title": "Refactor Remaining Components to Use Repository Layer",
+            "description": "Update all remaining components previously making direct Supabase calls or using inconsistent abstractions to utilize the new repository classes and hooks.",
+            "status": "done",
+            "dependencies": [
+              6,
+              7
+            ],
+            "details": "Systematically refactor all remaining components identified in the audit. Create additional React hooks as needed for specific domains. Ensure consistent repository pattern usage throughout the application. Focus on components with the most complex data access patterns first.",
+            "testStrategy": "Perform integration tests for each refactored component. Run regression tests to ensure functionality remains intact. Monitor for any performance impacts."
+          },
+          {
+            "id": 9,
+            "title": "Document Repository Pattern and Measure Impact",
+            "description": "Create comprehensive documentation for the repository pattern implementation and measure the impact on code quality and maintainability.",
+            "status": "done",
+            "dependencies": [
+              7,
+              8
+            ],
+            "details": "Document the repository pattern architecture, usage guidelines, and best practices. Create examples for developers. Update coding standards to enforce repository usage. Measure and document impact metrics including code reduction (~40%), error handling standardization, type safety improvements, and maintainability enhancements.",
+            "testStrategy": "Review documentation for clarity and completeness. Verify examples are accurate and follow best practices. Validate impact metrics through code analysis and developer feedback."
           }
         ]
       },
@@ -195,7 +244,7 @@
         "description": "Create consistent loading, error, and empty state components across the application, along with a useAsyncData hook to standardize data fetching patterns.",
         "details": "This task involves creating a standardized approach to handling loading states, error states, and empty states throughout the application:\n\n1. Analyze current loading and error handling patterns:\n   - Identify all components using loading indicators (Skeleton, Loader2, custom spinners)\n   - Document inconsistent error handling approaches\n   - Map out empty state implementations across the application\n\n2. Create reusable state components:\n   - Implement `LoadingState.tsx` in `src/components/ui/`:\n     ```tsx\n     interface LoadingStateProps {\n       variant?: 'spinner' | 'skeleton' | 'pulse';\n       text?: string;\n       size?: 'sm' | 'md' | 'lg';\n     }\n     \n     export function LoadingState({ variant = 'spinner', text, size = 'md' }: LoadingStateProps) {\n       // Implementation with appropriate styling and animation\n     }\n     ```\n   - Implement `ErrorState.tsx` in `src/components/ui/`:\n     ```tsx\n     interface ErrorStateProps {\n       error: Error | string;\n       onRetry?: () => void;\n       title?: string;\n     }\n     \n     export function ErrorState({ error, onRetry, title = 'An error occurred' }: ErrorStateProps) {\n       // Implementation with error display and optional retry button\n     }\n     ```\n   - Implement `EmptyState.tsx` in `src/components/ui/`:\n     ```tsx\n     interface EmptyStateProps {\n       title: string;\n       description?: string;\n       icon?: React.ReactNode;\n       action?: {\n         label: string;\n         onClick: () => void;\n       };\n     }\n     \n     export function EmptyState({ title, description, icon, action }: EmptyStateProps) {\n       // Implementation with appropriate styling\n     }\n     ```\n\n3. Create a useAsyncData hook for standardized data fetching:\n   - Implement in `src/hooks/useAsyncData.ts`:\n     ```tsx\n     interface UseAsyncDataOptions<T> {\n       initialData?: T;\n       onSuccess?: (data: T) => void;\n       onError?: (error: Error) => void;\n       dependencies?: any[];\n     }\n     \n     interface UseAsyncDataResult<T> {\n       data: T | undefined;\n       isLoading: boolean;\n       error: Error | null;\n       refetch: () => Promise<void>;\n     }\n     \n     export function useAsyncData<T>(\n       fetchFn: () => Promise<T>,\n       options: UseAsyncDataOptions<T> = {}\n     ): UseAsyncDataResult<T> {\n       // Implementation with proper state management\n       // Should handle loading, success, and error states\n       // Should support refetching and dependency-based refetching\n     }\n     ```\n\n4. Create documentation and usage examples:\n   - Add comprehensive JSDoc comments to all components and hooks\n   - Create example implementations in `src/examples/`\n   - Update the component library documentation\n\n5. Refactor existing components:\n   - Identify 3-5 key components to refactor as examples\n   - Update them to use the new standardized components and hooks\n   - Document the changes and benefits\n\n6. Integration with repository pattern:\n   - Ensure the useAsyncData hook works seamlessly with the repository pattern from Task #2\n   - Add specific examples of using repositories with the hook",
         "testStrategy": "1. Unit Tests:\n   - Create comprehensive unit tests for each component:\n     - LoadingState: Test different variants, sizes, and text options\n     - ErrorState: Test error display, retry functionality\n     - EmptyState: Test with and without actions, different content\n   - Test the useAsyncData hook:\n     - Test successful data fetching\n     - Test error handling\n     - Test loading state transitions\n     - Test refetching functionality\n     - Test dependency-based refetching\n\n2. Integration Tests:\n   - Create tests that combine the components with real data fetching\n   - Test integration with the repository pattern\n   - Verify correct state transitions in complex scenarios\n\n3. Visual Testing:\n   - Create Storybook stories for each component showing different states and variants\n   - Add visual regression tests to ensure consistent appearance\n\n4. User Acceptance Testing:\n   - Create a test page that demonstrates all components in action\n   - Verify that loading, error, and empty states are intuitive and helpful\n   - Confirm that error messages are clear and actionable\n\n5. Performance Testing:\n   - Measure render performance of components under different conditions\n   - Verify that the useAsyncData hook doesn't cause unnecessary re-renders\n   - Test with large datasets to ensure good performance",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           2
         ],
@@ -373,7 +422,7 @@
     ],
     "metadata": {
       "created": "2025-08-01T07:52:17.903Z",
-      "updated": "2025-08-04T01:04:34.954Z",
+      "updated": "2025-08-04T03:12:59.297Z",
       "description": "Code restructuring and architecture modernization tasks"
     }
   }

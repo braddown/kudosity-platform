@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
+import { useApiState, useMutationState } from "@/hooks/use-async-state"
 import {
   ChevronDown,
   ChevronUp,
@@ -38,42 +39,37 @@ interface List {
   creator_id?: string
 }
 
-const useLists = () => {
-  const [lists, setLists] = useState<List[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchLists = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      const response = await fetch('/api/lists')
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch lists: ${response.statusText}`)
-      }
-
-      const listsData = await response.json()
-      setLists(listsData)
-    } catch (err) {
-      setError("Failed to load lists")
-      console.error("Error fetching lists:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchLists()
-  }, [])
-
-  return { lists, loading, error, refetch: fetchLists }
-}
+// Remove the custom useLists hook - we'll use useApiState instead
 
 export default function ListsComponent() {
   const { toast } = useToast()
-  const { lists, loading, error, refetch } = useLists()
+  
+  // Temporary simple fetch for debugging
+  const [lists, setLists] = useState<List[] | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/lists')
+      .then(response => {
+        console.log('🌐 Fetch response:', response.status, response.statusText)
+        return response.json()
+      })
+      .then(data => {
+        console.log('📦 Fetched data:', data, 'Type:', typeof data, 'Length:', data?.length)
+        setLists(data)
+        setLoading(false)
+      })
+      .catch(err => {
+        console.error('❌ Fetch error:', err)
+        setError(err.message)
+        setLoading(false)
+      })
+  }, [])
+
+  // Debug logging
+  console.log('🚀 Component state:', { lists, loading, error, type: typeof lists, length: lists?.length })
+
   const [expandedList, setExpandedList] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedListIds, setSelectedListIds] = useState<string[]>([])
@@ -86,11 +82,6 @@ export default function ListsComponent() {
   const [newListDescription, setNewListDescription] = useState("")
   const [newListTag, setNewListTag] = useState("")
   const [newListTags, setNewListTags] = useState<string[]>([])
-
-  const filteredLists = lists.filter((list) => 
-    list.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (list.description && list.description.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
 
   const toggleExpand = (id: string) => {
     setExpandedList(expandedList === id ? null : id)
@@ -224,7 +215,7 @@ export default function ListsComponent() {
     })
   }
 
-  const toggleSelectAll = () => {
+  const toggleSelectAll = (filteredLists: List[]) => {
     if (selectAll) {
       setSelectedListIds([])
     } else {
@@ -244,7 +235,12 @@ export default function ListsComponent() {
         ;(window as any).createNewList = undefined
       }
     }
-  }, [])
+  }, [handleCreateNewList])
+
+  const filteredLists = (lists || []).filter((list) => 
+    list.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (list.description && list.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  )
 
   if (loading) {
     return (
@@ -261,9 +257,6 @@ export default function ListsComponent() {
       <div className="space-y-4">
         <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-md p-8 text-center">
           <div className="text-destructive">Error: {error}</div>
-          <Button onClick={refetch} className="mt-4">
-            Try Again
-          </Button>
         </div>
       </div>
     )
@@ -292,7 +285,7 @@ export default function ListsComponent() {
           <TableHeader className="bg-muted/30 dark:bg-muted/40">
             <TableRow className="hover:bg-muted/40 dark:hover:bg-muted/50 border-border/50">
               <TableHead className="w-[40px]">
-                <Checkbox checked={selectAll} onCheckedChange={toggleSelectAll} aria-label="Select all lists" />
+                <Checkbox checked={selectAll} onCheckedChange={() => toggleSelectAll(filteredLists)} aria-label="Select all lists" />
               </TableHead>
               <TableHead className="w-[300px] font-medium text-foreground">List Name</TableHead>
               <TableHead className="font-medium text-foreground">Members</TableHead>

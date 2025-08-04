@@ -16,9 +16,7 @@ import {
   Key,
   Webhook,
   BookOpen,
-  DollarSign,
   Home,
-  Phone,
 } from "lucide-react"
 import type React from "react"
 
@@ -206,13 +204,6 @@ export const navigationConfig: NavigationItem[] = [
         icon: FileText,
         path: "/templates",
         description: "Message templates"
-      },
-      {
-        id: "sms",
-        label: "SMS",
-        icon: Phone,
-        path: "/sms",
-        description: "SMS messaging"
       }
     ]
   },
@@ -293,13 +284,6 @@ export const navigationConfig: NavigationItem[] = [
         icon: BookOpen,
         path: "/api-documentation",
         description: "API reference and docs"
-      },
-      {
-        id: "pricing",
-        label: "Pricing",
-        icon: DollarSign,
-        path: "/pricing",
-        description: "Pricing plans and billing"
       }
     ]
   },

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase"
+import { listsRepository } from "@/lib/repositories"
 
 /**
  * GET /api/lists/[id]
  * Fetch a specific list by ID
+ * 
+ * Refactored to use Repository Pattern - cleaner and more maintainable.
  */
 export async function GET(
   request: NextRequest,
@@ -12,45 +14,36 @@ export async function GET(
   try {
     const { id } = params
 
-    const { data: list, error } = await supabase
-      .from('lists')
-      .select(`
-        id,
-        name,
-        description,
-        creator_id,
-        type,
-        source,
-        contact_count,
-        tags,
-        shared,
-        created_at,
-        updated_at
-      `)
-      .eq('id', id)
-      .single()
+    // Use repository findById method
+    const result = await listsRepository.findById(id)
 
-    if (error) {
-      if (error.code === 'PGRST116') {
+    if (!result.success) {
+      if (result.error?.code === 'PGRST116') {
         return NextResponse.json({ error: 'List not found' }, { status: 404 })
       }
-      console.error('Error fetching list:', error)
-      return NextResponse.json({ error: 'Failed to fetch list' }, { status: 500 })
+      return NextResponse.json(
+        { error: result.error?.message || 'Failed to fetch list' }, 
+        { status: 500 }
+      )
     }
 
-    // Format the response
+    if (!result.data) {
+      return NextResponse.json({ error: 'List not found' }, { status: 404 })
+    }
+
+    // Format the response to match expected interface
     const formattedList = {
-      id: list.id,
-      name: list.name,
-      description: list.description,
-      member_count: list.contact_count || 0,
-      created_at: list.created_at,
-      updated_at: list.updated_at,
-      type: list.type,
-      source: list.source,
-      tags: list.tags || [],
-      shared: list.shared || false,
-      creator_id: list.creator_id
+      id: result.data.id,
+      name: result.data.name,
+      description: result.data.description,
+      member_count: result.data.contact_count || 0,
+      created_at: result.data.created_at,
+      updated_at: result.data.updated_at,
+      type: result.data.type,
+      source: result.data.source,
+      tags: result.data.tags || [],
+      shared: result.data.shared || false,
+      creator_id: result.data.creator_id
     }
 
     return NextResponse.json(formattedList)
@@ -63,6 +56,8 @@ export async function GET(
 /**
  * PUT /api/lists/[id]
  * Update a specific list
+ * 
+ * Refactored to use Repository Pattern with standardized error handling.
  */
 export async function PUT(
   request: NextRequest,
@@ -78,55 +73,44 @@ export async function PUT(
       return NextResponse.json({ error: 'List name is required' }, { status: 400 })
     }
 
-    // Update the list
-    const { data: updatedList, error } = await supabase
-      .from('lists')
-      .update({
-        name: name.trim(),
-        description: description?.trim() || null,
-        type,
-        source,
-        tags,
-        shared,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select(`
-        id,
-        name,
-        description,
-        creator_id,
-        type,
-        source,
-        contact_count,
-        tags,
-        shared,
-        created_at,
-        updated_at
-      `)
-      .single()
+    // Use repository update method
+    const result = await listsRepository.update(id, {
+      name: name.trim(),
+      description: description?.trim() || null,
+      type,
+      source,
+      tags,
+      shared,
+      updated_at: new Date().toISOString()
+    })
 
-    if (error) {
-      if (error.code === 'PGRST116') {
+    if (!result.success) {
+      if (result.error?.code === 'PGRST116') {
         return NextResponse.json({ error: 'List not found' }, { status: 404 })
       }
-      console.error('Error updating list:', error)
-      return NextResponse.json({ error: 'Failed to update list' }, { status: 500 })
+      return NextResponse.json(
+        { error: result.error?.message || 'Failed to update list' }, 
+        { status: 500 }
+      )
     }
 
-    // Format response
+    if (!result.data) {
+      return NextResponse.json({ error: 'List not found' }, { status: 404 })
+    }
+
+    // Format response to match expected interface
     const formattedList = {
-      id: updatedList.id,
-      name: updatedList.name,
-      description: updatedList.description,
-      member_count: updatedList.contact_count || 0,
-      created_at: updatedList.created_at,
-      updated_at: updatedList.updated_at,
-      type: updatedList.type,
-      source: updatedList.source,
-      tags: updatedList.tags || [],
-      shared: updatedList.shared || false,
-      creator_id: updatedList.creator_id
+      id: result.data.id,
+      name: result.data.name,
+      description: result.data.description,
+      member_count: result.data.contact_count || 0,
+      created_at: result.data.created_at,
+      updated_at: result.data.updated_at,
+      type: result.data.type,
+      source: result.data.source,
+      tags: result.data.tags || [],
+      shared: result.data.shared || false,
+      creator_id: result.data.creator_id
     }
 
     return NextResponse.json(formattedList)
@@ -139,6 +123,8 @@ export async function PUT(
 /**
  * DELETE /api/lists/[id]
  * Delete a specific list
+ * 
+ * Refactored to use Repository Pattern with built-in system list protection.
  */
 export async function DELETE(
   request: NextRequest,
@@ -147,35 +133,20 @@ export async function DELETE(
   try {
     const { id } = params
 
-    // Check if list exists and get its type
-    const { data: existingList, error: fetchError } = await supabase
-      .from('lists')
-      .select('id, name, type')
-      .eq('id', id)
-      .single()
+    // Use repository deleteWithMemberships method (includes system list protection)
+    const result = await listsRepository.deleteWithMemberships(id)
 
-    if (fetchError) {
-      if (fetchError.code === 'PGRST116') {
+    if (!result.success) {
+      if (result.error?.message?.includes('system lists')) {
+        return NextResponse.json({ error: 'Cannot delete system lists' }, { status: 403 })
+      }
+      if (result.error?.code === 'PGRST116') {
         return NextResponse.json({ error: 'List not found' }, { status: 404 })
       }
-      console.error('Error fetching list for deletion:', fetchError)
-      return NextResponse.json({ error: 'Failed to fetch list' }, { status: 500 })
-    }
-
-    // Prevent deletion of system lists
-    if (existingList.type === 'System') {
-      return NextResponse.json({ error: 'Cannot delete system lists' }, { status: 403 })
-    }
-
-    // Delete the list (this will cascade delete list_memberships due to foreign key)
-    const { error: deleteError } = await supabase
-      .from('lists')
-      .delete()
-      .eq('id', id)
-
-    if (deleteError) {
-      console.error('Error deleting list:', deleteError)
-      return NextResponse.json({ error: 'Failed to delete list' }, { status: 500 })
+      return NextResponse.json(
+        { error: result.error?.message || 'Failed to delete list' }, 
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({ message: 'List deleted successfully' })
