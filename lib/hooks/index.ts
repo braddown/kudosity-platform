@@ -7,7 +7,13 @@ export * from './use-async-state'
 // Feature-specific hooks
 export * from './use-profile-data'
 export * from './use-profile-form'
+export * from './useProfiles'
+export * from './useLogs'
+export * from './useCampaigns'
 export * from './use-lists'
+
+// Navigation hooks
+export * from './useEnhancedNavigation'
 
 // Utility hooks
 export * from './use-media-query'
