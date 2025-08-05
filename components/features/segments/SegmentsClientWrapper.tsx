@@ -1,7 +1,7 @@
 "use client"
 import { useRouter } from "next/navigation"
 import MainLayout from "@/components/MainLayout"
-import SegmentList from "@/components/SegmentList"
+import SegmentList from "./SegmentList"
 import { Button } from "@/components/ui/button"
 import { PlusCircle } from "lucide-react"
 

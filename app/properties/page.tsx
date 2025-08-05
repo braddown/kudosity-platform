@@ -3,7 +3,7 @@
 import MainLayout from "@/components/MainLayout"
 import PageLayout from "@/components/layouts/PageLayout"
 import { Plus } from "lucide-react"
-import { PropertiesComponent } from "@/components/PropertiesComponent"
+import { PropertiesComponent } from "@/features/properties"
 import { useRef } from "react"
 
 export default function PropertiesPage() {

@@ -7,7 +7,7 @@ import { DropdownMenuItem, DropdownMenu, DropdownMenuTrigger, DropdownMenuConten
 import { Badge } from "@/components/ui/badge"
 import type { KudosityTableColumn } from "@/components/KudosityTable"
 import { Lock, MoreHorizontal, Search, Loader2 } from "lucide-react"
-import { profilesApi } from "@/lib/profiles-api"
+import { profilesApi } from "@/api/profiles-api"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Check, AlertTriangle } from "lucide-react"
 

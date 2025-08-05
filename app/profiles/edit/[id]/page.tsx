@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import MainLayout from "@/components/MainLayout"
 import ProfilePage from "@/components/ProfilePage"
 import PageLayout from "@/components/layouts/PageLayout"
-import { profilesApi } from "@/lib/profiles-api"
+import { profilesApi } from "@/api/profiles-api"
 import { toast } from "@/components/ui/use-toast"
 import { Save, X } from "lucide-react"
 

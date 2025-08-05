@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import MainLayout from "@/components/MainLayout"
-import Webhooks from "@/components/Webhooks"
+import { Webhooks } from "@/features/settings"
 import { usePageHeader } from "@/components/PageHeaderContext"
 import { Plus } from "lucide-react"
 

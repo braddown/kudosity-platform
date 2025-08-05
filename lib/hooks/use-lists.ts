@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { List } from '@/lib/repositories'
+import { List } from '@/api/repositories'
 
 interface UseListsOptions {
   autoFetch?: boolean

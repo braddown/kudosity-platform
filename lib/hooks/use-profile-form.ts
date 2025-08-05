@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { profilesApi } from '@/lib/profiles-api'
+import { profilesApi } from '@/api/profiles-api'
 import { toast } from '@/components/ui/use-toast'
 
 interface UseProfileFormOptions {

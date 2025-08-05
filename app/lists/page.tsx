@@ -2,7 +2,7 @@
 
 import { PlusCircle } from "lucide-react"
 import MainLayout from "@/components/MainLayout"
-import ListsComponent from "@/components/ListsComponent"
+import { ListsComponent } from "@/features/lists"
 import PageLayout from "@/components/layouts/PageLayout"
 
 export default function ListsPage() {

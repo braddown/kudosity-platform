@@ -1,7 +1,7 @@
 "use client"
 
 import MainLayout from "@/components/MainLayout"
-import TouchpointsList from "@/components/TouchpointsList"
+import { TouchpointsList } from "@/features/touchpoints"
 import PageLayout from "@/components/layouts/PageLayout"
 import { Plus } from "lucide-react"
 import { useRouter } from "next/navigation"

@@ -20,7 +20,7 @@ import {
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { segmentsApi, type Segment } from "@/lib/segments-api"
+import { segmentsApi, type Segment } from "@/api/segments-api"
 import { useToast } from "@/components/ui/use-toast"
 
 interface SegmentWithStats extends Segment {

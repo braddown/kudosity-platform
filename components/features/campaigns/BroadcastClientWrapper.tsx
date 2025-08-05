@@ -1,7 +1,7 @@
 "use client"
 
 import PageClientWrapper from "@/components/PageClientWrapper"
-import BroadcastMessage from "@/components/BroadcastMessage"
+import BroadcastMessage from "./BroadcastMessage"
 
 export default function BroadcastClientWrapper() {
   return (

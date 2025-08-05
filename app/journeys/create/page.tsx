@@ -4,7 +4,7 @@ import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import MainLayout from "@/components/MainLayout"
 import { EditPageHeader } from "@/components/EditPageHeader"
-import JourneyEditor from "@/components/JourneyEditor"
+import { JourneyEditor } from "@/features/journeys"
 
 export default function CreateJourneyPage() {
   const router = useRouter()

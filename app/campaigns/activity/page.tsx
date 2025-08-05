@@ -3,7 +3,7 @@
 import MainLayout from "@/components/MainLayout"
 import { useState, useEffect } from "react"
 import PageLayout from "@/components/layouts/PageLayout"
-import { CampaignActivityTable } from "@/components/CampaignActivityTable"
+import { CampaignActivityTable } from "@/features/campaigns"
 import { Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 

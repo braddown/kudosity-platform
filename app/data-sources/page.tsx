@@ -1,7 +1,7 @@
 "use client"
 
 import MainLayout from "@/components/MainLayout"
-import DataSources from "@/components/DataSources"
+import { DataSources } from "@/features/settings"
 import PageLayout from "@/components/layouts/PageLayout"
 import { Plus, Upload } from "lucide-react"
 

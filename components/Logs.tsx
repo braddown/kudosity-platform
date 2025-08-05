@@ -40,7 +40,7 @@ import * as SelectPrimitive from "@radix-ui/react-select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 
-import { logFiltersApi, type LogFilter } from "@/lib/log-filters-api"
+import { logFiltersApi, type LogFilter } from "@/api/log-filters-api"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 

@@ -1,4 +1,4 @@
-import { supabase } from "./supabase"
+import { supabase } from "../supabase"
 
 // Get all profiles with optional filtering
 export const getProfiles = async (options?: {

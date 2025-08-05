@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { useRef, useState } from "react"
 import { X } from "lucide-react"
 import MainLayout from "@/components/MainLayout"
-import BroadcastMessage from "@/components/BroadcastMessage"
+import { BroadcastMessage } from "@/features/campaigns"
 import PageLayout from "@/components/layouts/PageLayout"
 
 export default function BroadcastPage() {

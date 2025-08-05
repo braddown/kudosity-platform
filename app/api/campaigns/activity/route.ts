@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { campaignsRepository } from "@/lib/repositories"
+import { campaignsRepository } from "@/api/repositories"
 
 export async function GET() {
   try {

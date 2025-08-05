@@ -16,8 +16,8 @@ import {
   softDeleteProfile,
   restoreProfile,
   deleteProfile,
-} from "@/lib/profiles-api"
-import { segmentsApi } from "@/lib/segments-api"
+} from "@/api/profiles-api"
+import { segmentsApi } from "@/api/segments-api"
 import PageLayout from "@/components/layouts/PageLayout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

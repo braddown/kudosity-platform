@@ -1,12 +1,12 @@
 "use client"
 
 import PageClientWrapper from "@/components/PageClientWrapper"
-import ChatApp from "@/components/ChatApp"
+import ListsComponent from "./ListsComponent"
 
-export default function ChatClientWrapper() {
+export default function ListsClientWrapper() {
   return (
     <PageClientWrapper>
-      <ChatApp />
+      <ListsComponent />
     </PageClientWrapper>
   )
 }

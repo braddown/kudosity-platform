@@ -28,7 +28,7 @@ import {
   AlertTriangle,
   Check,
 } from "lucide-react"
-import { profilesApi } from "@/lib/profiles-api"
+import { profilesApi } from "@/api/profiles-api"
 
 interface CustomField {
   key: string

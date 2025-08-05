@@ -19,7 +19,15 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@/lib/*": ["lib/*"],
+      "@/api/*": ["lib/api/*"],
+      "@/hooks/*": ["lib/hooks/*"],
+      "@/types/*": ["lib/types/*"],
+      "@/components/*": ["components/*"],
+      "@/features/*": ["components/features/*"],
+      "@/providers/*": ["providers/*"],
+      "@/ui/*": ["components/ui/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

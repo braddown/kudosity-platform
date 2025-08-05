@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { profilesApi } from "@/lib/profiles-api"
+import { profilesApi } from "@/api/profiles-api"
 import { DataTable } from "@/components/ui/data-table"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { CustomFieldsManager } from "@/components/CustomFieldsManager"
+import CustomFieldsManager from "./CustomFieldsManager"
 
 type PropertyCategory = "System" | "Contact" | "Custom"
 

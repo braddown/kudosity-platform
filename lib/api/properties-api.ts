@@ -1,4 +1,4 @@
-import { supabase } from "./supabase"
+import { supabase } from "../supabase"
 
 export const propertiesApi = {
   // Get all properties for a contact

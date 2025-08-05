@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation"
 import MainLayout from "@/components/MainLayout"
-import TouchpointMessage from "@/components/TouchpointMessage"
+import { TouchpointMessage } from "@/features/touchpoints"
 import PageLayout from "@/components/layouts/PageLayout"
 import { Save, Send } from "lucide-react"
 

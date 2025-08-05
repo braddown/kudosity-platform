@@ -3,7 +3,7 @@
 import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import MainLayout from "@/components/MainLayout"
-import TouchpointMessage from "@/components/TouchpointMessage"
+import { TouchpointMessage } from "@/features/touchpoints"
 import { EditPageHeader } from "@/components/EditPageHeader"
 
 export default function CreateTouchpointPage() {

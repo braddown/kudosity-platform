@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { X, Plus } from "lucide-react"
 import type { FilterCondition, FilterGroup } from "./Contacts"
-import { profilesApi } from "@/lib/profiles-api"
+import { profilesApi } from "@/api/profiles-api"
 
 interface ProfileFilterBuilderProps {
   onFilterChange: (filters: FilterGroup[]) => void

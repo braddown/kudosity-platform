@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { listsRepository } from "@/lib/repositories"
+import { listsRepository } from "@/api/repositories"
 
 /**
  * GET /api/lists/[id]

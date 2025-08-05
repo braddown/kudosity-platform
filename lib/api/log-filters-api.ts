@@ -1,4 +1,4 @@
-import { supabase } from "./supabase"
+import { supabase } from "../supabase"
 import type { FilterGroup } from "@/components/Logs"
 
 export interface LogFilter {

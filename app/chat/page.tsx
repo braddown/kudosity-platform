@@ -1,7 +1,7 @@
 "use client"
 
 import MainLayout from "@/components/MainLayout"
-import ChatApp from "@/components/ChatApp"
+import { ChatApp } from "@/features/chat"
 import PageLayout from "@/components/layouts/PageLayout"
 import { Settings, Archive, Users, MessageSquare } from "lucide-react"
 

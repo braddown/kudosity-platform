@@ -1,7 +1,7 @@
 "use client"
 
 import MainLayout from "@/components/MainLayout"
-import Journeys from "@/components/Journeys"
+import { Journeys } from "@/features/journeys"
 import PageLayout from "@/components/layouts/PageLayout"
 import { Plus } from "lucide-react"
 

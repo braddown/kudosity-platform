@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Loader2 } from "lucide-react"
 import MainLayout from "@/components/MainLayout"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { profilesApi } from "@/lib/profiles-api"
+import { profilesApi } from "@/api/profiles-api"
 import { Save, X, Info } from "lucide-react"
 import PageLayout from "@/components/layouts/PageLayout"
 

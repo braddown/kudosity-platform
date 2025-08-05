@@ -2,7 +2,7 @@
 
 import { PlusCircle } from "lucide-react"
 import MainLayout from "@/components/MainLayout"
-import SegmentList from "@/components/SegmentList"
+import { SegmentList } from "@/features/segments"
 import PageLayout from "@/components/layouts/PageLayout"
 import { useRouter } from "next/navigation"
 
