@@ -14,7 +14,7 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import { useAsyncData } from './use-async-data'
-import { profilesApi } from '@/api/profiles-api'
+import { profilesApiBridge } from '@/lib/api/profiles-api-bridge'
 
 // Types
 export interface Profile {
@@ -143,14 +143,14 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
         offset: (pagination.page - 1) * pagination.limit,
       }
 
-      const result = await profilesApi.getProfiles(options)
+      const result = await profilesApiBridge.getProfiles(options)
       
       if (result.error) {
         throw new Error(result.error)
       }
 
       // Also fetch total count for pagination
-      const countResult = await profilesApi.getProfilesCount()
+      const countResult = await profilesApiBridge.getProfilesCount()
       if (countResult.count !== undefined) {
         setTotalCount(countResult.count)
       }
@@ -178,7 +178,7 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
    */
   const createProfile = useCallback(async (data: Partial<Profile>): Promise<Profile | null> => {
     try {
-      const result = await profilesApi.createProfile(data)
+      const result = await profilesApiBridge.createProfile(data)
       
       if (result.error) {
         throw new Error(result.error)
@@ -207,7 +207,7 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
    */
   const updateProfile = useCallback(async (id: string, data: Partial<Profile>): Promise<Profile | null> => {
     try {
-      const result = await profilesApi.updateProfile(id, data)
+      const result = await profilesApiBridge.updateProfile(id, data)
       
       if (result.error) {
         throw new Error(result.error)
@@ -228,7 +228,7 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
    */
   const deleteProfile = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const result = await profilesApi.softDeleteProfile(id)
+      const result = await profilesApiBridge.softDeleteProfile(id)
       
       if (result.error) {
         throw new Error(result.error)
@@ -247,7 +247,7 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
    */
   const restoreProfile = useCallback(async (id: string): Promise<Profile | null> => {
     try {
-      const result = await profilesApi.restoreProfile(id)
+      const result = await profilesApiBridge.restoreProfile(id)
       
       if (result.error) {
         throw new Error(result.error)
@@ -266,7 +266,7 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
    */
   const getProfile = useCallback(async (id: string): Promise<Profile | null> => {
     try {
-      const result = await profilesApi.getProfile(id)
+      const result = await profilesApiBridge.getProfile(id)
       
       if (result.error) {
         throw new Error(result.error)
@@ -341,7 +341,7 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
    */
   const bulkDelete = useCallback(async (ids: string[]): Promise<boolean> => {
     try {
-      const promises = ids.map(id => profilesApi.softDeleteProfile(id))
+      const promises = ids.map(id => profilesApiBridge.softDeleteProfile(id))
       const results = await Promise.allSettled(promises)
       
       const failed = results.filter(result => result.status === 'rejected')
@@ -362,7 +362,7 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
    */
   const bulkUpdate = useCallback(async (ids: string[], data: Partial<Profile>): Promise<boolean> => {
     try {
-      const promises = ids.map(id => profilesApi.updateProfile(id, data))
+      const promises = ids.map(id => profilesApiBridge.updateProfile(id, data))
       const results = await Promise.allSettled(promises)
       
       const failed = results.filter(result => result.status === 'rejected')

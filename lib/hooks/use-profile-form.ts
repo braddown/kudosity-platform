@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { profilesApi } from '@/api/profiles-api'
+import { profilesApiBridge } from '@/lib/api/profiles-api-bridge'
 import { toast } from '@/components/ui/use-toast'
 
 interface UseProfileFormOptions {
@@ -139,7 +139,7 @@ export function useProfileForm({
         notification_preferences: profileToSave.notification_preferences || {},
       }
 
-      const { error } = await profilesApi.updateProfile(profile.id, finalProfileToSave)
+      const { error } = await profilesApiBridge.updateProfile(profile.id, finalProfileToSave)
 
       if (error) {
         toast({

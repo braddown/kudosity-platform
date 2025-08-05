@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { profilesApi } from '@/api/profiles-api'
+import { profilesApiBridge } from '@/lib/api/profiles-api-bridge'
 
 interface UseProfileDataOptions {
   profileId: string
@@ -43,7 +43,7 @@ export function useProfileData({
   const fetchCustomFieldsSchema = async () => {
     try {
       setLoadingSchema(true)
-      const { data: schema, error } = await profilesApi.getCustomFieldsSchema()
+      const { data: schema, error } = await profilesApiBridge.getCustomFieldsSchema()
 
       if (error) {
         console.error("Error fetching custom fields schema:", error)
@@ -70,7 +70,7 @@ export function useProfileData({
 
     try {
       console.log(`Fetching profile with ID: ${profileId}`)
-      const { data, error } = await profilesApi.getProfile(profileId)
+      const { data, error } = await profilesApiBridge.getProfile(profileId)
 
       if (error) {
         console.error("Error fetching profile:", error)
