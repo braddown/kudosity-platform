@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { KudosityTable, type KudosityTableColumn } from "@/components/KudosityTable"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Download, UserPlus, Trash2, ArrowUpIcon, ArrowDownIcon } from "lucide-react"
 import { profilesApi } from "@/lib/profiles-api"
 
@@ -391,23 +392,24 @@ export function ProfilesTable({ onProfileSelect }: ProfilesTableProps) {
         <div className="text-center max-w-md">
           <p className="text-red-600 mb-4">Error loading profiles:</p>
           <p className="text-sm text-gray-600 mb-4 bg-gray-100 p-3 rounded">{error}</p>
-          <button
+          <Button
             onClick={() => window.location.reload()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md mr-2"
+            variant="default"
+            className="mr-2"
           >
             Retry
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => {
               setError(null)
               setLoading(true)
               // Trigger refetch
               window.location.reload()
             }}
-            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md"
+            variant="secondary"
           >
             Debug
-          </button>
+          </Button>
         </div>
       </div>
     )

@@ -109,7 +109,7 @@ export default function AccountSettings() {
             </div>
           </div>
           <div className="flex justify-end">
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                          <Button variant="default">
               Save Personal Information
             </Button>
           </div>
@@ -205,7 +205,7 @@ export default function AccountSettings() {
             </div>
           </div>
           <div className="flex justify-end">
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                          <Button variant="default">
               Save Organization Information
             </Button>
           </div>

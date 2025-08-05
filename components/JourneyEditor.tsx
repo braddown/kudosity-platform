@@ -195,7 +195,7 @@ const JourneyEditor = forwardRef<{ save: () => Promise<void> }, JourneyEditorPro
           <div className="w-full space-y-6">
             {/* Add Node Controls */}
             <div className="flex gap-3 flex-wrap p-4 bg-card/30 rounded-lg border border-border/50">
-              <Button onClick={addTouchpointNode} className="bg-blue-600 hover:bg-blue-700">
+              <Button onClick={addTouchpointNode} variant="default">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Touchpoint
               </Button>

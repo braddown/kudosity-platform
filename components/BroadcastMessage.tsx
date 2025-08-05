@@ -632,7 +632,7 @@ Opt-out reply STOP`
               <FormSection title="Send Message" description="Review and send your broadcast" fullWidth>
                 <div className="flex justify-end">
                   <Button
-                    className="bg-blue-600 text-white hover:bg-blue-700"
+                    variant="default"
                     onClick={handleNext}
                     disabled={selectedAudiences.length === 0}
                   >

@@ -700,7 +700,7 @@ export default function ChatApp() {
               {/* AI Generate Tab Content */}
               {activeTab === "ai" && (
                 <div className="flex items-center gap-2">
-                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                  <Button size="sm" variant="default">
                     Generate Response
                   </Button>
                   <Select defaultValue="default">

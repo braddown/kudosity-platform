@@ -176,7 +176,7 @@ export default function Dashboard() {
         <div className="space-y-6 md:space-y-8">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
             <h3 className="text-lg md:text-xl font-semibold text-foreground">Highest Performing Campaigns</h3>
-            <Button variant="default" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                            <Button variant="default">
               View Campaigns
             </Button>
           </div>
@@ -222,7 +222,7 @@ export default function Dashboard() {
         <div className="space-y-6 md:space-y-8">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
             <h3 className="text-lg md:text-xl font-semibold text-foreground">Business Performance Summary</h3>
-            <Button variant="default" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                            <Button variant="default">
               View Dashboard
             </Button>
           </div>
@@ -238,7 +238,7 @@ export default function Dashboard() {
         <div className="space-y-6 md:space-y-8">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
             <h3 className="text-lg md:text-xl font-semibold text-foreground">Customer Engagement Summary</h3>
-            <Button variant="default" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                            <Button variant="default">
               View Dashboard
             </Button>
           </div>
@@ -254,7 +254,7 @@ export default function Dashboard() {
         <div className="space-y-6 md:space-y-8">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
             <h3 className="text-lg md:text-xl font-semibold text-foreground">Messaging Activity Summary</h3>
-            <Button variant="default" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                            <Button variant="default">
               View Activity Logs
             </Button>
           </div>

@@ -15,16 +15,17 @@ export function EditActionButtons({ onSave, onCancel, isSaving = false, saveText
       <Button
         onClick={onSave}
         disabled={isSaving}
-        className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-2 h-10 rounded-md"
+        variant="default"
+        className="px-8"
       >
         {isSaving ? "Saving..." : saveText}
       </Button>
       <Button
         onClick={onCancel}
         variant="outline"
-        className="bg-gray-100 hover:bg-gray-200 text-black p-2 h-10 w-10 rounded-md flex items-center justify-center"
+        size="icon"
       >
-        <X className="h-5 w-5 text-slate-300 text-slate-400" />
+        <X className="h-4 w-4" />
       </Button>
     </div>
   )

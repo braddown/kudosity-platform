@@ -156,7 +156,7 @@ const TouchpointMessage = forwardRef<{ save: () => Promise<void> }, TouchpointMe
                   </FormField>
 
                   <FormField label="Actions">
-                    <Button variant="default" className="w-full bg-blue-600 hover:bg-blue-700">
+                    <Button variant="default" className="w-full">
                       Save Template
                     </Button>
                   </FormField>
@@ -202,11 +202,11 @@ const TouchpointMessage = forwardRef<{ save: () => Promise<void> }, TouchpointMe
               {/* Message Actions Section */}
               <FormSection title="Message Actions" description="Add additional message components" fullWidth>
                 <div className="flex flex-wrap gap-3">
-                  <Button variant="default" className="bg-blue-600 hover:bg-blue-700">
+                  <Button variant="default">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Split Message
                   </Button>
-                  <Button variant="default" className="bg-green-600 hover:bg-green-700">
+                  <Button variant="secondary">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Follow Up Message
                   </Button>

@@ -25,7 +25,7 @@ export default function ErrorBoundary({
         <Button onClick={() => window.location.reload()} variant="outline">
           Refresh Page
         </Button>
-        <Button onClick={reset} className="bg-blue-500 hover:bg-blue-600 text-white">
+        <Button onClick={reset} variant="default">
           Try Again
         </Button>
       </div>

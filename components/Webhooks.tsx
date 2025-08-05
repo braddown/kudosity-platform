@@ -264,7 +264,7 @@ export default function Webhooks() {
             <Button variant="outline" onClick={resetDialog}>
               Cancel
             </Button>
-            <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={resetDialog}>
+            <Button variant="default" onClick={resetDialog}>
               {editingItem ? "Update" : "Create"} Webhook
             </Button>
           </div>

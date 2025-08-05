@@ -18,7 +18,7 @@ export default function SegmentsClientWrapper() {
       <div className="w-full border-b border-gray-200 py-4 px-4 flex justify-between items-center max-w-full">
         <h2 className="text-2xl font-semibold pl-4">Segments</h2>
         <div className="flex items-center gap-2">
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreateSegment}>
+          <Button variant="default" onClick={handleCreateSegment}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Create Segment
           </Button>

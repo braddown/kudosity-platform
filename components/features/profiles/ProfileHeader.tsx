@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { Button } from "@/components/ui/button"
 
 interface ProfileHeaderProps {
   profileName: string
@@ -54,13 +55,14 @@ export function ProfileHeader({
         </h1>
       </div>
       {onSave && (
-        <button
+        <Button
           onClick={onSave}
           disabled={saving}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-400 transition-colors"
+          variant="default"
+          className="px-4"
         >
           {saving ? "Saving..." : "Save Changes"}
-        </button>
+        </Button>
       )}
     </div>
   )

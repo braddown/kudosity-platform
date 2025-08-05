@@ -126,7 +126,7 @@ export default function CreatePropertyForm({ onSubmit, onCancel }: CreatePropert
             <Button type="button" variant="outline" onClick={onCancel} className="perplexity-button">
               Cancel
             </Button>
-            <Button type="submit" className="perplexity-button bg-primary hover:bg-primary/90">
+            <Button type="submit" variant="default" className="perplexity-button">
               Create Property
             </Button>
           </div>

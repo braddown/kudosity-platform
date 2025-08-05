@@ -64,7 +64,7 @@ export default function TemplateEditForm({ template }: TemplateEditFormProps) {
           <h1 className="text-2xl font-semibold text-foreground">{isEditing ? template.name : "New Template"}</h1>
         </div>
         <div className="flex items-center space-x-3">
-          <Button onClick={handleSave} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+          <Button onClick={handleSave} variant="default">
             Save
           </Button>
           <Button variant="ghost" size="sm" onClick={handleClose}>

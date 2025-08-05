@@ -382,7 +382,7 @@ export default function Overview({ data }: { data: DashboardData }) {
         <div className="w-full mb-8">
           <div className="w-full flex justify-between items-center mb-4">
             <h3 className="text-xl font-semibold text-foreground">Highest Performing Campaigns</h3>
-            <Button variant="default" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                            <Button variant="default">
               <Link href="/performance">View Campaigns</Link>
             </Button>
           </div>
@@ -457,7 +457,7 @@ export default function Overview({ data }: { data: DashboardData }) {
         <div className="w-full mb-8">
           <div className="w-full flex justify-between items-center mb-4">
             <h3 className="text-xl font-semibold text-foreground">Business Performance Summary</h3>
-            <Button variant="default" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                            <Button variant="default">
               <Link href="/performance">View Dashboard</Link>
             </Button>
           </div>
@@ -500,7 +500,7 @@ export default function Overview({ data }: { data: DashboardData }) {
         <div className="w-full mb-8">
           <div className="w-full flex justify-between items-center mb-4">
             <h3 className="text-xl font-semibold text-foreground">Customer Engagement Summary</h3>
-            <Button variant="default" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                            <Button variant="default">
               <Link href="/logs">View Dashboard</Link>
             </Button>
           </div>
@@ -544,7 +544,7 @@ export default function Overview({ data }: { data: DashboardData }) {
         <div className="w-full mb-8">
           <div className="w-full flex justify-between items-center mb-4">
             <h3 className="text-xl font-semibold text-foreground">Messaging Activity Summary</h3>
-            <Button variant="default" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                            <Button variant="default">
               <Link href="/logs">View Activity Logs</Link>
             </Button>
           </div>

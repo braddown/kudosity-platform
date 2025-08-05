@@ -181,7 +181,7 @@ function ConfigureModal({
             <Button variant="outline" onClick={onClose}>
               Close
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">Save</Button>
+            <Button variant="default" className="">Save</Button>
           </div>
         </SheetFooter>
       </SheetContent>
@@ -336,7 +336,7 @@ function FilteringDrawer({
                           <Trash2 className="h-4 w-4" />
                         </Button>
                         <Button
-                          className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
+                          variant="default" className=" whitespace-nowrap"
                           onClick={() => addCondition(groupIndex)}
                         >
                           <Plus className="mr-2 h-4 w-4" />
@@ -350,7 +350,7 @@ function FilteringDrawer({
               {groupIndex < filterGroups.length - 1 && <div className="text-sm font-medium text-gray-500 my-2">or</div>}
             </React.Fragment>
           ))}
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white mt-4" onClick={addGroup}>
+          <Button variant="default" className=" mt-4" onClick={addGroup}>
             <Plus className="mr-2 h-4 w-4" />
             Filter
           </Button>
@@ -360,7 +360,7 @@ function FilteringDrawer({
             <Button variant="outline" onClick={onClose}>
               Close
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">Save</Button>
+            <Button variant="default" className="">Save</Button>
           </div>
         </SheetFooter>
       </SheetContent>
@@ -433,7 +433,7 @@ export default function DataSourcesComponent() {
                       Filtering
                     </Button>
                   </div>
-                  <Button variant="outline" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white text-xs">
+                  <Button variant="outline" size="sm" className="text-xs">
                     <RefreshCw className="mr-1 h-3 w-3" />
                     Sync Now
                   </Button>

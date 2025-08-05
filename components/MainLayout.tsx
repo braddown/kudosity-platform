@@ -309,12 +309,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
               <div className="flex items-center gap-2">
                 {pathname === "/pricing" && (
-                  <Button
-                    onClick={() => {
-                      console.log("Contact sales clicked")
-                    }}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                  >
+                                  <Button
+                  onClick={() => {
+                    console.log("Contact sales clicked")
+                  }}
+                  variant="default"
+                >
                     <PhoneCall className="h-4 w-4 mr-2" />
                     Contact Sales
                   </Button>

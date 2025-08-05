@@ -283,7 +283,7 @@ export default function JourneyCanvas() {
 
                           <div className="flex justify-between pt-6">
                             <Button variant="outline">Add Filter</Button>
-                            <Button className="bg-blue-600 hover:bg-blue-700 text-white">Save</Button>
+                            <Button variant="default">Save</Button>
                           </div>
                         </div>
                       </CardContent>
