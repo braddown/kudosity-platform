@@ -6,7 +6,13 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+    "analyze": "ANALYZE=true npm run build",
+    "lighthouse": "lighthouse http://localhost:3000 --output html --output-path ./lighthouse-report.html --chrome-flags=\"--headless\"",
+    "perf:build": "npm run build && npm run analyze",
+    "perf:test": "npm run build && npm run start & sleep 10 && npm run lighthouse && kill %1",
+    "bundle:analyze": "npm run analyze && npx webpack-bundle-analyzer .next/server/chunks/ -m server",
+    "perf:monitor": "node -e \"console.log('Performance monitoring enabled in production build')\""
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -38,6 +44,7 @@
     "@radix-ui/react-toggle-group": "1.1.1",
     "@radix-ui/react-tooltip": "1.1.6",
     "@supabase/supabase-js": "latest",
+    "@types/react-window": "^1.8.8",
     "autoprefixer": "^10.4.20",
     "child_process": "latest",
     "class-variance-authority": "^0.7.1",
@@ -51,6 +58,7 @@
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
     "next": "14.2.16",
+    "next-seo": "^6.8.0",
     "next-themes": "latest",
     "path": "latest",
     "react": "^18",
@@ -58,19 +66,26 @@
     "react-dom": "^18",
     "react-hook-form": "^7.54.1",
     "react-resizable-panels": "^2.1.7",
+    "react-window": "^1.8.11",
+    "react-window-infinite-loader": "^1.0.10",
     "recharts": "latest",
     "sonner": "^1.7.1",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.6",
+    "web-vitals": "^5.1.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^15.4.5",
     "@types/node": "^22",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@typescript-eslint/eslint-plugin": "^8.39.0",
+    "lighthouse": "^12.8.1",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5"
+    "typescript": "^5",
+    "webpack-bundle-analyzer": "^4.10.2"
   }
 }

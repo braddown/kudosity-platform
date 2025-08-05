@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { EnhancedPageLayout } from "@/components/layouts/EnhancedPageLayout"
+import EnhancedPageLayout from "@/components/layouts/EnhancedPageLayout"
 import { useLogs } from "@/hooks/useLogs"
 
 /**
@@ -63,7 +63,6 @@ export default function LogsRefactored() {
   } = useLogs({
     immediate: true,
     pagination: { page: 1, pageSize: 25 },
-    enableRealTimeUpdates: false,
     cacheTTL: 2 * 60 * 1000, // 2 minutes for fresh data
   })
 
