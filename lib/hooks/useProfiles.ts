@@ -14,7 +14,7 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import { useAsyncData } from './use-async-data'
-import { profilesApiBridge } from '@/lib/api/profiles-api-bridge'
+import { supabase } from '@/lib/supabase'
 
 // Types
 export interface Profile {
@@ -143,19 +143,75 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
         offset: (pagination.page - 1) * pagination.limit,
       }
 
-      const result = await profilesApiBridge.getProfiles(options)
-      
-      if (result.error) {
-        throw new Error(result.error)
+      // Fetch profiles from CDP system
+      let query = supabase
+        .from("cdp_profiles")
+        .select("*", { count: 'exact' })
+        .eq("merge_status", "active")
+        .order("created_at", { ascending: false })
+
+      // Apply search filter
+      if (options.search) {
+        query = query.or(
+          `first_name.ilike.%${options.search}%,last_name.ilike.%${options.search}%,email.ilike.%${options.search}%,mobile.ilike.%${options.search}%`
+        )
       }
 
-      // Also fetch total count for pagination
-      const countResult = await profilesApiBridge.getProfilesCount()
-      if (countResult.count !== undefined) {
-        setTotalCount(countResult.count)
+      // Apply status filter (map to lifecycle_stage)
+      if (options.status) {
+        if (options.status === 'Active') {
+          query = query.in('lifecycle_stage', ['lead', 'prospect', 'customer'])
+        } else if (options.status === 'Inactive') {
+          query = query.eq('lifecycle_stage', 'churned')
+        }
       }
 
-      return result.data || []
+      // Apply pagination
+      if (options.limit) {
+        query = query.limit(options.limit)
+      }
+      if (options.offset) {
+        query = query.range(options.offset, options.offset + (options.limit || 50) - 1)
+      }
+
+      const { data, error, count } = await query
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      // Update total count for pagination
+      if (count !== null) {
+        setTotalCount(count)
+      }
+
+      // Map CDP profiles to expected format for compatibility
+      const mappedProfiles = (data || []).map(cdpProfile => ({
+        id: cdpProfile.id,
+        first_name: cdpProfile.first_name,
+        last_name: cdpProfile.last_name,
+        email: cdpProfile.email,
+        mobile: cdpProfile.mobile?.startsWith('unknown_') ? '' : cdpProfile.mobile,
+        phone: cdpProfile.phone,
+        country: cdpProfile.country,
+        state: cdpProfile.state,
+        city: cdpProfile.city,
+        status: cdpProfile.lifecycle_stage === 'customer' ? 'Active' : 
+                cdpProfile.lifecycle_stage === 'churned' ? 'Inactive' : 'Active',
+        lifecycle_stage: cdpProfile.lifecycle_stage,
+        lead_score: cdpProfile.lead_score,
+        lifetime_value: cdpProfile.lifetime_value,
+        data_quality_score: cdpProfile.data_quality_score,
+        custom_fields: cdpProfile.custom_fields || {},
+        notification_preferences: cdpProfile.notification_preferences || {},
+        tags: cdpProfile.tags || [],
+        source: cdpProfile.source,
+        created_at: cdpProfile.created_at,
+        updated_at: cdpProfile.updated_at,
+        last_activity_at: cdpProfile.last_activity_at
+      }))
+
+      return mappedProfiles
     },
     {
       immediate,
@@ -178,29 +234,84 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
    */
   const createProfile = useCallback(async (data: Partial<Profile>): Promise<Profile | null> => {
     try {
-      const result = await profilesApiBridge.createProfile(data)
+      // Map data to CDP format
+      const cdpProfileData = {
+        mobile: data.mobile || `unknown_${Date.now()}`,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        email: data.email,
+        phone: data.mobile,
+        country: data.country || 'Unknown',
+        state: data.state,
+        city: data.city,
+        lifecycle_stage: 'lead' as const,
+        lead_score: 0,
+        lifetime_value: 0,
+        custom_fields: data.custom_fields || {},
+        notification_preferences: data.notification_preferences || {
+          marketing_sms: true,
+          marketing_email: true,
+          transactional_sms: true,
+          transactional_email: true,
+          marketing_whatsapp: false,
+          transactional_whatsapp: false,
+          marketing_rcs: false,
+          transactional_rcs: false
+        },
+        tags: data.tags || [],
+        source: 'manual_entry',
+        source_details: {
+          created_by: 'system',
+          creation_date: new Date().toISOString()
+        }
+      }
+
+      const { data: result, error } = await supabase
+        .from("cdp_profiles")
+        .insert([cdpProfileData])
+        .select()
+        .single()
       
-      if (result.error) {
-        throw new Error(result.error)
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      // Map result back to expected format
+      const mappedProfile: Profile = {
+        id: result.id,
+        first_name: result.first_name,
+        last_name: result.last_name,
+        email: result.email,
+        mobile: result.mobile?.startsWith('unknown_') ? '' : result.mobile,
+        phone: result.phone,
+        country: result.country,
+        state: result.state,
+        city: result.city,
+        status: 'Active',
+        lifecycle_stage: result.lifecycle_stage,
+        lead_score: result.lead_score,
+        lifetime_value: result.lifetime_value,
+        data_quality_score: result.data_quality_score,
+        custom_fields: result.custom_fields || {},
+        notification_preferences: result.notification_preferences || {},
+        tags: result.tags || [],
+        source: result.source,
+        created_at: result.created_at,
+        updated_at: result.updated_at,
+        last_activity_at: result.last_activity_at
       }
 
       // Optimistic update
-      if (optimistic && result.data) {
-        const newProfile = result.data as Profile
-        // Add to current profiles if on first page
-        if (pagination.page === 1) {
-          // This would require updating the profiles state - we'd need to modify useAsyncData to support this
-          // For now, trigger a refetch
-        }
+      if (optimistic) {
         refetch()
       }
 
-      return result.data as Profile || null
+      return mappedProfile
     } catch (error) {
       console.error('Failed to create profile:', error)
       return null
     }
-  }, [optimistic, pagination.page, refetch])
+  }, [optimistic, refetch])
 
   /**
    * Update an existing profile

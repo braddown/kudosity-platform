@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { profilesApiBridge } from '@/lib/api/profiles-api-bridge'
+import { supabase } from '@/lib/supabase'
 
 interface UseProfileDataOptions {
   profileId: string
@@ -39,29 +39,61 @@ export function useProfileData({
   const [customFieldsSchema, setCustomFieldsSchema] = useState<Record<string, any>>({})
   const [loadingSchema, setLoadingSchema] = useState(true)
 
-  // Fetch custom fields schema
+  // Fetch custom fields schema from CDP system
   const fetchCustomFieldsSchema = async () => {
     try {
       setLoadingSchema(true)
-      const { data: schema, error } = await profilesApiBridge.getCustomFieldsSchema()
+      
+      // Get schema from any profile's custom_fields to understand structure
+      const { data: sampleProfiles, error } = await supabase
+        .from("cdp_profiles")
+        .select("custom_fields")
+        .not("custom_fields", "is", null)
+        .limit(10)
 
       if (error) {
         console.error("Error fetching custom fields schema:", error)
-        if (onError) onError(`Failed to load custom fields schema: ${error}`)
-      } else {
-        console.log("Custom fields schema loaded:", schema)
-        setCustomFieldsSchema(schema || {})
+        if (onError) onError(`Failed to load custom fields schema: ${error.message}`)
+        setCustomFieldsSchema({})
+        return
       }
+
+      // Build schema from existing custom fields
+      const schema: Record<string, any> = {}
+      
+      sampleProfiles?.forEach(profile => {
+        if (profile.custom_fields && typeof profile.custom_fields === 'object') {
+          Object.entries(profile.custom_fields).forEach(([key, value]) => {
+            if (!key.startsWith('_') && !schema[key]) {
+              schema[key] = {
+                key: key,
+                label: key.split('_').map((word: string) => 
+                  word.charAt(0).toUpperCase() + word.slice(1)
+                ).join(' '),
+                type: typeof value === 'number' ? 'number' : 
+                      typeof value === 'boolean' ? 'boolean' : 'string',
+                required: false,
+                description: `Custom field: ${key}`,
+                defaultValue: ''
+              }
+            }
+          })
+        }
+      })
+
+      console.log("Custom fields schema loaded:", schema)
+      setCustomFieldsSchema(schema)
     } catch (err) {
       console.error("Exception fetching custom fields schema:", err)
       const errorMessage = err instanceof Error ? err.message : String(err)
       if (onError) onError(`Exception loading custom fields schema: ${errorMessage}`)
+      setCustomFieldsSchema({})
     } finally {
       setLoadingSchema(false)
     }
   }
 
-  // Fetch profile data from the database
+  // Fetch profile data from CDP system
   const fetchProfileData = async () => {
     if (!profileId) return
 
@@ -69,12 +101,17 @@ export function useProfileData({
     setError(null)
 
     try {
-      console.log(`Fetching profile with ID: ${profileId}`)
-      const { data, error } = await profilesApiBridge.getProfile(profileId)
+      console.log(`Fetching CDP profile with ID: ${profileId}`)
+      
+      const { data, error } = await supabase
+        .from("cdp_profiles")
+        .select("*")
+        .eq("id", profileId)
+        .single()
 
       if (error) {
-        console.error("Error fetching profile:", error)
-        const errorMessage = `Failed to load profile: ${error}`
+        console.error("Error fetching CDP profile:", error)
+        const errorMessage = `Failed to load profile: ${error.message}`
         setError(errorMessage)
         if (onError) onError(errorMessage)
         return
@@ -88,10 +125,40 @@ export function useProfileData({
         return
       }
 
-      console.log("Profile data loaded:", data)
+      console.log("CDP profile data loaded:", data)
+
+      // Map CDP profile to expected format for compatibility
+      const mappedProfile = {
+        id: data.id,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        email: data.email,
+        mobile: data.mobile?.startsWith('unknown_') ? '' : data.mobile,
+        phone: data.phone,
+        country: data.country,
+        state: data.state,
+        city: data.city,
+        status: data.lifecycle_stage === 'customer' ? 'Active' : 
+                data.lifecycle_stage === 'churned' ? 'Inactive' : 'Active',
+        lifecycle_stage: data.lifecycle_stage,
+        lead_score: data.lead_score,
+        lifetime_value: data.lifetime_value,
+        data_quality_score: data.data_quality_score,
+        custom_fields: data.custom_fields || {},
+        notification_preferences: data.notification_preferences || {},
+        tags: data.tags || [],
+        source: data.source,
+        source_details: data.source_details,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        last_activity_at: data.last_activity_at,
+        // Additional CDP fields
+        consent_date: data.consent_date,
+        consent_source: data.consent_source
+      }
 
       // Ensure all custom fields from schema are present in the profile
-      const completeCustomFields = { ...data.custom_fields }
+      const completeCustomFields = { ...mappedProfile.custom_fields }
 
       // Add any missing custom fields from the schema with default values
       Object.keys(customFieldsSchema).forEach((fieldKey) => {
@@ -105,13 +172,13 @@ export function useProfileData({
 
       // Update the profile with complete custom fields
       const completeProfile = {
-        ...data,
+        ...mappedProfile,
         custom_fields: completeCustomFields,
       }
 
       setProfile(completeProfile)
     } catch (err) {
-      console.error("Exception fetching profile:", err)
+      console.error("Exception fetching CDP profile:", err)
       const errorMessage = `An error occurred: ${err instanceof Error ? err.message : String(err)}`
       setError(errorMessage)
       if (onError) onError(errorMessage)

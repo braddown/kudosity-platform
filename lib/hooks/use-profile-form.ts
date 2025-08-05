@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { profilesApiBridge } from '@/lib/api/profiles-api-bridge'
+import { supabase } from '@/lib/supabase'
 import { toast } from '@/components/ui/use-toast'
 
 interface UseProfileFormOptions {
@@ -139,12 +139,32 @@ export function useProfileForm({
         notification_preferences: profileToSave.notification_preferences || {},
       }
 
-      const { error } = await profilesApiBridge.updateProfile(profile.id, finalProfileToSave)
+      // Map form data to CDP profile format
+      const cdpProfileUpdate = {
+        first_name: finalProfileToSave.first_name,
+        last_name: finalProfileToSave.last_name,
+        email: finalProfileToSave.email,
+        mobile: finalProfileToSave.mobile,
+        phone: finalProfileToSave.mobile,
+        country: finalProfileToSave.country,
+        state: finalProfileToSave.state,
+        city: finalProfileToSave.city,
+        custom_fields: finalProfileToSave.custom_fields,
+        notification_preferences: finalProfileToSave.notification_preferences,
+        tags: finalProfileToSave.tags,
+        updated_at: new Date().toISOString(),
+        last_activity_at: new Date().toISOString()
+      }
+
+      const { error } = await supabase
+        .from("cdp_profiles")
+        .update(cdpProfileUpdate)
+        .eq("id", profile.id)
 
       if (error) {
         toast({
           title: "Error saving profile",
-          description: error,
+          description: error.message || "Failed to save profile",
           variant: "destructive",
         })
         if (onSaveError) onSaveError()
