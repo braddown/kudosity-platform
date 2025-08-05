@@ -1,525 +1,309 @@
-/**
- * Customer Data Platform (CDP) Profiles Hook
- * 
- * Custom hook for managing Profile entities in the CDP architecture.
- * Provides comprehensive CRUD operations, search, matching, and metrics.
- */
-
-import { useState, useCallback, useMemo } from 'react'
-import { useAsyncData } from './use-async-data'
-import { CDPProfilesRepository } from '@/lib/api/repositories/CDPProfilesRepository'
+import { useState, useEffect, useCallback } from 'react'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import type { 
   Profile, 
-  CreateProfileRequest, 
-  UpdateProfileRequest,
-  ProfileSearchFilters,
-  PaginatedResponse,
-  ProfileMetrics,
-  NotificationPreferences
-} from '@/lib/types'
-
-// Initialize repository
-const profilesRepo = new CDPProfilesRepository()
-
-// Types for hook options and state
-export interface UseCDPProfilesOptions {
-  initialFilters?: ProfileSearchFilters
-  pageSize?: number
-  autoFetch?: boolean
-  enableRealTimeUpdates?: boolean
-}
-
-export interface UseCDPProfilesResult {
-  // Data state
-  profiles: Profile[]
-  profile: Profile | null
-  isLoading: boolean
-  error: string | null
-  
-  // Pagination
-  currentPage: number
-  totalPages: number
-  totalCount: number
-  hasNextPage: boolean
-  hasPreviousPage: boolean
-  
-  // Search and filtering
-  filters: ProfileSearchFilters
-  searchQuery: string
-  
-  // Metrics
-  metrics: ProfileMetrics | null
-  metricsLoading: boolean
-  
-  // Actions
-  searchProfiles: (filters?: ProfileSearchFilters, page?: number) => Promise<void>
-  setSearchQuery: (query: string) => void
-  applyFilters: (filters: ProfileSearchFilters) => void
-  clearFilters: () => void
-  goToPage: (page: number) => void
-  refreshProfiles: () => Promise<void>
-  
-  // CRUD operations
-  createProfile: (data: CreateProfileRequest) => Promise<Profile>
-  getProfile: (id: string) => Promise<Profile | null>
-  getProfileByMobile: (mobile: string) => Promise<Profile | null>
-  updateProfile: (id: string, data: UpdateProfileRequest) => Promise<Profile>
-  deleteProfile: (id: string) => Promise<void>
-  
-  // Profile intelligence
-  findMatches: (mobile: string, email?: string, firstName?: string, lastName?: string) => Promise<Array<{profile_id: string; match_score: number; match_reasons: string[]}>>
-  mergeProfiles: (sourceId: string, targetId: string, userId?: string) => Promise<{success: boolean; contacts_moved?: number; activities_moved?: number; error?: string}>
-  
-  // Tags and custom fields
-  addTags: (id: string, tags: string[]) => Promise<Profile>
-  removeTags: (id: string, tags: string[]) => Promise<Profile>
-  updateCustomField: (id: string, fieldKey: string, value: any) => Promise<Profile>
-  removeCustomField: (id: string, fieldKey: string) => Promise<Profile>
-  
-  // Notification preferences
-  updateNotificationPreferences: (id: string, preferences: Partial<NotificationPreferences>) => Promise<Profile>
-  getOptedInProfiles: (channel: keyof NotificationPreferences, filters?: ProfileSearchFilters) => Promise<PaginatedResponse<Profile>>
-  
-  // Metrics and analytics
-  loadMetrics: () => Promise<void>
-  updateDataQualityScores: () => Promise<{updated_count: number}>
-}
+  UseProfilesOptions, 
+  UseProfilesResult,
+  ContactProcessingResult 
+} from '@/lib/types/cdp-types'
 
 /**
- * Main CDP Profiles Hook
+ * CDP Profiles Hook - Manages customer profiles with intelligent matching
+ * 
+ * This hook provides CRUD operations for the new CDP profiles system,
+ * including profile creation, updates, merging, and intelligent search.
  */
-export function useCDPProfiles(options: UseCDPProfilesOptions = {}): UseCDPProfilesResult {
+export function useCDPProfiles(options: UseProfilesOptions = {}): UseProfilesResult {
+  const [profiles, setProfiles] = useState<Profile[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [totalCount, setTotalCount] = useState(0)
+  
+  const supabase = createClientComponentClient()
+  
   const {
-    initialFilters = {},
-    pageSize = 20,
-    autoFetch = true,
-    enableRealTimeUpdates = false
+    filters = {},
+    pagination = { page: 1, pageSize: 50 },
+    sort = { field: 'created_at', direction: 'desc' }
   } = options
 
-  // State management
-  const [profiles, setProfiles] = useState<Profile[]>([])
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(0)
-  const [totalCount, setTotalCount] = useState(0)
-  const [filters, setFilters] = useState<ProfileSearchFilters>(initialFilters)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [metrics, setMetrics] = useState<ProfileMetrics | null>(null)
-  const [metricsLoading, setMetricsLoading] = useState(false)
+  // Calculate pagination
+  const currentPage = pagination.page || 1
+  const pageSize = pagination.pageSize || 50
+  const offset = (currentPage - 1) * pageSize
+  const totalPages = Math.ceil(totalCount / pageSize)
 
-  // Async data hook for main profiles list
-  const {
-    data: profilesData,
-    isLoading,
-    error,
-    execute: fetchProfiles,
-    refresh: refreshProfiles
-  } = useAsyncData<PaginatedResponse<Profile>>(
-    async () => {
-      const searchFilters = searchQuery ? { ...filters, search: searchQuery } : filters
-      return profilesRepo.search(searchFilters, currentPage, pageSize)
-    },
-    { immediate: autoFetch }
-  )
+  // Fetch profiles with filters and pagination
+  const fetchProfiles = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
 
-  // Update profiles state when data changes
-  useMemo(() => {
-    if (profilesData) {
-      setProfiles(profilesData.data)
-      setTotalPages(Math.ceil(profilesData.total / pageSize))
-      setTotalCount(profilesData.total)
+      let query = supabase
+        .from('cdp_profiles')
+        .select('*', { count: 'exact' })
+        .eq('merge_status', 'active') // Only show active profiles
+
+      // Apply filters
+      if (filters.lifecycle_stage) {
+        query = query.eq('lifecycle_stage', filters.lifecycle_stage)
+      }
+      
+      if (filters.source) {
+        query = query.eq('source', filters.source)
+      }
+      
+      if (filters.tags && filters.tags.length > 0) {
+        query = query.overlaps('tags', filters.tags)
+      }
+      
+      if (filters.search) {
+        // Search across multiple fields
+        query = query.or(`
+          first_name.ilike.%${filters.search}%,
+          last_name.ilike.%${filters.search}%,
+          email.ilike.%${filters.search}%,
+          mobile.ilike.%${filters.search}%
+        `)
+      }
+
+      // Apply sorting
+      query = query.order(sort.field, { ascending: sort.direction === 'asc' })
+
+      // Apply pagination
+      query = query.range(offset, offset + pageSize - 1)
+
+      const { data, error: queryError, count } = await query
+
+      if (queryError) throw queryError
+
+      setProfiles(data || [])
+      setTotalCount(count || 0)
+    } catch (err) {
+      console.error('Error fetching CDP profiles:', err)
+      setError(err instanceof Error ? err.message : 'Failed to fetch profiles')
+    } finally {
+      setLoading(false)
     }
-  }, [profilesData, pageSize])
+  }, [supabase, filters, pagination, sort, offset, pageSize])
 
-  // Computed pagination state
-  const hasNextPage = currentPage < totalPages
-  const hasPreviousPage = currentPage > 1
+  // Create new profile
+  const createProfile = useCallback(async (profileData: Partial<Profile>): Promise<Profile> => {
+    try {
+      const { data, error: insertError } = await supabase
+        .from('cdp_profiles')
+        .insert([{
+          mobile: profileData.mobile || '',
+          first_name: profileData.first_name,
+          last_name: profileData.last_name,
+          email: profileData.email,
+          lifecycle_stage: profileData.lifecycle_stage || 'lead',
+          source: profileData.source || 'manual_entry',
+          custom_fields: profileData.custom_fields || {},
+          notification_preferences: profileData.notification_preferences || {
+            marketing_sms: true,
+            marketing_email: true,
+            transactional_sms: true,
+            transactional_email: true,
+            marketing_whatsapp: false,
+            transactional_whatsapp: false,
+            marketing_rcs: false,
+            transactional_rcs: false
+          },
+          tags: profileData.tags || []
+        }])
+        .select()
+        .single()
 
-  // =====================================================
-  // SEARCH & FILTERING ACTIONS
-  // =====================================================
+      if (insertError) throw insertError
 
-  const searchProfiles = useCallback(async (newFilters?: ProfileSearchFilters, page?: number) => {
-    if (newFilters) {
-      setFilters(newFilters)
+      // Refresh the list
+      await fetchProfiles()
+      
+      return data
+    } catch (err) {
+      console.error('Error creating CDP profile:', err)
+      throw new Error(err instanceof Error ? err.message : 'Failed to create profile')
     }
-    if (page !== undefined) {
-      setCurrentPage(page)
+  }, [supabase, fetchProfiles])
+
+  // Update existing profile
+  const updateProfile = useCallback(async (id: string, updates: Partial<Profile>): Promise<Profile> => {
+    try {
+      const { data, error: updateError } = await supabase
+        .from('cdp_profiles')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (updateError) throw updateError
+
+      // Update local state
+      setProfiles(prev => prev.map(profile => 
+        profile.id === id ? { ...profile, ...data } : profile
+      ))
+      
+      return data
+    } catch (err) {
+      console.error('Error updating CDP profile:', err)
+      throw new Error(err instanceof Error ? err.message : 'Failed to update profile')
     }
+  }, [supabase])
+
+  // Delete profile (soft delete by marking as archived)
+  const deleteProfile = useCallback(async (id: string): Promise<void> => {
+    try {
+      const { error: deleteError } = await supabase
+        .from('cdp_profiles')
+        .update({ merge_status: 'archived' })
+        .eq('id', id)
+
+      if (deleteError) throw deleteError
+
+      // Remove from local state
+      setProfiles(prev => prev.filter(profile => profile.id !== id))
+      setTotalCount(prev => prev - 1)
+    } catch (err) {
+      console.error('Error deleting CDP profile:', err)
+      throw new Error(err instanceof Error ? err.message : 'Failed to delete profile')
+    }
+  }, [supabase])
+
+  // Merge two profiles
+  const mergeProfiles = useCallback(async (sourceId: string, targetId: string): Promise<void> => {
+    try {
+      const { data, error: mergeError } = await supabase.rpc('merge_cdp_profiles', {
+        source_profile_id: sourceId,
+        target_profile_id: targetId
+      })
+
+      if (mergeError) throw mergeError
+
+      // Refresh the list to show updated state
+      await fetchProfiles()
+    } catch (err) {
+      console.error('Error merging CDP profiles:', err)
+      throw new Error(err instanceof Error ? err.message : 'Failed to merge profiles')
+    }
+  }, [supabase, fetchProfiles])
+
+  // Find potential duplicate profiles
+  const findPotentialDuplicates = useCallback(async (profileId: string) => {
+    try {
+      const profile = profiles.find(p => p.id === profileId)
+      if (!profile) throw new Error('Profile not found')
+
+      const { data, error } = await supabase.rpc('find_cdp_profile_matches', {
+        input_mobile: profile.mobile,
+        input_email: profile.email,
+        input_first_name: profile.first_name,
+        input_last_name: profile.last_name
+      })
+
+      if (error) throw error
+
+      return data.filter((match: any) => match.profile_id !== profileId)
+    } catch (err) {
+      console.error('Error finding potential duplicates:', err)
+      throw new Error(err instanceof Error ? err.message : 'Failed to find duplicates')
+    }
+  }, [supabase, profiles])
+
+  // Process a contact into the CDP system
+  const processContact = useCallback(async (contactData: {
+    mobile: string
+    email?: string
+    first_name?: string
+    last_name?: string
+    source: string
+    source_details?: Record<string, any>
+    raw_data?: Record<string, any>
+  }): Promise<ContactProcessingResult> => {
+    try {
+      // First, create the contact record
+      const { data: contact, error: contactError } = await supabase
+        .from('cdp_contacts')
+        .insert([{
+          mobile: contactData.mobile,
+          email: contactData.email,
+          first_name: contactData.first_name,
+          last_name: contactData.last_name,
+          source: contactData.source,
+          source_details: contactData.source_details || {},
+          raw_data: contactData.raw_data || {}
+        }])
+        .select()
+        .single()
+
+      if (contactError) throw contactError
+
+      // Process the contact through the CDP system
+      const { data: result, error: processError } = await supabase.rpc('process_cdp_contact', {
+        contact_uuid: contact.id
+      })
+
+      if (processError) throw processError
+
+      // Refresh profiles if a new one was created
+      if (result.action === 'new_profile_created' || result.action === 'auto_matched') {
+        await fetchProfiles()
+      }
+
+      return result
+    } catch (err) {
+      console.error('Error processing contact:', err)
+      throw new Error(err instanceof Error ? err.message : 'Failed to process contact')
+    }
+  }, [supabase, fetchProfiles])
+
+  // Filter and search utilities
+  const setFilters = useCallback((newFilters: UseProfilesOptions['filters']) => {
+    // This would trigger a re-fetch with new filters
+    // Implementation depends on how the parent component manages state
+  }, [])
+
+  const clearFilters = useCallback(() => {
+    // Clear all filters and refresh
+    setFilters({})
+  }, [setFilters])
+
+  const refetch = useCallback(async () => {
     await fetchProfiles()
   }, [fetchProfiles])
 
-  const applyFilters = useCallback((newFilters: ProfileSearchFilters) => {
-    setFilters(newFilters)
-    setCurrentPage(1)
+  // Load profiles on mount and when dependencies change
+  useEffect(() => {
     fetchProfiles()
   }, [fetchProfiles])
-
-  const clearFilters = useCallback(() => {
-    setFilters({})
-    setSearchQuery('')
-    setCurrentPage(1)
-    fetchProfiles()
-  }, [fetchProfiles])
-
-  const goToPage = useCallback((page: number) => {
-    setCurrentPage(page)
-    fetchProfiles()
-  }, [fetchProfiles])
-
-  const handleSetSearchQuery = useCallback((query: string) => {
-    setSearchQuery(query)
-    setCurrentPage(1)
-    // Auto-search after a brief delay (can be debounced)
-    const timer = setTimeout(() => {
-      fetchProfiles()
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [fetchProfiles])
-
-  // =====================================================
-  // CRUD OPERATIONS
-  // =====================================================
-
-  const createProfile = useCallback(async (data: CreateProfileRequest): Promise<Profile> => {
-    try {
-      const newProfile = await profilesRepo.create(data)
-      // Refresh the list to include the new profile
-      await refreshProfiles()
-      return newProfile
-    } catch (err) {
-      throw new Error(`Failed to create profile: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    }
-  }, [refreshProfiles])
-
-  const getProfile = useCallback(async (id: string): Promise<Profile | null> => {
-    try {
-      const profileData = await profilesRepo.getById(id)
-      setProfile(profileData)
-      return profileData
-    } catch (err) {
-      throw new Error(`Failed to get profile: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    }
-  }, [])
-
-  const getProfileByMobile = useCallback(async (mobile: string): Promise<Profile | null> => {
-    try {
-      const profileData = await profilesRepo.getByMobile(mobile)
-      setProfile(profileData)
-      return profileData
-    } catch (err) {
-      throw new Error(`Failed to get profile by mobile: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    }
-  }, [])
-
-  const updateProfile = useCallback(async (id: string, data: UpdateProfileRequest): Promise<Profile> => {
-    try {
-      const updatedProfile = await profilesRepo.update(id, data)
-      
-      // Update local state
-      setProfiles(prev => prev.map(p => p.id === id ? updatedProfile : p))
-      if (profile?.id === id) {
-        setProfile(updatedProfile)
-      }
-      
-      return updatedProfile
-    } catch (err) {
-      throw new Error(`Failed to update profile: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    }
-  }, [profile])
-
-  const deleteProfile = useCallback(async (id: string): Promise<void> => {
-    try {
-      await profilesRepo.delete(id)
-      
-      // Remove from local state
-      setProfiles(prev => prev.filter(p => p.id !== id))
-      if (profile?.id === id) {
-        setProfile(null)
-      }
-      
-      // Refresh to get accurate counts
-      await refreshProfiles()
-    } catch (err) {
-      throw new Error(`Failed to delete profile: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    }
-  }, [profile, refreshProfiles])
-
-  // =====================================================
-  // PROFILE INTELLIGENCE
-  // =====================================================
-
-  const findMatches = useCallback(async (
-    mobile: string,
-    email?: string,
-    firstName?: string,
-    lastName?: string
-  ) => {
-    try {
-      return await profilesRepo.findMatches(mobile, email, firstName, lastName)
-    } catch (err) {
-      throw new Error(`Failed to find matches: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    }
-  }, [])
-
-  const mergeProfiles = useCallback(async (
-    sourceId: string,
-    targetId: string,
-    userId?: string
-  ) => {
-    try {
-      const result = await profilesRepo.mergeProfiles(sourceId, targetId, userId)
-      
-      if (result.success) {
-        // Remove source profile from local state and refresh
-        setProfiles(prev => prev.filter(p => p.id !== sourceId))
-        await refreshProfiles()
-      }
-      
-      return result
-    } catch (err) {
-      throw new Error(`Failed to merge profiles: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    }
-  }, [refreshProfiles])
-
-  // =====================================================
-  // TAGS & CUSTOM FIELDS
-  // =====================================================
-
-  const addTags = useCallback(async (id: string, tags: string[]): Promise<Profile> => {
-    try {
-      const updatedProfile = await profilesRepo.addTags(id, tags)
-      
-      // Update local state
-      setProfiles(prev => prev.map(p => p.id === id ? updatedProfile : p))
-      if (profile?.id === id) {
-        setProfile(updatedProfile)
-      }
-      
-      return updatedProfile
-    } catch (err) {
-      throw new Error(`Failed to add tags: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    }
-  }, [profile])
-
-  const removeTags = useCallback(async (id: string, tags: string[]): Promise<Profile> => {
-    try {
-      const updatedProfile = await profilesRepo.removeTags(id, tags)
-      
-      // Update local state
-      setProfiles(prev => prev.map(p => p.id === id ? updatedProfile : p))
-      if (profile?.id === id) {
-        setProfile(updatedProfile)
-      }
-      
-      return updatedProfile
-    } catch (err) {
-      throw new Error(`Failed to remove tags: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    }
-  }, [profile])
-
-  const updateCustomField = useCallback(async (id: string, fieldKey: string, value: any): Promise<Profile> => {
-    try {
-      const updatedProfile = await profilesRepo.updateCustomField(id, fieldKey, value)
-      
-      // Update local state
-      setProfiles(prev => prev.map(p => p.id === id ? updatedProfile : p))
-      if (profile?.id === id) {
-        setProfile(updatedProfile)
-      }
-      
-      return updatedProfile
-    } catch (err) {
-      throw new Error(`Failed to update custom field: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    }
-  }, [profile])
-
-  const removeCustomField = useCallback(async (id: string, fieldKey: string): Promise<Profile> => {
-    try {
-      const updatedProfile = await profilesRepo.removeCustomField(id, fieldKey)
-      
-      // Update local state
-      setProfiles(prev => prev.map(p => p.id === id ? updatedProfile : p))
-      if (profile?.id === id) {
-        setProfile(updatedProfile)
-      }
-      
-      return updatedProfile
-    } catch (err) {
-      throw new Error(`Failed to remove custom field: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    }
-  }, [profile])
-
-  // =====================================================
-  // NOTIFICATION PREFERENCES
-  // =====================================================
-
-  const updateNotificationPreferences = useCallback(async (
-    id: string,
-    preferences: Partial<NotificationPreferences>
-  ): Promise<Profile> => {
-    try {
-      const updatedProfile = await profilesRepo.updateNotificationPreferences(id, preferences)
-      
-      // Update local state
-      setProfiles(prev => prev.map(p => p.id === id ? updatedProfile : p))
-      if (profile?.id === id) {
-        setProfile(updatedProfile)
-      }
-      
-      return updatedProfile
-    } catch (err) {
-      throw new Error(`Failed to update notification preferences: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    }
-  }, [profile])
-
-  const getOptedInProfiles = useCallback(async (
-    channel: keyof NotificationPreferences,
-    optFilters?: ProfileSearchFilters
-  ): Promise<PaginatedResponse<Profile>> => {
-    try {
-      return await profilesRepo.getOptedInProfiles(channel, optFilters)
-    } catch (err) {
-      throw new Error(`Failed to get opted-in profiles: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    }
-  }, [])
-
-  // =====================================================
-  // METRICS & ANALYTICS
-  // =====================================================
-
-  const loadMetrics = useCallback(async (): Promise<void> => {
-    setMetricsLoading(true)
-    try {
-      const metricsData = await profilesRepo.getMetrics()
-      setMetrics(metricsData)
-    } catch (err) {
-      console.error('Failed to load metrics:', err)
-    } finally {
-      setMetricsLoading(false)
-    }
-  }, [])
-
-  const updateDataQualityScores = useCallback(async () => {
-    try {
-      return await profilesRepo.updateDataQualityScores()
-    } catch (err) {
-      throw new Error(`Failed to update data quality scores: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    }
-  }, [])
-
-  // =====================================================
-  // RETURN HOOK INTERFACE
-  // =====================================================
 
   return {
-    // Data state
     profiles,
-    profile,
-    isLoading,
+    loading,
     error,
-    
-    // Pagination
-    currentPage,
-    totalPages,
     totalCount,
-    hasNextPage,
-    hasPreviousPage,
-    
-    // Search and filtering
-    filters,
-    searchQuery,
-    
-    // Metrics
-    metrics,
-    metricsLoading,
-    
-    // Actions
-    searchProfiles,
-    setSearchQuery: handleSetSearchQuery,
-    applyFilters,
-    clearFilters,
-    goToPage,
-    refreshProfiles,
-    
+    pagination: {
+      page: currentPage,
+      pageSize,
+      totalPages
+    },
     // CRUD operations
     createProfile,
-    getProfile,
-    getProfileByMobile,
     updateProfile,
     deleteProfile,
-    
-    // Profile intelligence
-    findMatches,
     mergeProfiles,
-    
-    // Tags and custom fields
-    addTags,
-    removeTags,
-    updateCustomField,
-    removeCustomField,
-    
-    // Notification preferences
-    updateNotificationPreferences,
-    getOptedInProfiles,
-    
-    // Metrics and analytics
-    loadMetrics,
-    updateDataQualityScores
-  }
-}
-
-/**
- * Hook for single profile management
- */
-export function useCDPProfile(profileId?: string) {
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const loadProfile = useCallback(async (id: string) => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const profileData = await profilesRepo.getById(id)
-      setProfile(profileData)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load profile')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  const updateProfile = useCallback(async (data: UpdateProfileRequest) => {
-    if (!profile) return null
-    
-    setIsLoading(true)
-    setError(null)
-    try {
-      const updatedProfile = await profilesRepo.update(profile.id, data)
-      setProfile(updatedProfile)
-      return updatedProfile
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile')
-      return null
-    } finally {
-      setIsLoading(false)
-    }
-  }, [profile])
-
-  // Auto-load profile if profileId is provided
-  useMemo(() => {
-    if (profileId) {
-      loadProfile(profileId)
-    }
-  }, [profileId, loadProfile])
-
-  return {
-    profile,
-    isLoading,
-    error,
-    loadProfile,
-    updateProfile,
-    refreshProfile: () => profile ? loadProfile(profile.id) : Promise.resolve()
+    // Filtering and search
+    setFilters,
+    clearFilters,
+    refetch,
+    // CDP-specific operations
+    findPotentialDuplicates,
+    processContact
+  } as UseProfilesResult & {
+    findPotentialDuplicates: (profileId: string) => Promise<any[]>
+    processContact: (contactData: any) => Promise<ContactProcessingResult>
   }
 }

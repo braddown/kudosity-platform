@@ -12,7 +12,10 @@
     "perf:build": "npm run build && npm run analyze",
     "perf:test": "npm run build && npm run start & sleep 10 && npm run lighthouse && kill %1",
     "bundle:analyze": "npm run analyze && npx webpack-bundle-analyzer .next/server/chunks/ -m server",
-    "perf:monitor": "node -e \"console.log('Performance monitoring enabled in production build')\""
+    "perf:monitor": "node -e \"console.log('Performance monitoring enabled in production build')\"",
+    "migrate-cdp": "tsx scripts/migrate-to-cdp.ts",
+    "migrate-cdp:dry": "tsx scripts/migrate-to-cdp.ts --dry-run",
+    "migrate-cdp:rollback": "tsx scripts/migrate-to-cdp.ts --rollback --force-rollback"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
