@@ -23,10 +23,21 @@ export interface Profile {
   last_name: string
   email: string
   mobile?: string
+  phone?: string
+  country?: string
+  state?: string
+  city?: string
   status: 'active' | 'inactive' | 'deleted'
+  lifecycle_stage?: string
+  lead_score?: number
+  lifetime_value?: number
+  data_quality_score?: number
+  source?: string
   created_at: string
   updated_at: string
+  last_activity_at?: string
   custom_fields?: Record<string, any>
+  notification_preferences?: Record<string, any>
   tags?: string[]
 }
 
@@ -105,6 +116,12 @@ export interface UseProfilesResult {
   filterProfiles: (predicate: (profile: Profile) => boolean) => Profile[]
 }
 
+// Helper function to map CDP lifecycle stage to profile status
+const mapLifecycleStageToStatus = (lifecycleStage: string): 'active' | 'inactive' | 'deleted' => {
+  if (lifecycleStage === 'churned') return 'inactive'
+  return 'active' // default for lead, prospect, customer
+}
+
 /**
  * Hook for comprehensive profile management
  */
@@ -159,9 +176,9 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
 
       // Apply status filter (map to lifecycle_stage)
       if (options.status) {
-        if (options.status === 'Active') {
+        if (options.status === 'active') {
           query = query.in('lifecycle_stage', ['lead', 'prospect', 'customer'])
-        } else if (options.status === 'Inactive') {
+        } else if (options.status === 'inactive') {
           query = query.eq('lifecycle_stage', 'churned')
         }
       }
@@ -196,8 +213,7 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
         country: cdpProfile.country,
         state: cdpProfile.state,
         city: cdpProfile.city,
-        status: cdpProfile.lifecycle_stage === 'customer' ? 'Active' : 
-                cdpProfile.lifecycle_stage === 'churned' ? 'Inactive' : 'Active',
+        status: mapLifecycleStageToStatus(cdpProfile.lifecycle_stage),
         lifecycle_stage: cdpProfile.lifecycle_stage,
         lead_score: cdpProfile.lead_score,
         lifetime_value: cdpProfile.lifetime_value,
@@ -287,7 +303,7 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
         country: result.country,
         state: result.state,
         city: result.city,
-        status: 'Active',
+        status: 'active',
         lifecycle_stage: result.lifecycle_stage,
         lead_score: result.lead_score,
         lifetime_value: result.lifetime_value,
@@ -357,8 +373,7 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
         country: result.country,
         state: result.state,
         city: result.city,
-        status: result.lifecycle_stage === 'customer' ? 'Active' : 
-                result.lifecycle_stage === 'churned' ? 'Inactive' : 'Active',
+        status: mapLifecycleStageToStatus(result.lifecycle_stage),
         lifecycle_stage: result.lifecycle_stage,
         lead_score: result.lead_score,
         lifetime_value: result.lifetime_value,
@@ -439,7 +454,7 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
         country: result.country,
         state: result.state,
         city: result.city,
-        status: 'Active',
+        status: 'active',
         lifecycle_stage: result.lifecycle_stage,
         lead_score: result.lead_score,
         lifetime_value: result.lifetime_value,
@@ -491,8 +506,7 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
         country: result.country,
         state: result.state,
         city: result.city,
-        status: result.lifecycle_stage === 'customer' ? 'Active' : 
-                result.lifecycle_stage === 'churned' ? 'Inactive' : 'Active',
+        status: mapLifecycleStageToStatus(result.lifecycle_stage),
         lifecycle_stage: result.lifecycle_stage,
         lead_score: result.lead_score,
         lifetime_value: result.lifetime_value,
