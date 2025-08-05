@@ -318,16 +318,64 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
    */
   const updateProfile = useCallback(async (id: string, data: Partial<Profile>): Promise<Profile | null> => {
     try {
-      const result = await profilesApiBridge.updateProfile(id, data)
+      // Map data to CDP format
+      const cdpProfileUpdate = {
+        first_name: data.first_name,
+        last_name: data.last_name,
+        email: data.email,
+        mobile: data.mobile,
+        phone: data.mobile,
+        country: data.country,
+        state: data.state,
+        city: data.city,
+        custom_fields: data.custom_fields,
+        notification_preferences: data.notification_preferences,
+        tags: data.tags,
+        updated_at: new Date().toISOString(),
+        last_activity_at: new Date().toISOString()
+      }
+
+      const { data: result, error } = await supabase
+        .from("cdp_profiles")
+        .update(cdpProfileUpdate)
+        .eq("id", id)
+        .select()
+        .single()
       
-      if (result.error) {
-        throw new Error(result.error)
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      // Map result back to expected format
+      const mappedProfile: Profile = {
+        id: result.id,
+        first_name: result.first_name,
+        last_name: result.last_name,
+        email: result.email,
+        mobile: result.mobile?.startsWith('unknown_') ? '' : result.mobile,
+        phone: result.phone,
+        country: result.country,
+        state: result.state,
+        city: result.city,
+        status: result.lifecycle_stage === 'customer' ? 'Active' : 
+                result.lifecycle_stage === 'churned' ? 'Inactive' : 'Active',
+        lifecycle_stage: result.lifecycle_stage,
+        lead_score: result.lead_score,
+        lifetime_value: result.lifetime_value,
+        data_quality_score: result.data_quality_score,
+        custom_fields: result.custom_fields || {},
+        notification_preferences: result.notification_preferences || {},
+        tags: result.tags || [],
+        source: result.source,
+        created_at: result.created_at,
+        updated_at: result.updated_at,
+        last_activity_at: result.last_activity_at
       }
 
       // Optimistic update or refetch
       refetch()
 
-      return result.data as Profile || null
+      return mappedProfile
     } catch (error) {
       console.error('Failed to update profile:', error)
       return null
@@ -339,10 +387,17 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
    */
   const deleteProfile = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const result = await profilesApiBridge.softDeleteProfile(id)
+      const { error } = await supabase
+        .from("cdp_profiles")
+        .update({ 
+          merge_status: "archived", 
+          updated_at: new Date().toISOString(),
+          last_activity_at: new Date().toISOString()
+        })
+        .eq("id", id)
       
-      if (result.error) {
-        throw new Error(result.error)
+      if (error) {
+        throw new Error(error.message)
       }
 
       refetch()
@@ -358,14 +413,48 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
    */
   const restoreProfile = useCallback(async (id: string): Promise<Profile | null> => {
     try {
-      const result = await profilesApiBridge.restoreProfile(id)
+      const { data: result, error } = await supabase
+        .from("cdp_profiles")
+        .update({ 
+          merge_status: "active", 
+          updated_at: new Date().toISOString(),
+          last_activity_at: new Date().toISOString()
+        })
+        .eq("id", id)
+        .select()
+        .single()
       
-      if (result.error) {
-        throw new Error(result.error)
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      // Map result back to expected format
+      const mappedProfile: Profile = {
+        id: result.id,
+        first_name: result.first_name,
+        last_name: result.last_name,
+        email: result.email,
+        mobile: result.mobile?.startsWith('unknown_') ? '' : result.mobile,
+        phone: result.phone,
+        country: result.country,
+        state: result.state,
+        city: result.city,
+        status: 'Active',
+        lifecycle_stage: result.lifecycle_stage,
+        lead_score: result.lead_score,
+        lifetime_value: result.lifetime_value,
+        data_quality_score: result.data_quality_score,
+        custom_fields: result.custom_fields || {},
+        notification_preferences: result.notification_preferences || {},
+        tags: result.tags || [],
+        source: result.source,
+        created_at: result.created_at,
+        updated_at: result.updated_at,
+        last_activity_at: result.last_activity_at
       }
 
       refetch()
-      return result.data as Profile || null
+      return mappedProfile
     } catch (error) {
       console.error('Failed to restore profile:', error)
       return null
@@ -377,13 +466,47 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
    */
   const getProfile = useCallback(async (id: string): Promise<Profile | null> => {
     try {
-      const result = await profilesApiBridge.getProfile(id)
+      const { data: result, error } = await supabase
+        .from("cdp_profiles")
+        .select("*")
+        .eq("id", id)
+        .single()
       
-      if (result.error) {
-        throw new Error(result.error)
+      if (error) {
+        throw new Error(error.message)
       }
 
-      return result.data as Profile || null
+      if (!result) {
+        return null
+      }
+
+      // Map CDP profile to expected format
+      const mappedProfile: Profile = {
+        id: result.id,
+        first_name: result.first_name,
+        last_name: result.last_name,
+        email: result.email,
+        mobile: result.mobile?.startsWith('unknown_') ? '' : result.mobile,
+        phone: result.phone,
+        country: result.country,
+        state: result.state,
+        city: result.city,
+        status: result.lifecycle_stage === 'customer' ? 'Active' : 
+                result.lifecycle_stage === 'churned' ? 'Inactive' : 'Active',
+        lifecycle_stage: result.lifecycle_stage,
+        lead_score: result.lead_score,
+        lifetime_value: result.lifetime_value,
+        data_quality_score: result.data_quality_score,
+        custom_fields: result.custom_fields || {},
+        notification_preferences: result.notification_preferences || {},
+        tags: result.tags || [],
+        source: result.source,
+        created_at: result.created_at,
+        updated_at: result.updated_at,
+        last_activity_at: result.last_activity_at
+      }
+
+      return mappedProfile
     } catch (error) {
       console.error('Failed to get profile:', error)
       return null
@@ -452,16 +575,22 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
    */
   const bulkDelete = useCallback(async (ids: string[]): Promise<boolean> => {
     try {
-      const promises = ids.map(id => profilesApiBridge.softDeleteProfile(id))
-      const results = await Promise.allSettled(promises)
+      const { error } = await supabase
+        .from("cdp_profiles")
+        .update({ 
+          merge_status: "archived", 
+          updated_at: new Date().toISOString(),
+          last_activity_at: new Date().toISOString()
+        })
+        .in("id", ids)
       
-      const failed = results.filter(result => result.status === 'rejected')
-      if (failed.length > 0) {
-        console.error(`Failed to delete ${failed.length} profiles`)
+      if (error) {
+        console.error('Failed to bulk delete profiles:', error.message)
+        return false
       }
 
       refetch()
-      return failed.length === 0
+      return true
     } catch (error) {
       console.error('Failed to bulk delete profiles:', error)
       return false
@@ -473,16 +602,35 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
    */
   const bulkUpdate = useCallback(async (ids: string[], data: Partial<Profile>): Promise<boolean> => {
     try {
-      const promises = ids.map(id => profilesApiBridge.updateProfile(id, data))
-      const results = await Promise.allSettled(promises)
+      // Map data to CDP format
+      const cdpProfileUpdate = {
+        first_name: data.first_name,
+        last_name: data.last_name,
+        email: data.email,
+        mobile: data.mobile,
+        phone: data.mobile,
+        country: data.country,
+        state: data.state,
+        city: data.city,
+        custom_fields: data.custom_fields,
+        notification_preferences: data.notification_preferences,
+        tags: data.tags,
+        updated_at: new Date().toISOString(),
+        last_activity_at: new Date().toISOString()
+      }
+
+      const { error } = await supabase
+        .from("cdp_profiles")
+        .update(cdpProfileUpdate)
+        .in("id", ids)
       
-      const failed = results.filter(result => result.status === 'rejected')
-      if (failed.length > 0) {
-        console.error(`Failed to update ${failed.length} profiles`)
+      if (error) {
+        console.error('Failed to bulk update profiles:', error.message)
+        return false
       }
 
       refetch()
-      return failed.length === 0
+      return true
     } catch (error) {
       console.error('Failed to bulk update profiles:', error)
       return false

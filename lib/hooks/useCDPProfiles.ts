@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabase'
 import type { 
   Profile, 
   UseProfilesOptions, 
@@ -19,7 +19,7 @@ export function useCDPProfiles(options: UseProfilesOptions = {}): UseProfilesRes
   const [error, setError] = useState<string | null>(null)
   const [totalCount, setTotalCount] = useState(0)
   
-  const supabase = createClientComponentClient()
+  // Using imported supabase client
   
   const {
     filters = {},

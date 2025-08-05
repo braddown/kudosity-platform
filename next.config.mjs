@@ -67,7 +67,6 @@ const nextConfig = {
 
   // Experimental features for performance
   experimental: {
-    optimizeCss: true,
     scrollRestoration: true,
     cpus: Math.max(1, (process.env.NODE_ENV === 'production' ? 4 : 2)),
   },

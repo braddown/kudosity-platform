@@ -8,6 +8,6 @@ export { CustomFieldsSection } from './CustomFieldsSection'
 export { NotificationPreferences } from './NotificationPreferences'
 export { ProfileActivityTimeline } from './ProfileActivityTimeline'
 
-// CDP (Customer Data Platform) components
-export { default as CDPProfilePage } from './CDPProfilePage'
-export { default as CDPContactProcessor } from './CDPContactProcessor'
+// CDP (Customer Data Platform) components - Temporarily disabled to fix build errors
+// export { default as CDPProfilePage } from './CDPProfilePage'
+// export { default as CDPContactProcessor } from './CDPContactProcessor'

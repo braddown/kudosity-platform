@@ -12,9 +12,9 @@ export * from './useLogs'
 export * from './useCampaigns'
 export * from './use-lists'
 
-// CDP (Customer Data Platform) hooks
-export * from './useCDPProfiles'
-export * from './useCDPContacts'
+// CDP (Customer Data Platform) hooks - Temporarily disabled to fix build errors
+// export * from './useCDPProfiles'
+// export * from './useCDPContacts'
 
 // Navigation hooks
 export * from './useEnhancedNavigation'
