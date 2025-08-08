@@ -43,3 +43,6 @@ export * from "./form-layout"
 
 // Data display components
 export { DataTable } from "./data-table"
+
+// Loading components
+export { LoadingSpinner, LoadingSpinnerWithText, InlineLoadingSpinner } from "./loading-spinner"

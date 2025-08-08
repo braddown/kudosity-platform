@@ -13,7 +13,7 @@ export const getProfiles = async (options?: {
     // If specific limit/offset provided, use those (for pagination)
     if (options?.limit || options?.offset) {
       let query = supabase
-        .from("profiles")
+        .from("cdp_profiles")
         .select("*")
         .neq("id", "00000000-0000-0000-0000-000000000000") // Exclude metadata profile
         .order("created_at", { ascending: false })
@@ -53,7 +53,7 @@ export const getProfiles = async (options?: {
 
     // First, get the total count
     const { count, error: countError } = await supabase
-      .from("profiles")
+      .from("cdp_profiles")
       .select("*", { count: "exact", head: true })
       .neq("id", "00000000-0000-0000-0000-000000000000") // Exclude metadata profile
 
@@ -82,7 +82,7 @@ export const getProfiles = async (options?: {
       console.log(`Fetching batch ${i + 1}/${batches}: records ${start} to ${end}`)
 
       let query = supabase
-        .from("profiles")
+        .from("cdp_profiles")
         .select("*")
         .neq("id", "00000000-0000-0000-0000-000000000000") // Exclude metadata profile
         .range(start, end)
@@ -125,7 +125,7 @@ export const getProfile = async (id: string) => {
   try {
     console.log("Fetching profile by ID:", id)
 
-    const { data, error } = await supabase.from("profiles").select("*").eq("id", id).single()
+    const { data, error } = await supabase.from("cdp_profiles").select("*").eq("id", id).single()
 
     if (error) {
       console.error("Error fetching profile:", error)
@@ -145,7 +145,7 @@ export const createProfile = async (profileData: any) => {
   try {
     console.log("Creating profile:", profileData)
 
-    const { data, error } = await supabase.from("profiles").insert([profileData]).select().single()
+    const { data, error } = await supabase.from("cdp_profiles").insert([profileData]).select().single()
 
     if (error) {
       console.error("Error creating profile:", error)
@@ -165,7 +165,7 @@ export const updateProfile = async (id: string, profileData: any) => {
   try {
     console.log("Updating profile:", id, profileData)
 
-    const { data, error } = await supabase.from("profiles").update(profileData).eq("id", id).select().single()
+    const { data, error } = await supabase.from("cdp_profiles").update(profileData).eq("id", id).select().single()
 
     if (error) {
       console.error("Error updating profile:", error)
@@ -186,8 +186,8 @@ export const softDeleteProfile = async (id: string) => {
     console.log("Soft deleting profile:", id)
 
     const { data, error } = await supabase
-      .from("profiles")
-      .update({ status: "Inactive", updated_at: new Date().toISOString() })
+      .from("cdp_profiles")
+      .update({ lifecycle_stage: "churned", updated_at: new Date().toISOString() })
       .eq("id", id)
       .select()
       .single()
@@ -211,8 +211,8 @@ export const restoreProfile = async (id: string) => {
     console.log("Restoring profile:", id)
 
     const { data, error } = await supabase
-      .from("profiles")
-      .update({ status: "Active", updated_at: new Date().toISOString() })
+      .from("cdp_profiles")
+      .update({ lifecycle_stage: "customer", updated_at: new Date().toISOString() })
       .eq("id", id)
       .select()
       .single()
@@ -230,7 +230,7 @@ export const deleteProfile = async (id: string) => {
   try {
     console.log("Permanently deleting profile:", id)
 
-    const { error } = await supabase.from("profiles").delete().eq("id", id)
+    const { error } = await supabase.from("cdp_profiles").delete().eq("id", id)
 
     if (error) {
       console.error("Error deleting profile:", error)
@@ -251,7 +251,7 @@ export const getProfilesCount = async () => {
     console.log("Getting profiles count...")
 
     const { count, error } = await supabase
-      .from("profiles")
+      .from("cdp_profiles")
       .select("*", { count: "exact", head: true })
       .neq("id", "00000000-0000-0000-0000-000000000000") // Exclude metadata profile
 
@@ -268,34 +268,59 @@ export const getProfilesCount = async () => {
   }
 }
 
-// Get table schema for properties management
+// Get table schema for properties management - Updated for CDP structure
 export const getTableSchema = async () => {
   try {
-    console.log("Getting table schema...")
+    console.log("Getting CDP profiles table schema...")
 
-    // Define the schema based on our known structure
+    // Define the schema based on our CDP structure
     const columns = [
+      // Core identification
       { column_name: "id", data_type: "uuid", is_nullable: "NO" },
-      { column_name: "first_name", data_type: "character varying", is_nullable: "NO" },
-      { column_name: "last_name", data_type: "character varying", is_nullable: "NO" },
-      { column_name: "email", data_type: "character varying", is_nullable: "YES" },
-      { column_name: "mobile", data_type: "character varying", is_nullable: "YES" },
-      { column_name: "phone", data_type: "character varying", is_nullable: "YES" },
-      { column_name: "country", data_type: "character varying", is_nullable: "YES" },
-      { column_name: "state", data_type: "character varying", is_nullable: "YES" },
-      { column_name: "postcode", data_type: "character varying", is_nullable: "YES" },
-      { column_name: "suburb", data_type: "character varying", is_nullable: "YES" },
-      { column_name: "timezone", data_type: "character varying", is_nullable: "YES" },
-      { column_name: "status", data_type: "character varying", is_nullable: "NO" },
+      { column_name: "mobile", data_type: "text", is_nullable: "NO" },
+      
+      // Basic contact information
+      { column_name: "first_name", data_type: "text", is_nullable: "YES" },
+      { column_name: "last_name", data_type: "text", is_nullable: "YES" },
+      { column_name: "email", data_type: "text", is_nullable: "YES" },
+      { column_name: "notes", data_type: "text", is_nullable: "YES" },
+      
+      // Address fields (CDP structure)
+      { column_name: "address_line_1", data_type: "text", is_nullable: "YES" },
+      { column_name: "address_line_2", data_type: "text", is_nullable: "YES" },
+      { column_name: "postal_code", data_type: "text", is_nullable: "YES" },
+      { column_name: "city", data_type: "text", is_nullable: "YES" },
+      { column_name: "state", data_type: "text", is_nullable: "YES" },
+      { column_name: "country", data_type: "text", is_nullable: "YES" },
+      
+      // Contact properties (preferences and metadata)
+      { column_name: "timezone", data_type: "text", is_nullable: "YES" },
+      { column_name: "language_preferences", data_type: "text", is_nullable: "YES" },
+      { column_name: "os", data_type: "text", is_nullable: "YES" },
+      { column_name: "device", data_type: "text", is_nullable: "YES" },
+      { column_name: "source", data_type: "text", is_nullable: "YES" },
+      { column_name: "location", data_type: "text", is_nullable: "YES" },
+      
+      // Custom data and preferences
+      { column_name: "custom_fields", data_type: "jsonb", is_nullable: "YES" },
+      { column_name: "notification_preferences", data_type: "jsonb", is_nullable: "YES" },
+      { column_name: "tags", data_type: "ARRAY", is_nullable: "YES" },
+      
+      // Profile metadata
       { column_name: "created_at", data_type: "timestamp with time zone", is_nullable: "NO" },
       { column_name: "updated_at", data_type: "timestamp with time zone", is_nullable: "YES" },
-      { column_name: "custom_fields", data_type: "jsonb", is_nullable: "YES" },
-      { column_name: "tags", data_type: "ARRAY", is_nullable: "YES" },
-      { column_name: "last_login", data_type: "timestamp with time zone", is_nullable: "YES" },
-      { column_name: "performance_metrics", data_type: "jsonb", is_nullable: "YES" },
+      { column_name: "last_activity_at", data_type: "timestamp with time zone", is_nullable: "YES" },
+      
+      // Deduplication and merge management
+      { column_name: "is_duplicate", data_type: "boolean", is_nullable: "YES" },
+      { column_name: "duplicate_of_profile_id", data_type: "uuid", is_nullable: "YES" },
+      { column_name: "merge_status", data_type: "text", is_nullable: "YES" },
+      
+      // Data management (GDPR compliance)
+      { column_name: "data_retention_date", data_type: "timestamp with time zone", is_nullable: "YES" },
     ]
 
-    console.log("Successfully retrieved table schema")
+    console.log("Successfully retrieved CDP profiles table schema")
     return { data: columns, error: null }
   } catch (error: any) {
     console.error("Get table schema API error:", error)
@@ -308,7 +333,7 @@ const getCustomFieldDefinitions = async () => {
   try {
     // Try to get field definitions from any existing profile's custom_fields
     const { data: profiles, error } = await supabase
-      .from("profiles")
+      .from("cdp_profiles")
       .select("custom_fields")
       .not("custom_fields", "is", null)
       .limit(1)
@@ -335,7 +360,7 @@ const saveCustomFieldDefinitions = async (definitions: any) => {
   try {
     // Find any existing profile to store the definitions in
     const { data: existingProfiles, error: fetchError } = await supabase
-      .from("profiles")
+      .from("cdp_profiles")
       .select("id, custom_fields")
       .limit(1)
 
@@ -353,7 +378,7 @@ const saveCustomFieldDefinitions = async (definitions: any) => {
       }
 
       const { error: updateError } = await supabase
-        .from("profiles")
+        .from("cdp_profiles")
         .update({ custom_fields: updatedCustomFields })
         .eq("id", profile.id)
 
@@ -365,11 +390,12 @@ const saveCustomFieldDefinitions = async (definitions: any) => {
       return true
     } else {
       // No profiles exist yet, create a minimal one for metadata storage
-      const { error: insertError } = await supabase.from("profiles").insert([
+      const { error: insertError } = await supabase.from("cdp_profiles").insert([
         {
+          mobile: "system_metadata_profile",
           first_name: "System",
           last_name: "Metadata",
-          status: "Active", // Use "Active" instead of "System"
+          source: "system",
           custom_fields: {
             _field_definitions: definitions,
             _is_metadata: true,
@@ -390,134 +416,103 @@ const saveCustomFieldDefinitions = async (definitions: any) => {
   }
 }
 
-// Get custom fields schema by analyzing existing data
+// Get custom fields schema from custom_field_definitions table
 export const getCustomFieldsSchema = async () => {
   try {
-    console.log("Getting custom fields schema from profiles data...")
+    console.log("Getting custom fields schema from custom_field_definitions table...")
 
-    // First, try to get stored field definitions
-    const storedDefinitions = await getCustomFieldDefinitions()
-
-    // Then analyze existing profile data to find all custom fields
-    const { data: profiles, error } = await supabase
-      .from("profiles")
-      .select("custom_fields")
-      .not("custom_fields", "is", null)
-      .limit(100)
+    // Get field definitions from the dedicated table
+    const { data: fieldDefinitions, error } = await supabase
+      .from("custom_field_definitions")
+      .select("*")
+      .order("created_at", { ascending: true })
 
     if (error) {
       console.error("Error getting custom fields schema:", error)
-      return { data: storedDefinitions, error: null } // Return stored definitions even if analysis fails
+      return { data: {}, error: error.message }
     }
 
-    const customFieldKeys = new Set<string>()
-    const customFieldTypes: Record<string, string> = {}
-
-    // Analyze all profiles to find all custom fields
-    profiles?.forEach((profile) => {
-      if (profile.custom_fields && typeof profile.custom_fields === "object") {
-        Object.entries(profile.custom_fields).forEach(([key, value]) => {
-          // Skip metadata fields
-          if (key.startsWith("_")) return
-
-          customFieldKeys.add(key)
-
-          // Determine type based on value
-          if (!customFieldTypes[key] && value !== null && value !== undefined && value !== "") {
-            if (typeof value === "number") {
-              customFieldTypes[key] = "number"
-            } else if (typeof value === "boolean") {
-              customFieldTypes[key] = "boolean"
-            } else if (value instanceof Date || (typeof value === "string" && !isNaN(Date.parse(value)))) {
-              customFieldTypes[key] = "date"
-            } else if (typeof value === "string" && value.includes("@")) {
-              customFieldTypes[key] = "email"
-            } else if (typeof value === "string" && value.includes("http")) {
-              customFieldTypes[key] = "url"
-            } else if (typeof value === "string" && value.length > 100) {
-              customFieldTypes[key] = "textarea"
-            } else {
-              customFieldTypes[key] = "string"
-            }
-          }
-        })
+    // Transform the data into the expected format
+    const schema: Record<string, any> = {}
+    
+    fieldDefinitions?.forEach((field) => {
+      schema[field.key] = {
+        key: field.key,
+        label: field.label,
+        type: field.type,
+        required: field.required || false,
+        defaultValue: field.default_value || "",
+        description: field.description || "",
+        created_at: field.created_at,
+        updated_at: field.updated_at
       }
     })
 
-    // Convert to object format expected by UI, merging stored definitions with discovered fields
-    const customFieldsSchema: Record<string, any> = {}
+    // Fallback: Also check for legacy field definitions stored in profiles (for backward compatibility)
+    if (Object.keys(schema).length === 0) {
+      console.log("No field definitions found in table, checking legacy profile storage...")
+      const storedDefinitions = await getCustomFieldDefinitions()
+      Object.entries(storedDefinitions).forEach(([key, definition]) => {
+        schema[key] = definition
+      })
+    }
 
-    // Add discovered fields
-    Array.from(customFieldKeys).forEach((key) => {
-      const storedDef = storedDefinitions[key]
-
-      customFieldsSchema[key] = {
-        key: key,
-        label:
-          storedDef?.label ||
-          key
-            .split("_")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" "),
-        type: storedDef?.type || customFieldTypes[key] || "string",
-        required: storedDef?.required || false,
-        description: storedDef?.description || `Custom field: ${key}`,
-        defaultValue: storedDef?.defaultValue || "",
-      }
-    })
-
-    // Add stored definitions that might not have data yet
-    Object.entries(storedDefinitions).forEach(([key, definition]: [string, any]) => {
-      if (!customFieldsSchema[key]) {
-        customFieldsSchema[key] = {
-          key: key,
-          label: definition.label,
-          type: definition.type,
-          required: definition.required || false,
-          description: definition.description || "",
-          defaultValue: definition.defaultValue || "",
-        }
-      }
-    })
-
-    console.log(`Successfully retrieved custom fields schema: ${Object.keys(customFieldsSchema).length} fields`)
-    return { data: customFieldsSchema, error: null }
+    console.log(`Found ${Object.keys(schema).length} custom fields`)
+    return { data: schema, error: null }
   } catch (error: any) {
-    console.error("Get custom fields schema API error:", error)
+    console.error("Error getting custom fields schema:", error)
     return { data: {}, error: error.message || "Failed to get custom fields schema" }
   }
 }
 
-// Create a custom field - stores definition in metadata
+// Create a custom field - stores definition in custom_field_definitions table
 export const createCustomField = async (fieldData: any) => {
   try {
     console.log("Creating custom field:", fieldData)
 
-    // Get existing field definitions
-    const existingDefinitions = await getCustomFieldDefinitions()
+    // Insert the field definition into the custom_field_definitions table
+    const { data: insertedField, error: insertError } = await supabase
+      .from("custom_field_definitions")
+      .insert([
+        {
+          key: fieldData.key,
+          label: fieldData.label,
+          type: fieldData.type,
+          required: fieldData.required || false,
+          default_value: fieldData.defaultValue || null,
+          description: fieldData.description || null,
+        }
+      ])
+      .select()
+      .single()
 
-    // Add the new field definition
-    const updatedDefinitions = {
-      ...existingDefinitions,
-      [fieldData.key]: {
-        label: fieldData.label,
-        type: fieldData.type,
-        required: fieldData.required || false,
-        defaultValue: fieldData.defaultValue || "",
-        description: fieldData.description || "",
-        created_at: new Date().toISOString(),
-      },
+    if (insertError) {
+      console.error("Error inserting field definition:", insertError)
+      throw new Error(`Failed to create field definition: ${insertError.message}`)
     }
 
-    // Save updated definitions
-    const saved = await saveCustomFieldDefinitions(updatedDefinitions)
-
-    if (!saved) {
-      throw new Error("Failed to save custom field definition")
+    // Also save to legacy profile storage for backward compatibility
+    try {
+      const existingDefinitions = await getCustomFieldDefinitions()
+      const updatedDefinitions = {
+        ...existingDefinitions,
+        [fieldData.key]: {
+          label: fieldData.label,
+          type: fieldData.type,
+          required: fieldData.required || false,
+          defaultValue: fieldData.defaultValue || "",
+          description: fieldData.description || "",
+          created_at: new Date().toISOString(),
+        },
+      }
+      await saveCustomFieldDefinitions(updatedDefinitions)
+      console.log("Also saved to legacy profile storage for backward compatibility")
+    } catch (legacyError) {
+      console.warn("Failed to save to legacy storage, but field definition was created successfully:", legacyError)
     }
 
     console.log("Custom field created successfully")
-    return { data: fieldData, error: null }
+    return { data: insertedField, error: null }
   } catch (error: any) {
     console.error("Error creating custom field:", error)
     return { data: null, error: error.message || "Failed to create custom field" }
@@ -529,61 +524,173 @@ export const updateCustomField = async (fieldKey: string, fieldData: any) => {
   try {
     console.log("Updating custom field:", fieldKey, fieldData)
 
-    // Get existing definitions
-    const existingDefinitions = await getCustomFieldDefinitions()
-
-    // Remove old key if it changed
-    if (fieldKey !== fieldData.key && existingDefinitions[fieldKey]) {
-      delete existingDefinitions[fieldKey]
-    }
-
-    // Update field definition
-    const updatedDefinitions = {
-      ...existingDefinitions,
-      [fieldData.key]: {
+    // Update the field definition in the custom_field_definitions table
+    const { data: updatedField, error: updateError } = await supabase
+      .from("custom_field_definitions")
+      .update({
+        key: fieldData.key,
         label: fieldData.label,
         type: fieldData.type,
         required: fieldData.required || false,
-        defaultValue: fieldData.defaultValue || "",
-        description: fieldData.description || "",
-        updated_at: new Date().toISOString(),
-      },
+        default_value: fieldData.defaultValue || null,
+        description: fieldData.description || null,
+        updated_at: new Date().toISOString()
+      })
+      .eq("key", fieldKey)
+      .select()
+      .single()
+
+    if (updateError) {
+      console.error("Error updating field definition:", updateError)
+      throw new Error(`Failed to update field definition: ${updateError.message}`)
     }
 
-    // Save updated definitions
-    const saved = await saveCustomFieldDefinitions(updatedDefinitions)
+    // If the key changed, we need to update all profile data
+    if (fieldKey !== fieldData.key) {
+      console.log(`Field key changed from '${fieldKey}' to '${fieldData.key}', updating profile data...`)
+      
+      const { data: profiles, error: fetchError } = await supabase
+        .from("cdp_profiles")
+        .select("id, custom_fields")
+        .not("custom_fields", "is", null)
 
-    if (!saved) {
-      throw new Error("Failed to save custom field definition")
+      if (fetchError) {
+        console.error("Error fetching profiles for key update:", fetchError)
+      } else {
+        let updateCount = 0
+        for (const profile of profiles || []) {
+          if (profile.custom_fields && 
+              typeof profile.custom_fields === 'object' && 
+              profile.custom_fields !== null &&
+              fieldKey in profile.custom_fields) {
+            
+            const updatedCustomFields = { ...profile.custom_fields }
+            updatedCustomFields[fieldData.key] = updatedCustomFields[fieldKey]
+            delete updatedCustomFields[fieldKey]
+            
+            const { error: profileUpdateError } = await supabase
+              .from("cdp_profiles")
+              .update({ 
+                custom_fields: updatedCustomFields,
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", profile.id)
+              
+            if (!profileUpdateError) {
+              updateCount++
+            }
+          }
+        }
+        console.log(`Updated field key in ${updateCount} profiles`)
+      }
     }
 
-    return { data: fieldData, error: null }
+    // Also update legacy profile storage for backward compatibility
+    try {
+      const existingDefinitions = await getCustomFieldDefinitions()
+      if (fieldKey !== fieldData.key && existingDefinitions[fieldKey]) {
+        delete existingDefinitions[fieldKey]
+      }
+      const updatedDefinitions = {
+        ...existingDefinitions,
+        [fieldData.key]: {
+          label: fieldData.label,
+          type: fieldData.type,
+          required: fieldData.required || false,
+          defaultValue: fieldData.defaultValue || "",
+          description: fieldData.description || "",
+          updated_at: new Date().toISOString(),
+        },
+      }
+      await saveCustomFieldDefinitions(updatedDefinitions)
+      console.log("Also updated legacy profile storage for backward compatibility")
+    } catch (legacyError) {
+      console.warn("Failed to update legacy storage, but field definition was updated successfully:", legacyError)
+    }
+
+    return { data: updatedField, error: null }
   } catch (error: any) {
     console.error("Error updating custom field:", error)
     return { data: null, error: error.message || "Failed to update custom field" }
   }
 }
 
-// Delete a custom field
+// Delete a custom field - removes it from all profiles and definitions
 export const deleteCustomField = async (fieldKey: string) => {
   try {
     console.log("Deleting custom field:", fieldKey)
 
-    // Get existing definitions
-    const existingDefinitions = await getCustomFieldDefinitions()
+    // Step 1: Remove field definition from custom_field_definitions table
+    const { error: deleteDefinitionError } = await supabase
+      .from("custom_field_definitions")
+      .delete()
+      .eq("key", fieldKey)
 
-    // Remove the field definition
-    const updatedDefinitions = { ...existingDefinitions }
-    delete updatedDefinitions[fieldKey]
-
-    // Save updated definitions
-    const saved = await saveCustomFieldDefinitions(updatedDefinitions)
-
-    if (!saved) {
-      throw new Error("Failed to save custom field definition")
+    if (deleteDefinitionError) {
+      console.error("Error deleting field definition:", deleteDefinitionError)
+      throw new Error(`Failed to delete field definition: ${deleteDefinitionError.message}`)
     }
 
-    return { data: { key: fieldKey }, error: null }
+    console.log(`Deleted field definition for '${fieldKey}' from custom_field_definitions table`)
+
+    // Step 2: Remove field from stored field definitions in profiles (legacy support)
+    const existingDefinitions = await getCustomFieldDefinitions()
+    if (existingDefinitions[fieldKey]) {
+      const updatedDefinitions = { ...existingDefinitions }
+      delete updatedDefinitions[fieldKey]
+      await saveCustomFieldDefinitions(updatedDefinitions)
+      console.log(`Removed '${fieldKey}' from profile-stored field definitions`)
+    }
+
+    // Step 3: Remove field data from all profiles
+    const { data: allProfiles, error: fetchError } = await supabase
+      .from("cdp_profiles")
+      .select("id, custom_fields")
+      
+    if (fetchError) {
+      throw new Error(`Failed to fetch profiles: ${fetchError.message}`)
+    }
+    
+    console.log(`Checking ${allProfiles?.length || 0} profiles for field '${fieldKey}'`)
+    
+    let updateCount = 0
+    let foundCount = 0
+    
+    for (const profile of allProfiles || []) {
+      // Check if the profile has the custom field
+      if (profile.custom_fields && 
+          typeof profile.custom_fields === 'object' && 
+          profile.custom_fields !== null &&
+          fieldKey in profile.custom_fields) {
+        
+        foundCount++
+        const updatedCustomFields = { ...profile.custom_fields }
+        delete updatedCustomFields[fieldKey]
+        
+        const { error: updateError } = await supabase
+          .from("cdp_profiles")
+          .update({ 
+            custom_fields: updatedCustomFields,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", profile.id)
+          
+        if (updateError) {
+          console.error(`Failed to update profile ${profile.id}:`, updateError)
+          continue // Continue with other profiles instead of failing completely
+        }
+        
+        updateCount++
+        
+        // Log progress for large operations
+        if (updateCount % 50 === 0) {
+          console.log(`Updated ${updateCount} profiles so far...`)
+        }
+      }
+    }
+    
+    console.log(`Found ${foundCount} profiles with field '${fieldKey}', successfully updated ${updateCount} profiles`)
+    return { data: { key: fieldKey, removedFromProfiles: updateCount }, error: null }
   } catch (error: any) {
     console.error("Error deleting custom field:", error)
     return { data: null, error: error.message || "Failed to delete custom field" }

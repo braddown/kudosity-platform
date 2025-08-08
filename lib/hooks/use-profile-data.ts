@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { profilesApi } from '@/lib/api/profiles-api'
 
 interface UseProfileDataOptions {
   profileId: string
@@ -13,6 +14,7 @@ interface UseProfileDataResult {
   customFieldsSchema: Record<string, any>
   loadingSchema: boolean
   refetch: () => void
+  updateProfile: (updatedProfile: any) => void
 }
 
 /**
@@ -39,50 +41,23 @@ export function useProfileData({
   const [customFieldsSchema, setCustomFieldsSchema] = useState<Record<string, any>>({})
   const [loadingSchema, setLoadingSchema] = useState(true)
 
-  // Fetch custom fields schema from CDP system
+  // Fetch custom fields schema using the same API as properties page
   const fetchCustomFieldsSchema = async () => {
     try {
       setLoadingSchema(true)
       
-      // Get schema from any profile's custom_fields to understand structure
-      const { data: sampleProfiles, error } = await supabase
-        .from("cdp_profiles")
-        .select("custom_fields")
-        .not("custom_fields", "is", null)
-        .limit(10)
+      // Use the same API that properties page uses for consistency
+      const { data: schema, error } = await profilesApi.getCustomFieldsSchema()
 
       if (error) {
         console.error("Error fetching custom fields schema:", error)
-        if (onError) onError(`Failed to load custom fields schema: ${error.message}`)
+        if (onError) onError(`Failed to load custom fields schema: ${error}`)
         setCustomFieldsSchema({})
         return
       }
 
-      // Build schema from existing custom fields
-      const schema: Record<string, any> = {}
-      
-      sampleProfiles?.forEach(profile => {
-        if (profile.custom_fields && typeof profile.custom_fields === 'object') {
-          Object.entries(profile.custom_fields).forEach(([key, value]) => {
-            if (!key.startsWith('_') && !schema[key]) {
-              schema[key] = {
-                key: key,
-                label: key.split('_').map((word: string) => 
-                  word.charAt(0).toUpperCase() + word.slice(1)
-                ).join(' '),
-                type: typeof value === 'number' ? 'number' : 
-                      typeof value === 'boolean' ? 'boolean' : 'string',
-                required: false,
-                description: `Custom field: ${key}`,
-                defaultValue: ''
-              }
-            }
-          })
-        }
-      })
-
-      console.log("Custom fields schema loaded:", schema)
-      setCustomFieldsSchema(schema)
+      console.log("Custom fields schema loaded from API:", schema)
+      setCustomFieldsSchema(schema || {})
     } catch (err) {
       console.error("Exception fetching custom fields schema:", err)
       const errorMessage = err instanceof Error ? err.message : String(err)
@@ -126,6 +101,21 @@ export function useProfileData({
       }
 
       console.log("CDP profile data loaded:", data)
+      console.log("Contact fields from DB:", {
+        notes: data.notes,
+        address_line_1: data.address_line_1,
+        address_line_2: data.address_line_2,
+        postal_code: data.postal_code,
+        city: data.city,
+        state: data.state,
+        country: data.country,
+        timezone: data.timezone,
+        language_preferences: data.language_preferences,
+        os: data.os,
+        device: data.device,
+        source: data.source,
+        location: data.location
+      })
 
       // Map CDP profile to expected format for compatibility
       const mappedProfile = {
@@ -134,27 +124,33 @@ export function useProfileData({
         last_name: data.last_name,
         email: data.email,
         mobile: data.mobile?.startsWith('unknown_') ? '' : data.mobile,
-        phone: data.phone,
-        country: data.country,
-        state: data.state,
+        notes: data.notes, // Added missing notes field
+        // Address fields - these were missing!
+        address_line_1: data.address_line_1,
+        address_line_2: data.address_line_2,
+        postal_code: data.postal_code,
         city: data.city,
-        status: data.lifecycle_stage === 'customer' ? 'Active' : 
-                data.lifecycle_stage === 'churned' ? 'Inactive' : 'Active',
-        lifecycle_stage: data.lifecycle_stage,
-        lead_score: data.lead_score,
-        lifetime_value: data.lifetime_value,
-        data_quality_score: data.data_quality_score,
+        state: data.state,
+        country: data.country,
+        // Contact property fields
+        timezone: data.timezone,
+        language_preferences: data.language_preferences,
+        os: data.os,
+        device: data.device,
+        source: data.source,
+        location: data.location,
+        // Custom fields and preferences
         custom_fields: data.custom_fields || {},
         notification_preferences: data.notification_preferences || {},
         tags: data.tags || [],
-        source: data.source,
-        source_details: data.source_details,
+        // System fields
         created_at: data.created_at,
         updated_at: data.updated_at,
         last_activity_at: data.last_activity_at,
-        // Additional CDP fields
-        consent_date: data.consent_date,
-        consent_source: data.consent_source
+        is_duplicate: data.is_duplicate,
+        duplicate_of_profile_id: data.duplicate_of_profile_id,
+        merge_status: data.merge_status,
+        data_retention_date: data.data_retention_date
       }
 
       // Ensure all custom fields from schema are present in the profile
@@ -193,6 +189,14 @@ export function useProfileData({
     // Profile data will be fetched after schema loads due to useEffect dependency
   }
 
+  // Update profile data directly
+  const updateProfile = (updatedProfile: any) => {
+    console.log("🔄 updateProfile called with:", updatedProfile)
+    console.log("🔄 New notification_preferences:", updatedProfile.notification_preferences)
+    setProfile(updatedProfile)
+    console.log("✅ Profile state updated")
+  }
+
   // Load custom fields schema on mount
   useEffect(() => {
     fetchCustomFieldsSchema()
@@ -211,6 +215,7 @@ export function useProfileData({
     error,
     customFieldsSchema,
     loadingSchema,
-    refetch
+    refetch,
+    updateProfile
   }
 }

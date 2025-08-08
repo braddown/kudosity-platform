@@ -7,6 +7,7 @@ import { useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { LoadingSpinnerWithText } from "@/components/ui/loading-spinner"
 import { useTheme } from "next-themes"
 import { Logo } from "@/components/Logo"
 
@@ -239,10 +240,7 @@ export default function Home() {
   // This will only show briefly during redirect
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] flex items-center justify-center">
-      <div className="flex flex-col items-center">
-        <div className="w-8 h-8 border-4 border-gray-300 dark:border-gray-600 border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin"></div>
-        <p className="mt-4 text-gray-600 dark:text-gray-400">Signing you in...</p>
-      </div>
+      <LoadingSpinnerWithText size="lg" text="Signing you in..." />
     </div>
   )
 }

@@ -5,11 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 
 interface ContactPropertiesFormProps {
   profile: any
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
   onSelectChange: (field: string, value: string) => void
+  onSave?: () => void
 }
 
 /**
@@ -22,7 +24,15 @@ interface ContactPropertiesFormProps {
  * @param onInputChange - Handler for input field changes
  * @param onSelectChange - Handler for select field changes
  */
-export function ContactPropertiesForm({ profile, onInputChange, onSelectChange }: ContactPropertiesFormProps) {
+export function ContactPropertiesForm({ profile, onInputChange, onSelectChange, onSave }: ContactPropertiesFormProps) {
+  // Handle Enter key press to save
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    // Save on Enter key, but not in textarea fields (allow new lines in textarea)
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && onSave) {
+      e.preventDefault()
+      onSave()
+    }
+  }
   return (
     <Card>
       <CardHeader>
@@ -31,12 +41,28 @@ export function ContactPropertiesForm({ profile, onInputChange, onSelectChange }
       <CardContent className="space-y-6">
         <div className="space-y-4">
           <div className="space-y-2">
+            <Label htmlFor="mobile">
+              Mobile <span className="text-red-500">*</span>
+            </Label>
+            <Input 
+              id="mobile" 
+              name="mobile" 
+              value={profile.mobile || ""} 
+              onChange={onInputChange}
+              onKeyDown={handleKeyDown}
+              required
+              placeholder="Required"
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="first_name">First Name</Label>
             <Input
               id="first_name"
               name="first_name"
               value={profile.first_name || ""}
               onChange={onInputChange}
+              onKeyDown={handleKeyDown}
             />
           </div>
 
@@ -47,6 +73,7 @@ export function ContactPropertiesForm({ profile, onInputChange, onSelectChange }
               name="last_name"
               value={profile.last_name || ""}
               onChange={onInputChange}
+              onKeyDown={handleKeyDown}
             />
           </div>
 
@@ -58,17 +85,82 @@ export function ContactPropertiesForm({ profile, onInputChange, onSelectChange }
               type="email"
               value={profile.email || ""}
               onChange={onInputChange}
+              onKeyDown={handleKeyDown}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
-            <Input id="phone" name="phone" value={profile.phone || ""} onChange={onInputChange} />
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea 
+              id="notes" 
+              name="notes" 
+              value={profile.notes || ""} 
+              onChange={onInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Additional notes about this contact"
+              rows={4}
+            />
+          </div>
+
+          {/* Address Fields - in the specified order */}
+          <div className="space-y-2">
+            <Label htmlFor="address_line_1">Address Line 1</Label>
+            <Input 
+              id="address_line_1" 
+              name="address_line_1" 
+              value={profile.address_line_1 || ""} 
+              onChange={onInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Street address"
+            />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="mobile">Mobile</Label>
-            <Input id="mobile" name="mobile" value={profile.mobile || ""} onChange={onInputChange} />
+            <Label htmlFor="address_line_2">Address Line 2</Label>
+            <Input 
+              id="address_line_2" 
+              name="address_line_2" 
+              value={profile.address_line_2 || ""} 
+              onChange={onInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Apartment, suite, etc. (optional)"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="city">City</Label>
+            <Input 
+              id="city" 
+              name="city" 
+              value={profile.city || ""} 
+              onChange={onInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="City"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="state">State/Province</Label>
+            <Input 
+              id="state" 
+              name="state" 
+              value={profile.state || ""} 
+              onChange={onInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="State or province"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="postal_code">Postcode/ZIP</Label>
+            <Input 
+              id="postal_code" 
+              name="postal_code" 
+              value={profile.postal_code || ""} 
+              onChange={onInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="ZIP/Postal code"
+            />
           </div>
 
           <div className="space-y-2">
@@ -93,7 +185,7 @@ export function ContactPropertiesForm({ profile, onInputChange, onSelectChange }
           <div className="space-y-2">
             <Label htmlFor="timezone">Timezone</Label>
             <Select
-              value={typeof profile.timezone === "string" ? profile.timezone : ""}
+              value={profile.timezone || ""}
               onValueChange={(value) => onSelectChange("timezone", value)}
             >
               <SelectTrigger>
@@ -127,9 +219,7 @@ export function ContactPropertiesForm({ profile, onInputChange, onSelectChange }
           <div className="space-y-2">
             <Label htmlFor="language_preferences">Language Preferences</Label>
             <Select
-              value={
-                typeof profile.language_preferences === "string" ? profile.language_preferences : ""
-              }
+              value={profile.language_preferences || ""}
               onValueChange={(value) => onSelectChange("language_preferences", value)}
             >
               <SelectTrigger>
@@ -178,7 +268,7 @@ export function ContactPropertiesForm({ profile, onInputChange, onSelectChange }
           <div className="space-y-2">
             <Label htmlFor="os">Operating System</Label>
             <Select
-              value={typeof profile.os === "string" ? profile.os : ""}
+              value={profile.os || ""}
               onValueChange={(value) => onSelectChange("os", value)}
             >
               <SelectTrigger>
@@ -223,7 +313,7 @@ export function ContactPropertiesForm({ profile, onInputChange, onSelectChange }
           <div className="space-y-2">
             <Label htmlFor="source">Source</Label>
             <Select
-              value={typeof profile.source === "string" ? profile.source : ""}
+              value={profile.source || ""}
               onValueChange={(value) => onSelectChange("source", value)}
             >
               <SelectTrigger>

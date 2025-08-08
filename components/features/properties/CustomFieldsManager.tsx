@@ -12,7 +12,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Plus,
   Edit,
@@ -25,9 +24,8 @@ import {
   Mail,
   Phone,
   Link,
-  AlertTriangle,
-  Check,
 } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 import { profilesApi } from "@/api/profiles-api"
 
 interface CustomField {
@@ -69,6 +67,7 @@ const fieldTypeLabels = {
 }
 
 export function CustomFieldsManager({ customFields, onUpdate, onRefresh }: CustomFieldsManagerProps) {
+  const { toast } = useToast()
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingField, setEditingField] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -115,7 +114,7 @@ export function CustomFieldsManager({ customFields, onUpdate, onRefresh }: Custo
   const handleDeleteField = async (fieldKey: string) => {
     if (
       !confirm(
-        `Are you sure you want to delete the "${customFields[fieldKey]?.label}" field? This will remove the field from all profiles.`,
+        `⚠️  Delete Custom Field: "${customFields[fieldKey]?.label}"\n\nThis will permanently remove this field from all profiles and cannot be undone.\n\nAre you sure you want to continue?`,
       )
     ) {
       return
@@ -129,13 +128,24 @@ export function CustomFieldsManager({ customFields, onUpdate, onRefresh }: Custo
         const updatedFields = { ...customFields }
         delete updatedFields[fieldKey]
         onUpdate(updatedFields)
-        setSuccess(`Field "${customFields[fieldKey]?.label}" deleted successfully`)
-        setTimeout(() => setSuccess(null), 3000)
+        toast({
+          title: "Field Deleted Successfully",
+          description: `"${customFields[fieldKey]?.label}" has been removed from ${result.data?.removedFromProfiles || 0} profiles.`,
+          duration: 5000,
+        })
       } else {
-        setError(result.error || "Failed to delete field")
+        toast({
+          variant: "destructive",
+          title: "Delete Failed",
+          description: `Failed to delete field "${customFields[fieldKey]?.label}": ${result.error || "Unknown error"}`,
+        })
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete field")
+      toast({
+        variant: "destructive",
+        title: "Delete Error",
+        description: `Error deleting field "${customFields[fieldKey]?.label}": ${err instanceof Error ? err.message : "Failed to delete field"}`,
+      })
     } finally {
       setLoading(false)
     }
@@ -218,21 +228,6 @@ export function CustomFieldsManager({ customFields, onUpdate, onRefresh }: Custo
 
   return (
     <div className="space-y-4">
-      {/* Success/Error Messages */}
-      {success && (
-        <Alert className="border-green-200 bg-green-50">
-          <Check className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">{success}</AlertDescription>
-        </Alert>
-      )}
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
       {/* Custom Fields List */}
       <div className="grid gap-4">
         {Object.entries(customFields).length === 0 ? (

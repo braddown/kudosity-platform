@@ -58,7 +58,8 @@ export default function ProfilePage({
     error,
     customFieldsSchema,
     loadingSchema,
-    refetch
+    refetch,
+    updateProfile
   } = useProfileData({
     profileId,
     onError: (error) => console.error('Profile data error:', error)
@@ -79,7 +80,8 @@ export default function ProfilePage({
     onSave,
     onSaveError,
     triggerSave,
-    refetch
+    refetch,
+    onProfileUpdate: updateProfile
   })
 
   // Show loading state while data is being fetched
@@ -116,6 +118,7 @@ export default function ProfilePage({
           profile={editedProfile || profile}
           onInputChange={handleInputChange}
           onSelectChange={handleSelectChange}
+          onSave={handleSave}
         />
 
         <CustomFieldsSection

@@ -2,7 +2,6 @@
 
 import React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 
 interface NotificationPreferencesProps {
@@ -28,130 +27,180 @@ export function NotificationPreferences({
   profile,
   onToggleChange
 }: NotificationPreferencesProps) {
+  const preferences = profile.notification_preferences || {}
+  
+  console.log("🔍 NotificationPreferences - profile:", profile)
+  console.log("🔍 NotificationPreferences - preferences:", preferences)
+  
+  // Format date for display
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'Not provided'
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  // Format channel name with proper capitalization
+  const formatChannelName = (channel: string) => {
+    const channelNames: Record<string, string> = {
+      'emails': 'Email',
+      'sms': 'SMS',
+      'whatsapp': 'WhatsApp',
+      'rcs': 'RCS'
+    }
+    return channelNames[channel] || channel
+  }
+
+  // Get channel consent/activation info
+  const getChannelInfo = (channel: string, type: 'marketing' | 'transactional') => {
+    const channelInfoKey = `${type}_${channel}_${type === 'marketing' ? 'consent' : 'activation'}`
+    const channelData = preferences[channelInfoKey]
+    
+    if (typeof channelData === 'object' && channelData !== null) {
+      if (type === 'marketing') {
+        return {
+          date: channelData.consent_date,
+          source: channelData.consent_source,
+          label: 'Consent'
+        }
+      } else {
+        return {
+          date: channelData.activation_date,
+          source: channelData.activation_source, 
+          label: 'Activation'
+        }
+      }
+    }
+    return null
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-xl font-medium text-foreground">Notification Preferences</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-6">
-          {/* Marketing Communications Section */}
-          <div className="space-y-4">
-            <div className="text-sm font-semibold text-foreground uppercase tracking-wider border-b pb-2">
-              Marketing Communications
-            </div>
-
+        {/* Channel Information Section */}
+        <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Marketing Channels - Consent Required */}
             <div className="space-y-3">
-              <PreferenceToggle
-                id="marketing_emails"
-                label="Marketing Emails"
-                description="Promotional emails, newsletters, and offers"
-                checked={profile.notification_preferences?.marketing_emails || false}
-                onToggle={(checked) => onToggleChange("marketing_emails", checked)}
-              />
-
-              <PreferenceToggle
-                id="marketing_sms"
-                label="Marketing SMS"
-                description="Promotional text messages and alerts"
-                checked={profile.notification_preferences?.marketing_sms || false}
-                onToggle={(checked) => onToggleChange("marketing_sms", checked)}
-              />
-
-              <PreferenceToggle
-                id="marketing_whatsapp"
-                label="Marketing WhatsApp"
-                description="Promotional messages via WhatsApp"
-                checked={profile.notification_preferences?.marketing_whatsapp || false}
-                onToggle={(checked) => onToggleChange("marketing_whatsapp", checked)}
-              />
-
-              <PreferenceToggle
-                id="marketing_rcs"
-                label="Marketing RCS"
-                description="Rich messaging with media and interactive elements"
-                checked={profile.notification_preferences?.marketing_rcs || false}
-                onToggle={(checked) => onToggleChange("marketing_rcs", checked)}
-              />
+              <div className="text-xs font-medium text-blue-600 uppercase tracking-wider">Marketing Channels</div>
+              
+              {['emails', 'sms', 'whatsapp', 'rcs'].map(channel => {
+                const info = getChannelInfo(channel, 'marketing')
+                const isEnabled = preferences[`marketing_${channel}`]
+                
+                return (
+                  <div key={`marketing_${channel}`} className="space-y-3 p-3 border rounded-md h-32 flex flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">{formatChannelName(channel)}</p>
+                      </div>
+                      <Switch
+                        checked={isEnabled || false}
+                        onCheckedChange={(checked) => onToggleChange(`marketing_${channel}`, checked)}
+                        className="data-[state=checked]:bg-blue-600"
+                      />
+                    </div>
+                    
+                    <div className="space-y-1">
+                      {info && isEnabled && (
+                        <>
+                          <p className="text-xs text-muted-foreground">
+                            Consent: {formatDate(info.date)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Source: {info.source || 'Not specified'}
+                          </p>
+                        </>
+                      )}
+                      {info && !isEnabled && (
+                        <>
+                          <p className="text-xs text-gray-400 line-through">
+                            Consent: {formatDate(info.date)}
+                          </p>
+                          <p className="text-xs text-gray-400 line-through">
+                            Source: {info.source || 'Not specified'}
+                          </p>
+                          <p className="text-xs text-red-500">Consent revoked</p>
+                        </>
+                      )}
+                      {!info && isEnabled && (
+                        <p className="text-xs text-amber-600">⚠️ Missing consent info</p>
+                      )}
+                      {!info && !isEnabled && (
+                        <p className="text-xs text-gray-400">No consent given</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          </div>
 
-          {/* Transactional Communications Section */}
-          <div className="space-y-4">
-            <div className="text-sm font-semibold text-foreground uppercase tracking-wider border-b pb-2">
-              Transactional Communications
-            </div>
-
+            {/* Transactional Channels - Activation Info */}
             <div className="space-y-3">
-              <PreferenceToggle
-                id="transactional_emails"
-                label="Transactional Emails"
-                description="Order confirmations, receipts, and account updates"
-                checked={profile.notification_preferences?.transactional_emails !== false}
-                onToggle={(checked) => onToggleChange("transactional_emails", checked)}
-              />
-
-              <PreferenceToggle
-                id="transactional_sms"
-                label="Transactional SMS"
-                description="Order updates and important account notifications"
-                checked={profile.notification_preferences?.transactional_sms !== false}
-                onToggle={(checked) => onToggleChange("transactional_sms", checked)}
-              />
-
-              <PreferenceToggle
-                id="transactional_whatsapp"
-                label="Transactional WhatsApp"
-                description="Order and service updates via WhatsApp"
-                checked={profile.notification_preferences?.transactional_whatsapp !== false}
-                onToggle={(checked) => onToggleChange("transactional_whatsapp", checked)}
-              />
-
-              <PreferenceToggle
-                id="transactional_rcs"
-                label="Transactional RCS"
-                description="Rich transactional messages with interactive elements"
-                checked={profile.notification_preferences?.transactional_rcs !== false}
-                onToggle={(checked) => onToggleChange("transactional_rcs", checked)}
-              />
+              <div className="text-xs font-medium text-green-600 uppercase tracking-wider">Transactional Channels</div>
+              
+              {['emails', 'sms', 'whatsapp', 'rcs'].map(channel => {
+                const info = getChannelInfo(channel, 'transactional')
+                const isEnabled = preferences[`transactional_${channel}`] !== false
+                
+                return (
+                  <div key={`transactional_${channel}`} className="space-y-3 p-3 border rounded-md h-32 flex flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">{formatChannelName(channel)}</p>
+                      </div>
+                      <Switch
+                        checked={isEnabled}
+                        onCheckedChange={(checked) => onToggleChange(`transactional_${channel}`, checked)}
+                        className="data-[state=checked]:bg-green-600"
+                      />
+                    </div>
+                    
+                    <div className="space-y-1">
+                      {info && isEnabled && (
+                        <>
+                          <p className="text-xs text-muted-foreground">
+                            Activated: {formatDate(info.date)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Source: {info.source || 'Not specified'}
+                          </p>
+                        </>
+                      )}
+                      {info && !isEnabled && (
+                        <>
+                          <p className="text-xs text-gray-400 line-through">
+                            Activated: {formatDate(info.date)}
+                          </p>
+                          <p className="text-xs text-gray-400 line-through">
+                            Source: {info.source || 'Not specified'}
+                          </p>
+                          <p className="text-xs text-orange-500">Channel deactivated</p>
+                        </>
+                      )}
+                      {!info && isEnabled && (
+                        <p className="text-xs text-blue-600">ℹ️ No activation info recorded</p>
+                      )}
+                      {!info && !isEnabled && (
+                        <p className="text-xs text-gray-400">Channel inactive</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
+
       </CardContent>
     </Card>
   )
 }
 
-/**
- * PreferenceToggle - Individual preference toggle component
- */
-interface PreferenceToggleProps {
-  id: string
-  label: string
-  description: string
-  checked: boolean
-  onToggle: (checked: boolean) => void
-}
-
-function PreferenceToggle({
-  id,
-  label,
-  description,
-  checked,
-  onToggle
-}: PreferenceToggleProps) {
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        <Label htmlFor={id}>{label}</Label>
-        <p className="text-xs text-gray-500">{description}</p>
-      </div>
-      <Switch
-        id={id}
-        checked={checked}
-        onCheckedChange={onToggle}
-        className="data-[state=checked]:bg-blue-600"
-      />
-    </div>
-  )
-}

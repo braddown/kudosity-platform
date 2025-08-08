@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/components/ui/use-toast"
+import { InlineLoadingSpinner } from "@/components/ui/loading-spinner"
 import { useApiState, useMutationState } from "@/hooks/use-async-state"
 import {
   ChevronDown,
@@ -21,7 +22,6 @@ import {
   Trash2,
   Users,
   Search,
-  Loader2,
   X
 } from "lucide-react"
 
@@ -501,7 +501,7 @@ export default function ListsComponent() {
                 onClick={createList}
                 disabled={creating || !newListName.trim()}
               >
-                {creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {creating && <InlineLoadingSpinner size="sm" />}
                 Create List
               </Button>
             </div>
