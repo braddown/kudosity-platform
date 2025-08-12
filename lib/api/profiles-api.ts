@@ -8,112 +8,72 @@ export const getProfiles = async (options?: {
   offset?: number
 }) => {
   try {
-    console.log("Fetching profiles from Supabase with options:", options)
+    console.log("Fetching profiles from API with options:", options)
 
-    // If specific limit/offset provided, use those (for pagination)
+    // Build query parameters
+    const params = new URLSearchParams()
+    if (options?.search) params.append('search', options.search)
+    if (options?.status) params.append('status', options.status)
+    if (options?.limit) params.append('limit', options.limit.toString())
+    if (options?.offset) params.append('offset', options.offset.toString())
+
+    // Use the authenticated API route
+    const response = await fetch(`/api/cdp-profiles?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // Include cookies for authentication
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error("Error fetching profiles:", errorData)
+      return { data: [], error: errorData.error || 'Failed to fetch profiles' }
+    }
+
+    const result = await response.json()
+    console.log(`Successfully fetched ${result.data?.length || 0} profiles`)
+    
+    // If we're fetching with pagination, return as is
     if (options?.limit || options?.offset) {
-      let query = supabase
-        .from("cdp_profiles")
-        .select("*")
-        .neq("id", "00000000-0000-0000-0000-000000000000") // Exclude metadata profile
-        .order("created_at", { ascending: false })
-
-      // Apply filters if provided
-      if (options?.search) {
-        query = query.or(
-          `first_name.ilike.%${options.search}%,last_name.ilike.%${options.search}%,email.ilike.%${options.search}%,mobile.ilike.%${options.search}%`,
-        )
-      }
-
-      if (options?.status) {
-        query = query.eq("status", options.status)
-      }
-
-      if (options?.limit) {
-        query = query.limit(options.limit)
-      }
-
-      if (options?.offset) {
-        query = query.range(options.offset, options.offset + (options.limit || 50) - 1)
-      }
-
-      const { data, error } = await query
-
-      if (error) {
-        console.error("Error fetching profiles:", error)
-        return { data: [], error: error.message }
-      }
-
-      console.log(`Successfully fetched ${data?.length || 0} profiles`)
-      return { data: data || [], error: null }
+      return { data: result.data || [], error: null }
     }
 
-    // Otherwise, fetch ALL profiles using batching to avoid 1000 record limit
-    console.log("Fetching ALL profiles using batching approach...")
-
-    // First, get the total count
-    const { count, error: countError } = await supabase
-      .from("cdp_profiles")
-      .select("*", { count: "exact", head: true })
-      .neq("id", "00000000-0000-0000-0000-000000000000") // Exclude metadata profile
-
-    if (countError) {
-      console.error("Error getting profile count:", countError)
-      return { data: [], error: countError.message }
+    // If fetching all profiles, we need to handle batching
+    if (result.count > 50) {
+      console.log(`Total profiles: ${result.count}, fetching in batches...`)
+      
+      const batchSize = 1000
+      const batches = Math.ceil(result.count / batchSize)
+      let allProfiles = result.data || []
+      
+      for (let i = 1; i < batches; i++) {
+        const batchParams = new URLSearchParams()
+        if (options?.search) batchParams.append('search', options.search)
+        if (options?.status) batchParams.append('status', options.status)
+        batchParams.append('limit', batchSize.toString())
+        batchParams.append('offset', (i * batchSize).toString())
+        
+        const batchResponse = await fetch(`/api/cdp-profiles?${batchParams.toString()}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        })
+        
+        if (batchResponse.ok) {
+          const batchResult = await batchResponse.json()
+          allProfiles = [...allProfiles, ...(batchResult.data || [])]
+          console.log(`Batch ${i + 1}/${batches} fetched: ${batchResult.data?.length} records. Total: ${allProfiles.length}`)
+        }
+      }
+      
+      return { data: allProfiles, error: null }
     }
-
-    console.log(`Total profiles in database: ${count}`)
-
-    if (!count || count === 0) {
-      return { data: [], error: null }
-    }
-
-    // Now fetch all records in batches to avoid the 1000 record limit
-    const batchSize = 1000
-    const totalRecords = count
-    const batches = Math.ceil(totalRecords / batchSize)
-
-    let allProfiles: any[] = []
-
-    for (let i = 0; i < batches; i++) {
-      const start = i * batchSize
-      const end = start + batchSize - 1
-
-      console.log(`Fetching batch ${i + 1}/${batches}: records ${start} to ${end}`)
-
-      let query = supabase
-        .from("cdp_profiles")
-        .select("*")
-        .neq("id", "00000000-0000-0000-0000-000000000000") // Exclude metadata profile
-        .range(start, end)
-        .order("created_at", { ascending: false })
-
-      // Apply filters if provided
-      if (options?.search) {
-        query = query.or(
-          `first_name.ilike.%${options.search}%,last_name.ilike.%${options.search}%,email.ilike.%${options.search}%,mobile.ilike.%${options.search}%`,
-        )
-      }
-
-      if (options?.status) {
-        query = query.eq("status", options.status)
-      }
-
-      const { data: batchData, error: batchError } = await query
-
-      if (batchError) {
-        console.error(`Error fetching batch ${i + 1}:`, batchError)
-        throw batchError
-      }
-
-      if (batchData) {
-        allProfiles = [...allProfiles, ...batchData]
-        console.log(`Batch ${i + 1} fetched: ${batchData.length} records. Total so far: ${allProfiles.length}`)
-      }
-    }
-
-    console.log(`Successfully fetched all profiles: ${allProfiles.length} records`)
-    return { data: allProfiles, error: null }
+    
+    return { data: result.data || [], error: null }
   } catch (error: any) {
     console.error("Profiles API error:", error)
     return { data: [], error: error.message || "Failed to fetch profiles" }
@@ -125,15 +85,23 @@ export const getProfile = async (id: string) => {
   try {
     console.log("Fetching profile by ID:", id)
 
-    const { data, error } = await supabase.from("cdp_profiles").select("*").eq("id", id).single()
+    const response = await fetch(`/api/cdp-profiles/${id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
 
-    if (error) {
-      console.error("Error fetching profile:", error)
-      return { data: null, error: error.message }
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error("Error fetching profile:", errorData)
+      return { data: null, error: errorData.error || 'Failed to fetch profile' }
     }
 
-    console.log("Successfully fetched profile:", data)
-    return { data, error: null }
+    const result = await response.json()
+    console.log("Successfully fetched profile:", result.data)
+    return { data: result.data, error: null }
   } catch (error: any) {
     console.error("Get profile API error:", error)
     return { data: null, error: error.message || "Failed to fetch profile" }
@@ -165,15 +133,24 @@ export const updateProfile = async (id: string, profileData: any) => {
   try {
     console.log("Updating profile:", id, profileData)
 
-    const { data, error } = await supabase.from("cdp_profiles").update(profileData).eq("id", id).select().single()
+    const response = await fetch(`/api/cdp-profiles/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(profileData)
+    })
 
-    if (error) {
-      console.error("Error updating profile:", error)
-      return { data: null, error: error.message }
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error("Error updating profile:", errorData)
+      return { data: null, error: errorData.error || 'Failed to update profile' }
     }
 
-    console.log("Successfully updated profile:", data)
-    return { data, error: null }
+    const result = await response.json()
+    console.log("Successfully updated profile:", result.data)
+    return { data: result.data, error: null }
   } catch (error: any) {
     console.error("Update profile API error:", error)
     return { data: null, error: error.message || "Failed to update profile" }
@@ -230,11 +207,18 @@ export const deleteProfile = async (id: string) => {
   try {
     console.log("Permanently deleting profile:", id)
 
-    const { error } = await supabase.from("cdp_profiles").delete().eq("id", id)
+    const response = await fetch(`/api/cdp-profiles/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
 
-    if (error) {
-      console.error("Error deleting profile:", error)
-      return { data: null, error: error.message }
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error("Error deleting profile:", errorData)
+      return { data: null, error: errorData.error || 'Failed to delete profile' }
     }
 
     console.log("Successfully deleted profile:", id)

@@ -143,10 +143,10 @@ export const navigationConfig: NavigationItem[] = [
     children: [
       {
         id: "profiles",
-        label: "Profiles",
+        label: "Recipient Profiles",
         icon: Users,
         path: "/profiles",
-        description: "Contact profiles and management"
+        description: "Recipient and customer profile management"
       },
       {
         id: "segments",
@@ -291,28 +291,21 @@ export const navigationConfig: NavigationItem[] = [
     id: "settings",
     label: "Settings",
     icon: Settings,
-    description: "Application and account settings",
+    description: "Account settings and configuration",
     children: [
       {
-        id: "personal",
-        label: "Personal",
+        id: "account",
+        label: "Account",
         icon: Settings,
-        path: "/settings/personal",
-        description: "Personal account settings"
-      },
-      {
-        id: "organization",
-        label: "Organization",
-        icon: Settings,
-        path: "/settings/organization",
-        description: "Organization settings"
+        path: "/settings/account",
+        description: "Account information and settings"
       },
       {
         id: "users",
         label: "Users",
         icon: Users,
         path: "/settings/users",
-        description: "User management"
+        description: "User management and permissions"
       },
       {
         id: "senders",
@@ -470,8 +463,7 @@ export const getRouteFromSubitem = (subitem: string, parentName: string): string
     "Reply-Automation": "/reply-automation",
     "API-Keys": "/api-keys",
     "API-Documentation": "/api-documentation",
-    Personal: "/settings/personal",
-    Organization: "/settings/organization",
+    Account: "/settings/account",
     Users: "/settings/users",
     Senders: "/settings/senders",
     Domains: "/settings/domains",

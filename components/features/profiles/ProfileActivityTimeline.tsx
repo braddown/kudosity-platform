@@ -2,10 +2,10 @@ import React, { useState, useEffect } from "react"
 import { format, parseISO } from "date-fns"
 import { Calendar, FileEdit, MessageSquare, Shield, ShieldCheck, ShieldX } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { supabase } from "@/lib/supabase"
 
 interface ProfileActivityTimelineProps {
   profile: any
+  refreshTrigger?: number // Add a trigger to force refresh
 }
 
 /**
@@ -21,7 +21,8 @@ interface ProfileActivityTimelineProps {
  * ```
  */
 export function ProfileActivityTimeline({
-  profile
+  profile,
+  refreshTrigger
 }: ProfileActivityTimelineProps) {
   const [activityLogs, setActivityLogs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,27 +32,32 @@ export function ProfileActivityTimeline({
       if (!profile?.id) return
       
       try {
-        const { data, error } = await supabase
-          .from('profile_activity_log')
-          .select('*')
-          .eq('profile_id', profile.id)
-          .order('created_at', { ascending: false })
-          .limit(10)
+        // Use the API endpoint instead of direct Supabase query
+        const response = await fetch(`/api/cdp-profiles/${profile.id}/activity`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        })
 
-        if (error) {
-          console.error('Error fetching activity logs:', error)
+        if (!response.ok) {
+          console.error('Error fetching activity logs:', await response.text())
+          setActivityLogs([])
         } else {
-          setActivityLogs(data || [])
+          const result = await response.json()
+          setActivityLogs(result.data || [])
         }
       } catch (err) {
         console.error('Exception fetching activity logs:', err)
+        setActivityLogs([])
       } finally {
         setLoading(false)
       }
     }
 
     fetchActivityLogs()
-  }, [profile?.id])
+  }, [profile?.id, refreshTrigger])
 
   const getActivityIcon = (activityType: string) => {
     switch (activityType) {
@@ -175,8 +181,8 @@ export function ProfileActivityTimeline({
                   }
                 })}
 
-                {activityLogs.length === 0 && (
-                  <div className="text-sm text-gray-500">No consent activity recorded yet.</div>
+                {activityLogs.length === 0 && !loading && (
+                  <div className="text-sm text-gray-500">No activity recorded yet.</div>
                 )}
               </>
             )}

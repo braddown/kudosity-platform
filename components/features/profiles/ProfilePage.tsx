@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useState } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useProfileData } from "@/hooks/use-profile-data"
@@ -51,6 +51,8 @@ export default function ProfilePage({
   triggerSave = false,
   isHeaderless = false
 }: ProfilePageProps) {
+  const [activityRefreshTrigger, setActivityRefreshTrigger] = useState(0)
+
   // Fetch profile data and custom fields schema
   const {
     profile,
@@ -77,7 +79,11 @@ export default function ProfilePage({
     hasChanges
   } = useProfileForm({
     profile,
-    onSave,
+    onSave: () => {
+      // Refresh activity timeline after save
+      setActivityRefreshTrigger(prev => prev + 1)
+      if (onSave) onSave()
+    },
     onSaveError,
     triggerSave,
     refetch,
@@ -136,6 +142,7 @@ export default function ProfilePage({
 
         <ProfileActivityTimeline
           profile={profile} // Use original profile for timestamps
+          refreshTrigger={activityRefreshTrigger}
         />
       </div>
     </div>

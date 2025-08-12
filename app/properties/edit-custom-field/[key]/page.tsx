@@ -24,7 +24,7 @@ import {
   Save,
 } from "lucide-react"
 import MainLayout from "@/components/MainLayout"
-import { profilesApi } from "@/api/profiles-api"
+import { profilesApi } from "@/lib/api/profiles-api"
 import { usePageHeader } from "@/components/PageHeaderContext"
 
 interface CustomField {

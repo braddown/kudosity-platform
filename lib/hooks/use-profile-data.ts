@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
 import { profilesApi } from '@/lib/api/profiles-api'
 
 interface UseProfileDataOptions {
@@ -78,15 +77,11 @@ export function useProfileData({
     try {
       console.log(`Fetching CDP profile with ID: ${profileId}`)
       
-      const { data, error } = await supabase
-        .from("cdp_profiles")
-        .select("*")
-        .eq("id", profileId)
-        .single()
+      const { data, error } = await profilesApi.getProfile(profileId)
 
       if (error) {
         console.error("Error fetching CDP profile:", error)
-        const errorMessage = `Failed to load profile: ${error.message}`
+        const errorMessage = `Failed to load profile: ${error}`
         setError(errorMessage)
         if (onError) onError(errorMessage)
         return

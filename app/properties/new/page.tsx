@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle, Check, Type, Hash, Calendar, ToggleLeft, Mail, Phone, Link, Save, X } from "lucide-react"
 import MainLayout from "@/components/MainLayout"
-import { profilesApi } from "@/api/profiles-api"
+import { profilesApi } from "@/lib/api/profiles-api"
 import { usePageHeader } from "@/components/PageHeaderContext"
 
 interface CustomField {

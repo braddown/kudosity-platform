@@ -16,8 +16,8 @@ import {
   softDeleteProfile,
   restoreProfile,
   deleteProfile,
-} from "@/api/profiles-api"
-import { segmentsApi } from "@/api/segments-api"
+} from "@/lib/api/profiles-api"
+import { segmentsApi } from "@/lib/api/segments-api"
 import PageLayout from "@/components/layouts/PageLayout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -1097,12 +1097,12 @@ export default function ProfilesPage() {
   if (loading) {
     return (
       <MainLayout>
-        <div className="p-6">
-          <div className="flex items-center justify-center p-8">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading profiles...</p>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <div className="inline-flex items-center justify-center">
+              <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
             </div>
+            <p className="text-muted-foreground text-sm">Loading profiles...</p>
           </div>
         </div>
       </MainLayout>
@@ -1111,7 +1111,7 @@ export default function ProfilesPage() {
 
   return (
     <MainLayout>
-      <PageLayout title="Profiles" actions={pageActions} fullWidth>
+      <PageLayout title="Recipient Profiles" actions={pageActions} fullWidth>
         <div className="space-y-6">
           {/* Summary Cards */}
           <ProfileCounts counts={counts} selectedType={selectedType} onTypeClick={setSelectedType} />

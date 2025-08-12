@@ -28,7 +28,8 @@ export function ContactPropertiesForm({ profile, onInputChange, onSelectChange, 
   // Handle Enter key press to save
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     // Save on Enter key, but not in textarea fields (allow new lines in textarea)
-    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && onSave) {
+    const target = e.target as HTMLElement
+    if (e.key === 'Enter' && target.tagName !== 'TEXTAREA' && onSave) {
       e.preventDefault()
       onSave()
     }

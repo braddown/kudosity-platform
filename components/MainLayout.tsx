@@ -14,6 +14,7 @@ import {
   HelpCircle,
   LogOut,
   FileText,
+  User,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -38,16 +39,73 @@ interface MainLayoutProps {
 
 function AccountDropdown({ onSelectProfileItem }: { onSelectProfileItem: (item: string) => void }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [userInfo, setUserInfo] = useState<{
+    email?: string
+    name?: string
+    accountName?: string
+    accountId?: string
+  }>({})
   const router = useRouter()
   const { setTheme, theme } = useTheme()
+
+  // Fetch user information
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const { createClient } = await import('@/lib/auth/client')
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (user) {
+          // Get user profile
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .single()
+          
+          // Get current account
+          const cookies = document.cookie.split('; ')
+          const accountCookie = cookies.find(c => c.startsWith('current_account='))
+          const accountId = accountCookie?.split('=')[1]
+          
+          if (accountId) {
+            const { data: account } = await supabase
+              .from('accounts')
+              .select('name, id')
+              .eq('id', accountId)
+              .single()
+            
+            setUserInfo({
+              email: user.email,
+              name: profile?.full_name || user.email?.split('@')[0],
+              accountName: account?.name,
+              accountId: account?.id
+            })
+          } else {
+            setUserInfo({
+              email: user.email,
+              name: profile?.full_name || user.email?.split('@')[0]
+            })
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user info:', error)
+      }
+    }
+    
+    fetchUserInfo()
+  }, [])
 
   const handleItemClick = (item: string) => {
     setIsOpen(false)
     if (item === "Pricing") {
       router.push("/pricing")
     } else if (item === "Log out") {
-      sessionStorage.removeItem("isAuthenticated")
-      router.push("/")
+      // Use proper sign out from Supabase auth
+      import('@/lib/auth/client').then(({ signOut }) => {
+        signOut()
+      })
     } else if (item === "Light mode") {
       setTheme("light")
       localStorage.setItem("manual-theme-override", "light")
@@ -62,20 +120,25 @@ function AccountDropdown({ onSelectProfileItem }: { onSelectProfileItem: (item: 
   const showLightMode = theme === "dark"
   const themeOption = showLightMode ? "Light mode" : "Dark mode"
   const themeIcon = showLightMode ? <Sun className="mr-3 h-4 w-4" /> : <Moon className="mr-3 h-4 w-4" />
+  
+  // Get initials from name or email
+  const getInitials = () => {
+    if (userInfo.name) {
+      return userInfo.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    }
+    if (userInfo.email) {
+      return userInfo.email.slice(0, 2).toUpperCase()
+    }
+    return 'U'
+  }
 
   return (
     <div className="flex items-center space-x-2 md:space-x-4">
-      <div className="hidden md:flex items-center text-sm font-medium">
-        <span className="mr-2 text-muted-foreground">BALANCE:</span>
-        <span className="bg-primary/10 border border-primary/20 rounded-full px-3 py-1 font-bold text-foreground">
-          $84.80
-        </span>
-      </div>
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
           <div className="flex items-center space-x-2 cursor-pointer">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground text-sm font-medium">
-              BD
+              {getInitials()}
             </div>
             {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </div>
@@ -83,16 +146,31 @@ function AccountDropdown({ onSelectProfileItem }: { onSelectProfileItem: (item: 
         <DropdownMenuContent className="w-56 z-[100] p-0 bg-card border-border" side="bottom" align="end" forceMount>
           <div className="flex items-center space-x-3 p-4">
             <Avatar className="h-10 w-10 flex-shrink-0">
-              <AvatarImage src="/placeholder.svg" alt="BD" />
-              <AvatarFallback className="bg-muted text-foreground">BD</AvatarFallback>
+              <AvatarImage src="/placeholder.svg" alt={getInitials()} />
+              <AvatarFallback className="bg-muted text-foreground">{getInitials()}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col min-w-0">
-              <p className="text-sm font-medium leading-none truncate text-foreground">Brad Down</p>
-              <p className="text-xs leading-none text-muted-foreground mt-1 truncate">Account ID: 54911</p>
-              <p className="text-xs leading-none text-muted-foreground mt-1 truncate">My Company</p>
+              <p className="text-sm font-medium leading-none truncate text-foreground">
+                {userInfo.name || 'User'}
+              </p>
+              <p className="text-xs leading-none text-muted-foreground mt-1 truncate">
+                {userInfo.email || 'No email'}
+              </p>
+              {userInfo.accountName && (
+                <p className="text-xs leading-none text-muted-foreground mt-1 truncate">
+                  {userInfo.accountName}
+                </p>
+              )}
             </div>
           </div>
           <DropdownMenuSeparator className="my-3" />
+          <DropdownMenuItem
+            className="py-3 px-4 hover:bg-accent cursor-pointer text-foreground"
+            onClick={() => router.push("/profile")}
+          >
+            <User className="mr-3 h-4 w-4" />
+            <span>User Profile</span>
+          </DropdownMenuItem>
           <DropdownMenuItem
             className="py-3 px-4 hover:bg-accent cursor-pointer text-foreground"
             onClick={() => handleItemClick("Billing")}
@@ -199,12 +277,19 @@ export default function MainLayout({ children }: MainLayoutProps) {
     }
   }, [pathname])
 
-  // Check authentication
+  // Check authentication using Supabase
   useEffect(() => {
-    const isAuthenticated = sessionStorage.getItem("isAuthenticated") === "true"
-    if (!isAuthenticated && pathname !== "/") {
-      router.push("/")
+    const checkAuth = async () => {
+      const { createClient } = await import('@/lib/auth/client')
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user && pathname !== "/" && !pathname.startsWith("/auth")) {
+        router.push("/auth/login")
+      }
     }
+    
+    checkAuth()
   }, [pathname, router])
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen)
