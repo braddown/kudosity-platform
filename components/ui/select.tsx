@@ -19,12 +19,13 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-10 w-full items-center justify-between rounded-md px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+      "flex h-10 w-full items-center justify-between rounded-md px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
       // Improved glass morphism with better light mode contrast
       "perplexity-button backdrop-blur-md",
       "border border-border/60 bg-background/60 dark:bg-white/[0.03] dark:border-white/[0.15]",
       "hover:bg-background/80 dark:hover:bg-white/[0.06] hover:border-border/80",
       "focus:bg-background/90 dark:focus:bg-white/[0.08] focus:border-border/90",
+      "data-[state=open]:bg-background/90 dark:data-[state=open]:bg-white/[0.08]",
       "transition-all duration-200 ease-out",
       className,
     )}
@@ -74,7 +75,7 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        "relative max-h-96 min-w-[8rem] overflow-hidden rounded-md text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
         // Perplexity-style glass morphism for dropdown
         "glass-card backdrop-blur-xl",
         "bg-card/80 dark:bg-card/60",
@@ -85,6 +86,7 @@ const SelectContent = React.forwardRef<
         className,
       )}
       position={position}
+      style={{ zIndex: 200 }}
       {...props}
     >
       <SelectScrollUpButton />

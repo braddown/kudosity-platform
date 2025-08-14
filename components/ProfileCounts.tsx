@@ -6,7 +6,7 @@ interface ProfileCountsProps {
     all: number
     active: number
     marketing: number
-    suppressed: number
+    archived: number
     unsubscribed: number
     deleted: number
   }
@@ -24,6 +24,7 @@ export function ProfileCounts({ counts, selectedType, onTypeClick }: ProfileCoun
       color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
       borderColor: "border-blue-500/20",
       textColor: "text-blue-600 dark:text-blue-400",
+      description: "Total profiles (excluding destroyed)",
     },
     {
       title: "Active",
@@ -33,24 +34,27 @@ export function ProfileCounts({ counts, selectedType, onTypeClick }: ProfileCoun
       color: "bg-green-500/10 text-green-600 dark:text-green-400",
       borderColor: "border-green-500/20",
       textColor: "text-green-600 dark:text-green-400",
+      description: "Active lifecycle status",
     },
     {
-      title: "Marketing",
+      title: "Marketing Enabled",
       count: counts.marketing,
       icon: <UserCog className="h-5 w-5" />,
       type: "marketing",
       color: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
       borderColor: "border-orange-500/20",
       textColor: "text-orange-600 dark:text-orange-400",
+      description: "Active with marketing channels",
     },
     {
-      title: "Suppressed",
-      count: counts.suppressed,
+      title: "Inactive",
+      count: counts.archived,
       icon: <UserMinus className="h-5 w-5" />,
-      type: "suppressed",
+      type: "archived",
       color: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
       borderColor: "border-yellow-500/20",
       textColor: "text-yellow-600 dark:text-yellow-400",
+      description: "Dormant profiles",
     },
     {
       title: "Unsubscribed",
@@ -60,6 +64,7 @@ export function ProfileCounts({ counts, selectedType, onTypeClick }: ProfileCoun
       color: "bg-red-500/10 text-red-600 dark:text-red-400",
       borderColor: "border-red-500/20",
       textColor: "text-red-600 dark:text-red-400",
+      description: "All marketing disabled",
     },
     {
       title: "Deleted",
@@ -69,6 +74,7 @@ export function ProfileCounts({ counts, selectedType, onTypeClick }: ProfileCoun
       color: "bg-gray-500/10 text-gray-600 dark:text-gray-400",
       borderColor: "border-gray-500/20",
       textColor: "text-gray-600 dark:text-gray-400",
+      description: "Soft deleted, recoverable",
     },
   ]
 

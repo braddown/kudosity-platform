@@ -1,7 +1,6 @@
 "use client"
 
-import type { ReactNode } from "react"
-import { useEffect } from "react"
+import { type ReactNode, useEffect } from "react"
 import { usePageHeader } from "../PageHeaderContext"
 
 interface ActionButton {
@@ -18,6 +17,7 @@ interface PageLayoutProps {
   description?: string
   children: ReactNode
   actions?: ActionButton[]
+  customActions?: ReactNode
   showBackButton?: boolean
   backHref?: string
   contentClassName?: string
@@ -31,12 +31,13 @@ export default function PageLayout({
   description,
   children,
   actions = [],
+  customActions,
   showBackButton = false,
   backHref = "/",
   contentClassName = "",
   fullWidth = false,
   withSidebar = false,
-  sidebar,
+  sidebar
 }: PageLayoutProps) {
   const { setPageHeader } = usePageHeader()
 
@@ -46,6 +47,7 @@ export default function PageLayout({
       title,
       description,
       actions,
+      customActions,
       showBackButton,
       backHref,
     })
@@ -54,7 +56,7 @@ export default function PageLayout({
     return () => {
       setPageHeader(null)
     }
-  }, [title, description, showBackButton, backHref, setPageHeader])
+  }, [title, description, actions, customActions, showBackButton, backHref, setPageHeader])
 
   return (
     <div className="w-full bg-background">

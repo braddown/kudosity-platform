@@ -14,16 +14,16 @@ export async function GET() {
       return NextResponse.json({ error: 'No session' }, { status: 401 })
     }
 
-    // Get user profile with organizations
+    // Get user profile with accounts
     const { data: profile } = await supabase
       .from('user_profiles')
       .select(`
         *,
-        organization_members!inner (
-          organization_id,
+        account_members!inner (
+          account_id,
           role,
           status,
-          organizations (
+          accounts (
             id,
             name,
             slug,
@@ -33,7 +33,7 @@ export async function GET() {
           )
         )
       `)
-      .eq('id', session.user.id)
+      .eq('user_id', session.user.id)
       .single()
 
     return NextResponse.json({

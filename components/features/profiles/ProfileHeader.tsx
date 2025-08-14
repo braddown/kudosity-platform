@@ -2,13 +2,24 @@
 
 import React from "react"
 import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 
 interface ProfileHeaderProps {
   profileName: string
+  profileStatus?: string
   onBack: () => void
   onSave?: () => void
+  onStatusChange?: (status: string) => void
   isHeaderless?: boolean
   saving?: boolean
+  hasChanges?: boolean
 }
 
 /**
@@ -32,13 +43,33 @@ interface ProfileHeaderProps {
  */
 export function ProfileHeader({
   profileName,
+  profileStatus = 'active',
   onBack,
   onSave,
+  onStatusChange,
   isHeaderless = false,
-  saving = false
+  saving = false,
+  hasChanges = false
 }: ProfileHeaderProps) {
+  // Return null if headerless mode
   if (isHeaderless) {
     return null
+  }
+
+  // Get status badge color
+  const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status) {
+      case 'active':
+        return 'default'
+      case 'inactive':
+        return 'secondary'
+      case 'deleted':
+        return 'destructive'
+      case 'destroyed':
+        return 'destructive'
+      default:
+        return 'outline'
+    }
   }
 
   return (
@@ -50,20 +81,60 @@ export function ProfileHeader({
         >
           ← Back to Profiles
         </button>
-        <h1 className="text-2xl font-bold">
-          {profileName}
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">
+            {profileName}
+          </h1>
+          <Badge variant={getStatusBadgeVariant(profileStatus)}>
+            {profileStatus}
+          </Badge>
+        </div>
       </div>
-      {onSave && (
-        <Button
-          onClick={onSave}
-          disabled={saving}
-          variant="default"
-          className="px-4"
-        >
-          {saving ? "Saving..." : "Save Changes"}
-        </Button>
-      )}
+      <div className="flex items-center gap-3">
+        {onStatusChange && (
+          <Select value={profileStatus} onValueChange={onStatusChange}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  Active
+                </div>
+              </SelectItem>
+              <SelectItem value="inactive">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                  Inactive
+                </div>
+              </SelectItem>
+              <SelectItem value="deleted">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-red-500" />
+                  Deleted
+                </div>
+              </SelectItem>
+              <SelectItem value="destroyed" disabled>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-gray-500" />
+                  Destroyed (Irreversible)
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+        {onSave && (
+          <Button
+            onClick={onSave}
+            disabled={saving || !hasChanges}
+            variant="default"
+            className="px-4"
+          >
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
+        )}
+      </div>
     </div>
   )
 }

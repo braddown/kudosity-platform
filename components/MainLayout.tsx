@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, Suspense, type ReactNode } from "react"
+import { useState, useEffect, useMemo, Suspense, type ReactNode } from "react"
 import {
   Menu,
   ChevronDown,
@@ -32,6 +32,7 @@ import { EditActionButtons } from "./EditActionButtons"
 import { Logo } from "@/components/Logo"
 import { useTheme } from "next-themes"
 import { useSimpleNavigation } from "@/lib/navigation/useNavigation"
+import { getGravatarUrlSimple, getInitials as getInitialsUtil } from "@/lib/utils/gravatar"
 
 interface MainLayoutProps {
   children: ReactNode
@@ -132,22 +133,36 @@ function AccountDropdown({ onSelectProfileItem }: { onSelectProfileItem: (item: 
     return 'U'
   }
 
+  // Memoize Gravatar URLs to prevent constant recalculation
+  const avatarUrlSmall = useMemo(() => 
+    getGravatarUrlSimple(userInfo.email, 90),
+    [userInfo.email]
+  )
+  
+  const avatarUrlLarge = useMemo(() => 
+    getGravatarUrlSimple(userInfo.email, 100),
+    [userInfo.email]
+  )
+
   return (
     <div className="flex items-center space-x-2 md:space-x-4">
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
           <div className="flex items-center space-x-2 cursor-pointer">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground text-sm font-medium">
-              {getInitials()}
-            </div>
+            <Avatar className="h-9 w-9">
+              <AvatarImage src={avatarUrlSmall} />
+              <AvatarFallback className="bg-muted text-foreground text-sm font-medium">
+                {getInitialsUtil(userInfo.name, userInfo.email)}
+              </AvatarFallback>
+            </Avatar>
             {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56 z-[100] p-0 bg-card border-border" side="bottom" align="end" forceMount>
           <div className="flex items-center space-x-3 p-4">
             <Avatar className="h-10 w-10 flex-shrink-0">
-              <AvatarImage src="/placeholder.svg" alt={getInitials()} />
-              <AvatarFallback className="bg-muted text-foreground">{getInitials()}</AvatarFallback>
+              <AvatarImage src={avatarUrlLarge} alt={getInitials()} />
+              <AvatarFallback className="bg-muted text-foreground">{getInitialsUtil(userInfo.name, userInfo.email)}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col min-w-0">
               <p className="text-sm font-medium leading-none truncate text-foreground">
@@ -382,7 +397,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
         <main className="flex-1 bg-background lg:ml-64 flex flex-col">
           {/* Fixed Page Header */}
           {pageHeader && (
-            <div className="fixed top-16 left-0 right-0 lg:left-64 w-full lg:w-auto border-b border-border py-4 px-6 flex justify-between items-center bg-background z-[75]">
+            <div className="fixed top-16 left-0 lg:left-64 right-0 border-b border-border py-4 px-6 flex justify-between items-center bg-background z-[75]">
               <div className="flex items-center">
                 <h1 className="text-2xl font-semibold text-foreground">
                   {pathname === "/chat"
@@ -404,8 +419,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
                     Contact Sales
                   </Button>
                 )}
-                {pageHeader.actions
-                  ?.filter(
+                {pageHeader.customActions ? (
+                  pageHeader.customActions
+                ) : (
+                  pageHeader.actions?.filter(
                     (action) =>
                       !action.label?.includes("Archive") &&
                       !action.label?.includes("Contacts") &&
@@ -467,7 +484,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
                         {action.label && <span className={action.icon ? "ml-1" : ""}>{action.label}</span>}
                       </Button>
                     )
-                  })}
+                  })
+                )}
               </div>
             </div>
           )}

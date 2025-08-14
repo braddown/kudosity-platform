@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { User } from "lucide-react"
 
 interface ContactPropertiesFormProps {
   profile: any
@@ -37,7 +38,10 @@ export function ContactPropertiesForm({ profile, onInputChange, onSelectChange, 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl font-medium text-foreground">Contact Properties</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-xl font-medium text-foreground">
+          <User className="h-4 w-4 text-blue-500" />
+          Contact Properties
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">

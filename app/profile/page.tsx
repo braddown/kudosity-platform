@@ -14,6 +14,7 @@ import { LoadingSpinnerWithText } from "@/components/ui/loading-spinner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { User, Mail, Calendar, Shield, Phone, Globe, Clock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { getGravatarUrlSimple, getInitials } from "@/lib/utils/gravatar"
 
 interface UserProfile {
   id: string
@@ -315,18 +316,7 @@ export default function ProfilePage() {
     })
   }, [setPageHeader, formData, profile, saving, toast])
 
-  const getInitials = () => {
-    const firstInitial = formData.first_name ? formData.first_name[0] : ''
-    const lastInitial = formData.last_name ? formData.last_name[0] : ''
-    
-    if (firstInitial || lastInitial) {
-      return (firstInitial + lastInitial).toUpperCase()
-    }
-    if (formData.email) {
-      return formData.email.slice(0, 2).toUpperCase()
-    }
-    return 'U'
-  }
+
 
   const getRoleBadge = (role: string) => {
     const colors: Record<string, string> = {
@@ -381,19 +371,19 @@ export default function ProfilePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              Profile Information
+              User Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center gap-6">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={profile.avatar_url} />
-                <AvatarFallback className="text-lg">{getInitials()}</AvatarFallback>
+                <AvatarImage src={getGravatarUrlSimple(profile?.email || formData.email, 200)} />
+                <AvatarFallback className="text-lg">{getInitials(profile?.full_name || `${formData.first_name} ${formData.last_name}`.trim(), profile?.email || formData.email)}</AvatarFallback>
               </Avatar>
               <div className="flex-1 space-y-1">
                 <p className="text-sm text-muted-foreground">User ID</p>
-                <p className="font-mono text-sm">{profile.id}</p>
-                <p className="text-sm text-muted-foreground">Member since {formatDate(profile.created_at)}</p>
+                <p className="font-mono text-sm">{profile?.id || '-'}</p>
+                <p className="text-sm text-muted-foreground">Member since {profile?.created_at ? formatDate(profile.created_at) : '-'}</p>
               </div>
             </div>
             
@@ -444,85 +434,88 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Location Settings Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5 text-green-600 dark:text-green-400" />
-              Location Settings
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
-                <Select value={formData.country} onValueChange={(value) => setFormData({ ...formData, country: value })}>
-                  <SelectTrigger id="country">
-                    <SelectValue placeholder="Select your country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {countries.map((country) => (
-                      <SelectItem key={country.value} value={country.value}>
-                        {country.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">Your personal location for messaging activities</p>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="timezone">Timezone</Label>
-                <Select value={formData.timezone} onValueChange={(value) => setFormData({ ...formData, timezone: value })}>
-                  <SelectTrigger id="timezone">
-                    <SelectValue placeholder="Select your timezone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timezones.map((tz) => (
-                      <SelectItem key={tz.value} value={tz.value}>
-                        {tz.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">Used for scheduling and activity timestamps</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Account Memberships Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              Account Memberships
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {memberships.map((membership) => (
-                <div key={membership.account_id} className="flex items-center justify-between p-3 rounded-lg border">
-                  <div>
-                    <p className="font-medium">{membership.accounts?.name || 'Unknown Account'}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Joined {formatDate(membership.joined_at)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {getRoleBadge(membership.role)}
-                    <Badge variant={membership.status === 'active' ? 'translucent-green' : 'translucent-gray'}>
-                      {membership.status}
-                    </Badge>
-                  </div>
+        {/* Location Settings and Account Memberships in 2 columns */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Location Settings Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5 text-green-600 dark:text-green-400" />
+                Location Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="country">Country</Label>
+                  <Select value={formData.country} onValueChange={(value) => setFormData({ ...formData, country: value })}>
+                    <SelectTrigger id="country">
+                      <SelectValue placeholder="Select your country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map((country) => (
+                        <SelectItem key={country.value} value={country.value}>
+                          {country.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Your personal location for messaging activities</p>
                 </div>
-              ))}
-              {memberships.length === 0 && (
-                <p className="text-muted-foreground text-center py-4">No account memberships found</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="timezone">Timezone</Label>
+                  <Select value={formData.timezone} onValueChange={(value) => setFormData({ ...formData, timezone: value })}>
+                    <SelectTrigger id="timezone">
+                      <SelectValue placeholder="Select your timezone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timezones.map((tz) => (
+                        <SelectItem key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Used for scheduling and activity timestamps</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Account Memberships Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                Account Memberships
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {memberships.map((membership) => (
+                  <div key={membership.account_id} className="flex items-center justify-between p-3 rounded-lg border">
+                    <div>
+                      <p className="font-medium">{membership.accounts?.name || 'Unknown Account'}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Joined {formatDate(membership.joined_at)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {getRoleBadge(membership.role)}
+                      <Badge variant={membership.status === 'active' ? 'translucent-green' : 'translucent-gray'}>
+                        {membership.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+                {memberships.length === 0 && (
+                  <p className="text-muted-foreground text-center py-4">No account memberships found</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </MainLayout>
   )

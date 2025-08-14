@@ -3,6 +3,7 @@
 import React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
+import { Bell } from "lucide-react"
 
 interface NotificationPreferencesProps {
   profile: any
@@ -81,7 +82,10 @@ export function NotificationPreferences({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl font-medium text-foreground">Notification Preferences</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-xl font-medium text-foreground">
+          <Bell className="h-4 w-4 text-orange-500" />
+          Notification Preferences
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Channel Information Section */}

@@ -11,6 +11,9 @@ interface ProfilePageProps {
   onSaveError?: () => void
   triggerSave?: boolean
   isHeaderless?: boolean
+  onStatusUpdate?: (status: string) => void
+  onStatusChange?: (status: string) => void
+  pendingStatusChange?: string | null
 }
 
 /**

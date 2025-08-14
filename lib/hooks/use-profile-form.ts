@@ -7,7 +7,6 @@ interface UseProfileFormOptions {
   profile: any
   onSave?: () => void
   onSaveError?: () => void
-  triggerSave?: boolean
   refetch?: () => void
   onProfileUpdate?: (updatedProfile: any) => void
 }
@@ -22,6 +21,7 @@ interface UseProfileFormResult {
   handleSave: () => Promise<void>
   resetForm: () => void
   hasChanges: boolean
+  setEditedProfile: React.Dispatch<React.SetStateAction<any>>
 }
 
 /**
@@ -50,19 +50,13 @@ export function useProfileForm({
   profile,
   onSave,
   onSaveError,
-  triggerSave = false,
   refetch,
   onProfileUpdate
 }: UseProfileFormOptions): UseProfileFormResult {
   const [editedProfile, setEditedProfile] = useState<any>(null)
   const [saving, setSaving] = useState(false)
 
-  // Handle external trigger to save
-  useEffect(() => {
-    if (triggerSave && editedProfile) {
-      handleSave()
-    }
-  }, [triggerSave])
+  // Handle external trigger to save - moved after handleSave definition
 
   // Reset edited profile when the base profile changes
   useEffect(() => {
@@ -353,18 +347,6 @@ export function useProfileForm({
           }
           
           newProfile.notification_preferences = currentPrefs
-          
-          // Auto-save notification preferences for legal compliance immediately
-          console.log(`🚀 Auto-saving notification preference change for ${name}`)
-          // Save immediately using the updated profile data
-          setTimeout(async () => {
-            console.log(`🚀 Executing auto-save for ${name}`)
-            console.log(`🚀 Current editedProfile state:`, editedProfile)
-            
-            // Force save with the updated profile data
-            const currentProfile = { ...(editedProfile || profile), notification_preferences: currentPrefs }
-            await handleSaveWithProfile(currentProfile)
-          }, 100) // Shorter delay
         } else {
           console.log(`⚠️ No change detected for ${name}, skipping update`)
         }
@@ -435,6 +417,8 @@ export function useProfileForm({
     await handleSaveWithProfile(profileToSave)
   }
 
+
+
   // Extract the core save logic into a separate function
   const performSave = async (profileToSave: any) => {
     // Ensure notification_preferences is properly structured
@@ -448,6 +432,25 @@ export function useProfileForm({
     const cdpProfileUpdate: any = {
       updated_at: new Date().toISOString(),
       last_activity_at: new Date().toISOString()
+    }
+
+    // Add status field if it exists
+    if (finalProfileToSave.status !== undefined) {
+      cdpProfileUpdate.status = finalProfileToSave.status
+      
+      // If status is deleted, ensure all notification preferences are turned off
+      if (finalProfileToSave.status === 'deleted') {
+        cdpProfileUpdate.notification_preferences = {
+          email_marketing: false,
+          email_transactional: false,
+          sms_marketing: false,
+          sms_transactional: false,
+          whatsapp_marketing: false,
+          whatsapp_transactional: false,
+          rcs_marketing: false,
+          rcs_transactional: false
+        }
+      }
     }
 
     // Add core contact fields (always include these)
@@ -475,7 +478,8 @@ export function useProfileForm({
 
     // Add complex fields
     if (finalProfileToSave.custom_fields !== undefined) cdpProfileUpdate.custom_fields = finalProfileToSave.custom_fields
-    if (finalProfileToSave.notification_preferences !== undefined) {
+    // Add notification preferences if they exist (unless already set by deleted status)
+    if (finalProfileToSave.notification_preferences !== undefined && !cdpProfileUpdate.notification_preferences) {
       cdpProfileUpdate.notification_preferences = finalProfileToSave.notification_preferences
       console.log(`💾 Saving notification preferences:`, finalProfileToSave.notification_preferences)
       console.log(`💾 Full cdpProfileUpdate object:`, cdpProfileUpdate)
@@ -780,6 +784,7 @@ export function useProfileForm({
     handleCustomFieldChange,
     handleSave,
     resetForm,
-    hasChanges
+    hasChanges,
+    setEditedProfile
   }
 }

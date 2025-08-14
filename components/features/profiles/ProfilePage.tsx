@@ -1,11 +1,17 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect, useCallback, useRef } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useProfileData } from "@/hooks/use-profile-data"
 import { useProfileForm } from "@/hooks/use-profile-form"
-import { ProfileHeader } from "./ProfileHeader"
 import { ContactPropertiesForm } from "./ContactPropertiesForm"
 import { CustomFieldsSection } from "./CustomFieldsSection"
 import { NotificationPreferences } from "./NotificationPreferences"
@@ -15,9 +21,7 @@ interface ProfilePageProps {
   profileId: string
   onBack: () => void
   onSave?: () => void
-  saveCallback?: () => void
   onSaveError?: () => void
-  triggerSave?: boolean
   isHeaderless?: boolean
 }
 
@@ -48,7 +52,6 @@ export default function ProfilePage({
   onBack,
   onSave,
   onSaveError,
-  triggerSave = false,
   isHeaderless = false
 }: ProfilePageProps) {
   const [activityRefreshTrigger, setActivityRefreshTrigger] = useState(0)
@@ -76,7 +79,8 @@ export default function ProfilePage({
     handleToggleChange,
     handleCustomFieldChange,
     handleSave,
-    hasChanges
+    hasChanges,
+    setEditedProfile
   } = useProfileForm({
     profile,
     onSave: () => {
@@ -85,10 +89,40 @@ export default function ProfilePage({
       if (onSave) onSave()
     },
     onSaveError,
-    triggerSave,
     refetch,
     onProfileUpdate: updateProfile
   })
+
+
+
+  // Handle status change
+  const handleStatusChange = useCallback((newStatus: string) => {
+    setEditedProfile(prev => {
+      const updated = {
+        ...prev,
+        status: newStatus
+      }
+      
+      // If status is changed to deleted, turn off all notification preferences
+      if (newStatus === 'deleted') {
+        updated.notification_preferences = {
+          email_marketing: false,
+          email_transactional: false,
+          sms_marketing: false,
+          sms_transactional: false,
+          whatsapp_marketing: false,
+          whatsapp_transactional: false,
+          rcs_marketing: false,
+          rcs_transactional: false
+        }
+      }
+      
+      return updated
+    })
+  }, [setEditedProfile])
+
+
+
 
   // Show loading state while data is being fetched
   if (loading || loadingSchema) {
@@ -110,14 +144,67 @@ export default function ProfilePage({
   const profileName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown Profile'
 
   return (
-    <div className="space-y-6">
-      <ProfileHeader
-        profileName={profileName}
-        onBack={onBack}
-        onSave={handleSave}
-        isHeaderless={isHeaderless}
-        saving={saving}
-      />
+    <div className={`space-y-6 ${!isHeaderless ? 'pt-6' : ''}`}>
+      {!isHeaderless && (
+        <div className="fixed top-16 left-64 right-0 z-50 bg-background px-6 py-4 border-b shadow-sm">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-xl font-semibold">Edit Profile: {profileName}</h1>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-muted-foreground">Status:</span>
+                <Select
+                  value={editedProfile?.status || profile.status || 'active'}
+                  onValueChange={handleStatusChange}
+                  disabled={saving}
+                >
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                        <span>Active</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="inactive">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                        <span>Inactive</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="deleted">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 rounded-full bg-red-500" />
+                        <span>Deleted</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <button
+                onClick={handleSave}
+                disabled={saving || !hasChanges}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                  saving || !hasChanges
+                    ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                }`}
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                onClick={onBack}
+                className="px-4 py-2 rounded-md text-sm font-medium border border-input bg-background hover:bg-accent"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ContactPropertiesForm

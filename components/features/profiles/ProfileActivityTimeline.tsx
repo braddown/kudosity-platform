@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react"
 import { format, parseISO } from "date-fns"
-import { Calendar, FileEdit, MessageSquare, Shield, ShieldCheck, ShieldX } from "lucide-react"
+import { Calendar, FileEdit, MessageSquare, Shield, ShieldCheck, ShieldX, ChevronRight, Clock } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 interface ProfileActivityTimelineProps {
   profile: any
@@ -118,10 +120,46 @@ export function ProfileActivityTimeline({
     }
   }
 
+  // Combine and sort all events
+  const allEvents = [
+    // Activity logs from database
+    ...activityLogs.map((log) => ({
+      ...log,
+      timestamp: log.created_at,
+      type: 'activity'
+    })),
+    // Profile system events
+    ...(profile.created_at ? [{
+      id: 'profile_created',
+      timestamp: profile.created_at,
+      type: 'system',
+      title: 'Profile Created',
+      description: 'Contact was added to the system',
+      icon: <Calendar className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />,
+      bgColor: "bg-green-50 dark:bg-green-950/30",
+      borderColor: "border-green-400 dark:border-green-500"
+    }] : [])
+  ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+
+  // Limit to 10 most recent events
+  const limitedEvents = allEvents.slice(0, 10)
+  const hasMore = allEvents.length > 10
+
   return (
     <Card data-testid="activity-history">
-      <CardHeader>
-        <CardTitle className="text-xl font-medium text-foreground">Activity History</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="flex items-center gap-2 text-xl font-medium text-foreground">
+          <Clock className="h-4 w-4 text-cyan-500" />
+          Recent Activity
+        </CardTitle>
+        {hasMore && (
+          <Link href={`/profiles/${profile.id}/activity`}>
+            <Button variant="ghost" size="sm" className="text-xs">
+              View All ({allEvents.length})
+              <ChevronRight className="h-3 w-3 ml-1" />
+            </Button>
+          </Link>
+        )}
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
@@ -131,28 +169,8 @@ export function ProfileActivityTimeline({
               <div className="text-sm text-gray-500">Loading activity history...</div>
             ) : (
               <>
-                {/* Combine all events and sort by timestamp (newest first) */}
-                {[
-                  // Activity logs from database
-                  ...activityLogs.map((log) => ({
-                    ...log,
-                    timestamp: log.created_at,
-                    type: 'activity'
-                  })),
-                                                // Profile system events - removed profile_updated as individual property updates are now tracked
-                  ...(profile.created_at ? [{
-                    id: 'profile_created',
-                    timestamp: profile.created_at,
-                    type: 'system',
-                    title: 'Profile Created',
-                    description: 'Contact was added to the system',
-                    icon: <Calendar className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />,
-                    bgColor: "bg-green-50 dark:bg-green-950/30",
-                    borderColor: "border-green-400 dark:border-green-500"
-                  }] : [])
-                ]
-                .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) // Sort newest first
-                .map((event) => {
+                {/* Display limited events */}
+                {limitedEvents.map((event) => {
                   if (event.type === 'activity') {
                     const colors = getActivityColors(event.activity_type)
                     return (

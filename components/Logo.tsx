@@ -50,6 +50,7 @@ export function Logo({ className = "h-8 w-auto", width = 150, height = 40 }: Log
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      style={{ width: `${width}px`, height: `${height}px` }}
     >
       <path
         d="M19.7648 32.8605H13.3901L5.21835 23.2208V32.8605H0V7.18628H5.21835V21.695L13.1919 12.7623H19.4556L10.7151 22.3749L19.7648 32.8605Z"

@@ -2,6 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ensure Radix UI portals are properly positioned above other elements */
+[data-radix-popper-content-wrapper] {
+  z-index: 200 !important;
+}
+
+/* Prevent Radix Select from removing body scrollbar */
+body {
+  overflow-y: scroll !important; /* Always show scrollbar */
+  overflow-x: hidden;
+}
+
+/* Override Radix UI's scroll lock behavior for Select components */
+body[style*="pointer-events"] {
+  pointer-events: auto !important;
+}
+
+/* Ensure Radix portals don't block interaction when closed */
+[data-radix-portal]:empty {
+  pointer-events: none !important;
+}
+
+body[style*="overflow"] {
+  overflow-y: scroll !important;
+  overflow-x: hidden !important;
+}
+
+/* Prevent any padding adjustments from Radix */
+body[style*="padding-right"] {
+  padding-right: 0 !important;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

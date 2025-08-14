@@ -13,6 +13,8 @@ import { usePageHeader } from "@/components/PageHeaderContext"
 import { createClient } from "@/lib/auth/client"
 import { useToast } from "@/components/ui/use-toast"
 import { LoadingSpinnerWithText } from "@/components/ui/loading-spinner"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { getGravatarUrlSimple, getInitials } from "@/lib/utils/gravatar"
 
 interface AccountMember {
   id: string
@@ -140,10 +142,32 @@ export default function UsersSettingsPage() {
           setCurrentUserId(user.id)
         }
         
-        // Get current account from cookie
-        const cookies = document.cookie.split('; ')
-        const accountCookie = cookies.find(c => c.startsWith('current_account='))
-        const accountId = accountCookie?.split('=')[1]
+        // Get current account - first try from user's membership
+        let accountId = null
+        
+        // Try to get from user's first active membership
+        if (user) {
+          const { data: membershipData } = await supabase
+            .from('account_members')
+            .select('account_id')
+            .eq('user_id', user.id)
+            .eq('status', 'active')
+            .limit(1)
+            .single()
+          
+          if (membershipData) {
+            accountId = membershipData.account_id
+            console.log('Found account from membership:', accountId)
+          }
+        }
+        
+        // Fallback to cookie if available
+        if (!accountId) {
+          const cookies = document.cookie.split('; ')
+          const accountCookie = cookies.find(c => c.startsWith('current_account='))
+          accountId = accountCookie?.split('=')[1]
+          console.log('Using account from cookie:', accountId)
+        }
         
         if (!accountId) {
           toast({
@@ -157,10 +181,31 @@ export default function UsersSettingsPage() {
         
         setCurrentAccountId(accountId)
         
-        // Fetch account members using RPC to bypass RLS
+        // Fetch account members directly
         console.log('Fetching members for account:', accountId)
+        console.log('Current user:', user)
+        
+        // First, let's try a simple query
+        const { data: testData, error: testError } = await supabase
+          .from('account_members')
+          .select('*')
+          .eq('account_id', accountId)
+        
+        console.log('Test query result:', testData, testError)
+        
+        // Now the full query
         const { data: membersData, error: membersError } = await supabase
-          .rpc('get_account_members', { p_account_id: accountId })
+          .from('account_members')
+          .select(`
+            *,
+            user_profiles!organization_members_user_id_fkey (
+              email,
+              full_name,
+              avatar_url
+            )
+          `)
+          .eq('account_id', accountId)
+          .order('joined_at', { ascending: true })
         
         console.log('Members data:', membersData)
         console.log('Members error:', membersError)
@@ -172,8 +217,16 @@ export default function UsersSettingsPage() {
             description: `Failed to load users: ${membersError.message}`,
             variant: "destructive"
           })
-        } else {
-          setUsers(membersData || [])
+        } else if (membersData) {
+          // Transform the data to match the expected format
+          const transformedUsers = membersData.map(member => ({
+            ...member,
+            email: member.user_profiles?.email || '',
+            full_name: member.user_profiles?.full_name || '',
+            avatar_url: member.user_profiles?.avatar_url || ''
+          }))
+          
+          setUsers(transformedUsers)
           
           // Find current user's role
           const currentMember = membersData?.find(m => m.user_id === user?.id)
@@ -320,7 +373,15 @@ export default function UsersSettingsPage() {
     {
       header: "Name",
       accessorKey: "name" as const,
-      cell: (row: AccountMember) => row.full_name || 'Unknown User',
+      cell: (row: AccountMember) => (
+        <div className="flex items-center gap-3">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={getGravatarUrlSimple(row.email, 80)} />
+            <AvatarFallback className="text-xs">{getInitials(row.full_name, row.email)}</AvatarFallback>
+          </Avatar>
+          <span>{row.full_name || 'Unknown User'}</span>
+        </div>
+      ),
     },
     {
       header: "Email",

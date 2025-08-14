@@ -660,15 +660,20 @@ export default function ProfilesPage() {
       filtered = filtered.filter((profile) => {
         switch (profileType) {
           case "active":
-            return profile.status === "Active"
+            // Active lifecycle status
+            return profile.status === 'active'
           case "marketing":
-            return profile.status === "Marketing"
-          case "suppressed":
-            return profile.status === "Suppressed"
+            // Active profiles with marketing channels enabled
+            return profile.status === 'active' && hasMarketingChannel(profile)
+          case "archived":
+            // Inactive lifecycle status
+            return profile.status === 'inactive'
           case "unsubscribed":
-            return profile.status === "Unsubscribed"
+            // Active or inactive profiles with all marketing disabled
+            return (profile.status === 'active' || profile.status === 'inactive') && allMarketingRevoked(profile)
           case "deleted":
-            return profile.status === "Inactive"
+            // Soft deleted profiles
+            return profile.status === 'deleted'
           default:
             return true
         }
@@ -770,14 +775,96 @@ export default function ProfilesPage() {
     setCurrentPage(1) // Reset to first page when filtering
   }, [profiles, selectedType, searchTerm, filterConditions, selectedSegment, segments])
 
-  // Calculate counts
+  // Helper function to check if profile has any active channel
+  const hasActiveChannel = (profile: Profile): boolean => {
+    if (!profile.notification_preferences) return false
+    
+    try {
+      const prefs = typeof profile.notification_preferences === 'string' 
+        ? JSON.parse(profile.notification_preferences) 
+        : profile.notification_preferences
+      
+      // Check if any channel is active (marketing or transactional)
+      return (
+        prefs.marketing_email === true ||
+        prefs.marketing_sms === true ||
+        prefs.marketing_whatsapp === true ||
+        prefs.marketing_rcs === true ||
+        prefs.transactional_email === true ||
+        prefs.transactional_sms === true ||
+        prefs.transactional_whatsapp === true ||
+        prefs.transactional_rcs === true
+      )
+    } catch {
+      return false
+    }
+  }
+
+  // Helper function to check if profile has any marketing channel active
+  const hasMarketingChannel = (profile: Profile): boolean => {
+    if (!profile.notification_preferences) return false
+    
+    try {
+      const prefs = typeof profile.notification_preferences === 'string' 
+        ? JSON.parse(profile.notification_preferences) 
+        : profile.notification_preferences
+      
+      // Check if any marketing channel is active
+      return (
+        prefs.marketing_email === true ||
+        prefs.marketing_sms === true ||
+        prefs.marketing_whatsapp === true ||
+        prefs.marketing_rcs === true
+      )
+    } catch {
+      return false
+    }
+  }
+
+  // Helper function to check if all marketing channels are revoked
+  const allMarketingRevoked = (profile: Profile): boolean => {
+    if (!profile.notification_preferences) return true
+    
+    try {
+      const prefs = typeof profile.notification_preferences === 'string' 
+        ? JSON.parse(profile.notification_preferences) 
+        : profile.notification_preferences
+      
+      // Check if ALL marketing channels are false/revoked
+      return (
+        prefs.marketing_email !== true &&
+        prefs.marketing_sms !== true &&
+        prefs.marketing_whatsapp !== true &&
+        prefs.marketing_rcs !== true
+      )
+    } catch {
+      return true
+    }
+  }
+
+  // Calculate counts based on lifecycle status and notification preferences
   const counts = {
-    all: profiles.length,
-    active: profiles.filter((p) => p.status === "Active").length,
-    marketing: profiles.filter((p) => p.status === "Marketing").length,
-    suppressed: profiles.filter((p) => p.status === "Suppressed").length,
-    unsubscribed: profiles.filter((p) => p.status === "Unsubscribed").length,
-    deleted: profiles.filter((p) => p.status === "Inactive").length,
+    // All profiles except destroyed
+    all: profiles.filter(p => p.status !== 'destroyed').length,
+    
+    // Active lifecycle status (not about channels, just lifecycle)
+    active: profiles.filter(p => p.status === 'active').length,
+    
+    // Active profiles with marketing channels enabled (derived state)
+    marketing: profiles.filter(p => 
+      p.status === 'active' && hasMarketingChannel(p)
+    ).length,
+    
+    // Inactive lifecycle status (dormant profiles)
+    archived: profiles.filter(p => p.status === 'inactive').length,
+    
+    // Active/Inactive profiles with all marketing channels disabled (derived state)
+    unsubscribed: profiles.filter(p => 
+      (p.status === 'active' || p.status === 'inactive') && allMarketingRevoked(p)
+    ).length,
+    
+    // Soft deleted profiles
+    deleted: profiles.filter(p => p.status === 'deleted').length,
   }
 
   const handleRowEdit = (profile: Profile) => {

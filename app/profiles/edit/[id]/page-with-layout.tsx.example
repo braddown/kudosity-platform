@@ -1,0 +1,59 @@
+"use client"
+
+import { useState, useEffect, useMemo } from "react"
+import { useRouter } from "next/navigation"
+import ProfilePage from "@/components/features/profiles/ProfilePage"
+import MainLayout from "@/components/MainLayout"
+import PageLayout from "@/components/layouts/PageLayout"
+import { ProfileEditActions } from "@/components/ProfileEditActions"
+
+// This shows how we COULD have made it work with the original layout
+
+export default function EditProfilePageWithLayout({ params }: { params: { id: string } }) {
+  const router = useRouter()
+  const profileId = params.id
+  
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveText, setSaveText] = useState("Save")
+  const [profileStatus, setProfileStatus] = useState<string>('active')
+  const [profileName, setProfileName] = useState<string>('')
+
+  // Memoize callbacks to prevent recreating them
+  const handleClose = useMemo(() => () => router.push("/profiles"), [router])
+  
+  const handleSave = useMemo(() => async () => {
+    // Save logic here
+  }, [])
+
+  const handleStatusChange = useMemo(() => (newStatus: string) => {
+    setProfileStatus(newStatus)
+  }, [])
+
+  // Memoize the actions component to prevent recreating it
+  const customActions = useMemo(() => (
+    <ProfileEditActions
+      onSave={handleSave}
+      onCancel={handleClose}
+      isSaving={isSaving}
+      hasChanges={true}
+      saveText={saveText}
+      status={profileStatus}
+      onStatusChange={handleStatusChange}
+    />
+  ), [handleSave, handleClose, isSaving, saveText, profileStatus, handleStatusChange])
+
+  return (
+    <MainLayout>
+      <PageLayout
+        title={profileName ? `Edit Profile: ${profileName}` : "Edit Profile"}
+        customActions={customActions}
+      >
+        <ProfilePage
+          profileId={profileId}
+          onBack={handleClose}
+          isHeaderless={true}
+        />
+      </PageLayout>
+    </MainLayout>
+  )
+}

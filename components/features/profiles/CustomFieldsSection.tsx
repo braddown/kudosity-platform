@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import { Settings2 } from "lucide-react"
 
 interface CustomFieldsSchema {
   [key: string]: {
@@ -48,7 +49,10 @@ export function CustomFieldsSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl font-medium text-foreground">Custom Properties</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-xl font-medium text-foreground">
+          <Settings2 className="h-4 w-4 text-green-500" />
+          Custom Properties
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {hasCustomFields ? (

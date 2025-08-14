@@ -123,15 +123,40 @@ export default function AccountSettingsPage() {
       try {
         const supabase = createClient()
         
-        // Get current account from cookie
-        const cookies = document.cookie.split('; ')
-        const accountCookie = cookies.find(c => c.startsWith('current_account='))
-        const accountId = accountCookie?.split('=')[1]
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        // Get current account - first try from user's membership
+        let accountId = null
+        
+        // Try to get from user's first active membership
+        if (user) {
+          const { data: membershipData } = await supabase
+            .from('account_members')
+            .select('account_id')
+            .eq('user_id', user.id)
+            .eq('status', 'active')
+            .limit(1)
+            .single()
+          
+          if (membershipData) {
+            accountId = membershipData.account_id
+            console.log('Found account from membership:', accountId)
+          }
+        }
+        
+        // Fallback to cookie if available
+        if (!accountId) {
+          const cookies = document.cookie.split('; ')
+          const accountCookie = cookies.find(c => c.startsWith('current_account='))
+          accountId = accountCookie?.split('=')[1]
+          console.log('Using account from cookie:', accountId)
+        }
         
         if (!accountId) {
           toast({
-            title: "No Account Selected",
-            description: "Please select an account to view settings.",
+            title: "No Account Found",
+            description: "Unable to find your account. Please try logging in again.",
             variant: "destructive"
           })
           setLoading(false)
@@ -139,11 +164,15 @@ export default function AccountSettingsPage() {
         }
         
         // Fetch account details
+        console.log('Fetching account with ID:', accountId)
         const { data, error } = await supabase
           .from('accounts')
           .select('*')
           .eq('id', accountId)
           .single()
+        
+        console.log('Account data:', data)
+        console.log('Account error:', error)
         
         if (error) {
           console.error('Error fetching account:', error)
@@ -359,93 +388,96 @@ export default function AccountSettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Company Details Card */}
-        <Card>
-          <CardContent className="space-y-6 pt-6">
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Hash className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                  Company Details
-                </h3>
-                <p className="text-sm text-muted-foreground">Company registration and identification</p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="companyNumber">Company Number</Label>
-                  <Input
-                    id="companyNumber"
-                    value={formData.company_number}
-                    onChange={(e) => setFormData({ ...formData, company_number: e.target.value })}
-                    placeholder="ABN/ACN/Registration Number"
-                  />
-                  <p className="text-xs text-muted-foreground">Business registration or tax number</p>
+        {/* Company Details and Location Settings in 2 columns */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Company Details Card */}
+          <Card>
+            <CardContent className="space-y-6 pt-6">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Hash className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    Company Details
+                  </h3>
+                  <p className="text-sm text-muted-foreground">Company registration and identification</p>
                 </div>
                 
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="companyAddress">Company Address</Label>
-                  <Textarea
-                    id="companyAddress"
-                    value={formData.company_address}
-                    onChange={(e) => setFormData({ ...formData, company_address: e.target.value })}
-                    placeholder="Enter company address"
-                    rows={3}
-                  />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="companyNumber">Company Number</Label>
+                    <Input
+                      id="companyNumber"
+                      value={formData.company_number}
+                      onChange={(e) => setFormData({ ...formData, company_number: e.target.value })}
+                      placeholder="ABN/ACN/Registration Number"
+                    />
+                    <p className="text-xs text-muted-foreground">Business registration or tax number</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="companyAddress">Company Address</Label>
+                    <Textarea
+                      id="companyAddress"
+                      value={formData.company_address}
+                      onChange={(e) => setFormData({ ...formData, company_address: e.target.value })}
+                      placeholder="Enter company address"
+                      rows={4}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Location Settings Card */}
-        <Card>
-          <CardContent className="space-y-6 pt-6">
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Globe className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  Location Settings
-                </h3>
-                <p className="text-sm text-muted-foreground">Primary location and timezone for the account</p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="country">Country</Label>
-                  <Select value={formData.country} onValueChange={(value) => setFormData({ ...formData, country: value })}>
-                    <SelectTrigger id="country">
-                      <SelectValue placeholder="Select a country" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countries.map((country) => (
-                        <SelectItem key={country.value} value={country.value}>
-                          {country.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          {/* Location Settings Card */}
+          <Card>
+            <CardContent className="space-y-6 pt-6">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Globe className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    Location Settings
+                  </h3>
+                  <p className="text-sm text-muted-foreground">Primary location and timezone for the account</p>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <Select value={formData.timezone} onValueChange={(value) => setFormData({ ...formData, timezone: value })}>
-                    <SelectTrigger id="timezone">
-                      <SelectValue placeholder="Select a timezone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {timezones.map((tz) => (
-                        <SelectItem key={tz.value} value={tz.value}>
-                          {tz.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="country">Country</Label>
+                    <Select value={formData.country} onValueChange={(value) => setFormData({ ...formData, country: value })}>
+                      <SelectTrigger id="country">
+                        <SelectValue placeholder="Select a country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countries.map((country) => (
+                          <SelectItem key={country.value} value={country.value}>
+                            {country.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="timezone">Timezone</Label>
+                    <Select value={formData.timezone} onValueChange={(value) => setFormData({ ...formData, timezone: value })}>
+                      <SelectTrigger id="timezone">
+                        <SelectValue placeholder="Select a timezone" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {timezones.map((tz) => (
+                          <SelectItem key={tz.value} value={tz.value}>
+                            {tz.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </MainLayout>
   )

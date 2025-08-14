@@ -15,6 +15,7 @@ interface PageHeaderInfo {
   title: string
   description?: string
   actions?: ActionButton[]
+  customActions?: ReactNode
   showBackButton?: boolean
   backHref?: string
 }

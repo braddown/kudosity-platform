@@ -11,20 +11,20 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (!error) {
-      // Check if user needs to create an organization
+      // Check if user needs to create an account
       const { data: { user } } = await supabase.auth.getUser()
       
       if (user) {
-        // Check if user has any organizations
+        // Check if user has any accounts
         const { data: memberships } = await supabase
-          .from('organization_members')
-          .select('organization_id')
+          .from('account_members')
+          .select('account_id')
           .eq('user_id', user.id)
           .eq('status', 'active')
 
-        // If no organizations, redirect to organization setup
+        // If no accounts, redirect to account setup
         if (!memberships || memberships.length === 0) {
-          return NextResponse.redirect(`${origin}/auth/setup-organization`)
+          return NextResponse.redirect(`${origin}/auth/setup-account`)
         }
       }
       
@@ -35,4 +35,6 @@ export async function GET(request: Request) {
   // Return the user to an error page with instructions
   return NextResponse.redirect(`${origin}/auth/error`)
 }
+
+
 
