@@ -29,7 +29,13 @@ export interface DataTableProps<T> {
   onFilterChange?: (value: string) => void
   actions?: Array<{
     label: string
+    icon?: React.ReactNode
     onClick: () => void
+  }>
+  bulkActions?: Array<{
+    label: string
+    icon?: React.ReactNode
+    onClick: (selectedRows: T[]) => void
   }>
   pagination?: {
     currentPage: number
@@ -57,6 +63,7 @@ export function DataTable<T extends { id: string | number; status?: string }>({
   filterOptions,
   onFilterChange,
   actions,
+  bulkActions,
   pagination,
   title = "All Items",
   onRowEdit,
@@ -138,10 +145,59 @@ export function DataTable<T extends { id: string | number; status?: string }>({
                   <ChevronDown className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-card border-border">
+              <DropdownMenuContent className="bg-card border-border w-64">
+                {/* Data Operations at the top */}
+                {actions && actions.length > 0 && (
+                  <>
+                    {actions.map((action, index) => (
+                      <DropdownMenuItem 
+                        key={`action-${index}`} 
+                        onClick={action.onClick} 
+                        className="hover:bg-accent text-foreground"
+                      >
+                        <span className="flex items-center gap-2">
+                          {action.icon}
+                          {action.label}
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+                    <div className="my-1 h-px bg-border" />
+                  </>
+                )}
+                
+                {/* Search for long lists */}
+                {filterOptions.length > 10 && (
+                  <>
+                    <div className="px-2 py-2">
+                      <Input
+                        placeholder="Search lists & segments..."
+                        className="h-8"
+                        onChange={(e) => {
+                          const searchValue = e.target.value.toLowerCase()
+                          // Filter the dropdown items based on search
+                          const items = document.querySelectorAll('[data-filter-option]')
+                          items.forEach((item) => {
+                            const label = item.getAttribute('data-filter-label')?.toLowerCase() || ''
+                            if (label.includes(searchValue)) {
+                              (item as HTMLElement).style.display = ''
+                            } else {
+                              (item as HTMLElement).style.display = 'none'
+                            }
+                          })
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                    <div className="my-1 h-px bg-border" />
+                  </>
+                )}
+                
+                {/* Filter/List/Segment Options */}
                 {filterOptions.map((option) => (
                   <DropdownMenuItem
                     key={option.value}
+                    data-filter-option
+                    data-filter-label={option.label}
                     onClick={() => handleFilterChange(option.value)}
                     className="hover:bg-accent text-foreground"
                   >
@@ -162,18 +218,31 @@ export function DataTable<T extends { id: string | number; status?: string }>({
               className="pl-10 w-[250px] h-10 bg-background border-border"
             />
           </div>
-          {actions && (
+          
+          {/* Bulk Actions - always visible, disabled when no selection */}
+          {bulkActions && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-10 hover:bg-accent">
-                  Actions
+                <Button 
+                  variant="outline" 
+                  className="h-10 hover:bg-accent"
+                  disabled={selectedRows.length === 0}
+                >
+                  Actions {selectedRows.length > 0 && `(${selectedRows.length})`}
                   <ChevronDown className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-card border-border">
-                {actions.map((action, index) => (
-                  <DropdownMenuItem key={index} onClick={action.onClick} className="hover:bg-accent text-foreground">
-                    {action.label}
+                {bulkActions.map((action, index) => (
+                  <DropdownMenuItem 
+                    key={index} 
+                    onClick={() => action.onClick(selectedRows)} 
+                    className="hover:bg-accent text-foreground"
+                  >
+                    <span className="flex items-center gap-2">
+                      {action.icon}
+                      {action.label}
+                    </span>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
