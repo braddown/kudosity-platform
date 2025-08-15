@@ -93,7 +93,7 @@ export default function UsersSettingsPage() {
       
       if (activityData && activityData.length > 0) {
         // Get unique user IDs
-        const userIds = [...new Set(activityData.map(a => a.user_id))]
+        const userIds = Array.from(new Set(activityData.map(a => a.user_id)))
         
         // Fetch user profiles for those user IDs
         const { data: profiles } = await supabase

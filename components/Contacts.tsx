@@ -835,7 +835,7 @@ export default function Contacts({
           all: contacts.length,
           active: contacts.filter((c) => c.status === "Active").length,
           marketing: contacts.filter((c) => c.is_marketing).length,
-          suppressed: contacts.filter((c) => c.is_suppressed).length,
+          archived: contacts.filter((c) => c.is_suppressed).length,
           unsubscribed: contacts.filter((c) => c.is_subscribed === false).length,
           deleted: contacts.filter((c) => c.status === "Deleted").length,
         }}

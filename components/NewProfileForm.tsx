@@ -1,12 +1,21 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { FormLayout, FormSection, FormField } from "@/components/ui/form-layout"
+import React, { useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Save, X } from "lucide-react"
+import { toast } from "sonner"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { ContactPropertiesForm } from "./features/profiles/ContactPropertiesForm"
+import { CustomFieldsSection } from "./features/profiles/CustomFieldsSection"
+import { NotificationPreferences } from "./features/profiles/NotificationPreferences"
+import type { CDPProfile } from "@/lib/types/cdp-types"
 
 interface NewProfileFormProps {
   onSubmit?: (data: any) => void
@@ -17,181 +26,249 @@ interface NewProfileFormProps {
 }
 
 export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, onSaveError }: NewProfileFormProps) {
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+  const router = useRouter()
+  const [saving, setSaving] = useState(false)
+  const [hasChanges, setHasChanges] = useState(false)
+  
+  // Initialize with a new empty profile
+  const [editedProfile, setEditedProfile] = useState<Partial<CDPProfile>>({
+    first_name: "",
+    last_name: "",
     email: "",
-    phone: "",
+    mobile: "",
     company: "",
-    jobTitle: "",
+    job_title: "",
     address: "",
     city: "",
-    state: "",
-    zipCode: "",
+    state_province: "",
+    zip_postal_code: "",
     country: "",
     notes: "",
     status: "active",
-    source: "manual",
+    source: "Manual Entry",
+    notification_preferences: {
+      email_marketing: true,
+      email_transactional: true,
+      sms_marketing: true,
+      sms_transactional: true,
+      whatsapp_marketing: true,
+      whatsapp_transactional: true,
+      rcs_marketing: true,
+      rcs_transactional: true,
+    },
+    custom_fields: {},
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSubmit?.(formData)
+  const handleInputChange = useCallback((field: string, value: any) => {
+    setEditedProfile(prev => ({
+      ...prev,
+      [field]: value
+    }))
+    setHasChanges(true)
+  }, [])
+
+  const handleSelectChange = useCallback((field: string, value: string) => {
+    setEditedProfile(prev => ({
+      ...prev,
+      [field]: value
+    }))
+    setHasChanges(true)
+  }, [])
+
+  const handleToggleChange = useCallback((field: string, checked: boolean) => {
+    setEditedProfile(prev => ({
+      ...prev,
+      notification_preferences: {
+        ...prev.notification_preferences,
+        [field]: checked
+      }
+    }))
+    setHasChanges(true)
+  }, [])
+
+  const handleCustomFieldChange = useCallback((key: string, value: any) => {
+    setEditedProfile(prev => ({
+      ...prev,
+      custom_fields: {
+        ...prev.custom_fields,
+        [key]: value
+      }
+    }))
+    setHasChanges(true)
+  }, [])
+
+  const handleStatusChange = useCallback((newStatus: string) => {
+    setEditedProfile(prev => {
+      const updated = {
+        ...prev,
+        status: newStatus
+      }
+
+      // If status is changed to deleted, ensure all notification preferences are turned off
+      if (newStatus === 'deleted') {
+        updated.notification_preferences = {
+          email_marketing: false,
+          email_transactional: false,
+          sms_marketing: false,
+          sms_transactional: false,
+          whatsapp_marketing: false,
+          whatsapp_transactional: false,
+          rcs_marketing: false,
+          rcs_transactional: false,
+        }
+      }
+
+      return updated
+    })
+    setHasChanges(true)
+  }, [])
+
+  const handleSave = async () => {
+    setSaving(true)
+    
+    try {
+      // Validate required fields
+      if (!editedProfile.first_name && !editedProfile.last_name && !editedProfile.mobile) {
+        toast.error("Please provide at least a name or mobile number")
+        setSaving(false)
+        return
+      }
+
+      const response = await fetch('/api/cdp-profiles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editedProfile),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to create profile')
+      }
+
+      const newProfile = await response.json()
+      
+      toast.success("Profile created successfully!")
+      
+      // Navigate to the edit page for the new profile
+      setTimeout(() => {
+        router.push(`/profiles/edit/${newProfile.id}`)
+      }, 500)
+      
+    } catch (error) {
+      console.error('Error creating profile:', error)
+      toast.error(error instanceof Error ? error.message : "Failed to create profile")
+      if (onSaveError) onSaveError()
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+  const handleBack = () => {
+    router.push('/profiles')
   }
+
+  // Get display name for header
+  const profileName = editedProfile.first_name || editedProfile.last_name 
+    ? `${editedProfile.first_name || ''} ${editedProfile.last_name || ''}`.trim()
+    : editedProfile.mobile || 'New Profile'
 
   return (
-    <div className="w-full">
-      <form onSubmit={handleSubmit}>
-        <FormLayout columns={2}>
-          <FormSection title="Personal Information">
-            <FormField label="First Name" required>
-              <Input
-                value={formData.firstName}
-                onChange={(e) => handleChange("firstName", e.target.value)}
-                placeholder="Enter first name"
-              />
-            </FormField>
-
-            <FormField label="Last Name" required>
-              <Input
-                value={formData.lastName}
-                onChange={(e) => handleChange("lastName", e.target.value)}
-                placeholder="Enter last name"
-              />
-            </FormField>
-
-            <FormField label="Email" required>
-              <Input
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-                placeholder="Enter email address"
-              />
-            </FormField>
-
-            <FormField label="Phone">
-              <Input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleChange("phone", e.target.value)}
-                placeholder="Enter phone number"
-              />
-            </FormField>
-          </FormSection>
-
-          <FormSection title="Professional Information">
-            <FormField label="Company">
-              <Input
-                value={formData.company}
-                onChange={(e) => handleChange("company", e.target.value)}
-                placeholder="Enter company name"
-              />
-            </FormField>
-
-            <FormField label="Job Title">
-              <Input
-                value={formData.jobTitle}
-                onChange={(e) => handleChange("jobTitle", e.target.value)}
-                placeholder="Enter job title"
-              />
-            </FormField>
-
-            <FormField label="Status" required>
-              <Select value={formData.status} onValueChange={(value) => handleChange("status", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
+    <div className="relative h-full">
+      {/* Fixed header with actions */}
+      <div className="fixed top-16 left-64 right-0 z-50 bg-background px-6 py-4 border-b shadow-sm">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold">New Profile: {profileName}</h1>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Status:</span>
+              <Select
+                value={editedProfile.status || 'active'}
+                onValueChange={handleStatusChange}
+              >
+                <SelectTrigger className="w-[140px] h-9">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="active">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                      <span>Active</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="inactive">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-gray-500" />
+                      <span>Inactive</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="pending">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                      <span>Pending</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="deleted">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-red-500" />
+                      <span>Deleted</span>
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
-            </FormField>
+            </div>
+            <Button
+              onClick={handleSave}
+              disabled={saving || !hasChanges}
+              className={saving || !hasChanges ? "opacity-50 cursor-not-allowed" : ""}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+            <Button
+              onClick={handleBack}
+              variant="ghost"
+              size="icon"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
 
-            <FormField label="Source">
-              <Select value={formData.source} onValueChange={(value) => handleChange("source", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select source" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="manual">Manual Entry</SelectItem>
-                  <SelectItem value="import">Import</SelectItem>
-                  <SelectItem value="api">API</SelectItem>
-                  <SelectItem value="website">Website</SelectItem>
-                </SelectContent>
-              </Select>
-            </FormField>
-          </FormSection>
+      {/* Main content with padding for fixed header */}
+      <div className="pt-20 px-6 pb-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <ContactPropertiesForm
+            profile={editedProfile as CDPProfile}
+            editedProfile={editedProfile as CDPProfile}
+            handleInputChange={handleInputChange}
+            handleSelectChange={handleSelectChange}
+          />
+          
+          <CustomFieldsSection
+            profile={editedProfile as CDPProfile}
+            editedProfile={editedProfile as CDPProfile}
+            customFieldsSchema={[]} // Empty for new profiles
+            handleCustomFieldChange={handleCustomFieldChange}
+          />
+          
+          <NotificationPreferences
+            profile={editedProfile as CDPProfile}
+            editedProfile={editedProfile as CDPProfile}
+            handleToggleChange={handleToggleChange}
+          />
+        </div>
+      </div>
 
-          <FormSection title="Address Information">
-            <FormField label="Address">
-              <Input
-                value={formData.address}
-                onChange={(e) => handleChange("address", e.target.value)}
-                placeholder="Enter street address"
-              />
-            </FormField>
-
-            <FormField label="City">
-              <Input
-                value={formData.city}
-                onChange={(e) => handleChange("city", e.target.value)}
-                placeholder="Enter city"
-              />
-            </FormField>
-
-            <FormField label="State/Province">
-              <Input
-                value={formData.state}
-                onChange={(e) => handleChange("state", e.target.value)}
-                placeholder="Enter state or province"
-              />
-            </FormField>
-
-            <FormField label="Zip/Postal Code">
-              <Input
-                value={formData.zipCode}
-                onChange={(e) => handleChange("zipCode", e.target.value)}
-                placeholder="Enter zip code"
-              />
-            </FormField>
-          </FormSection>
-
-          <FormSection title="Additional Information">
-            <FormField label="Country">
-              <Select value={formData.country} onValueChange={(value) => handleChange("country", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select country" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="us">United States</SelectItem>
-                  <SelectItem value="ca">Canada</SelectItem>
-                  <SelectItem value="uk">United Kingdom</SelectItem>
-                  <SelectItem value="au">Australia</SelectItem>
-                  <SelectItem value="de">Germany</SelectItem>
-                  <SelectItem value="fr">France</SelectItem>
-                </SelectContent>
-              </Select>
-            </FormField>
-          </FormSection>
-
-          <FormSection title="Notes" fullWidth>
-            <FormField label="Additional Notes" description="Any additional information about this profile">
-              <Textarea
-                value={formData.notes}
-                onChange={(e) => handleChange("notes", e.target.value)}
-                placeholder="Enter any additional notes..."
-                rows={4}
-              />
-            </FormField>
-          </FormSection>
-        </FormLayout>
-      </form>
+      {/* Hidden submit button for form submission */}
+      <button
+        id="save-profile-form"
+        type="button"
+        onClick={handleSave}
+        className="hidden"
+      />
     </div>
   )
 }

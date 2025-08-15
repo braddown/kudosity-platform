@@ -10,6 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Save, X } from "lucide-react"
 import { useProfileData } from "@/hooks/use-profile-data"
 import { useProfileForm } from "@/hooks/use-profile-form"
 import { ContactPropertiesForm } from "./ContactPropertiesForm"
@@ -23,6 +25,8 @@ interface ProfilePageProps {
   onSave?: () => void
   onSaveError?: () => void
   isHeaderless?: boolean
+  onSaveRef?: (ref: () => Promise<void>) => void
+  onHasChangesUpdate?: (hasChanges: boolean) => void
 }
 
 /**
@@ -52,7 +56,9 @@ export default function ProfilePage({
   onBack,
   onSave,
   onSaveError,
-  isHeaderless = false
+  isHeaderless = false,
+  onSaveRef,
+  onHasChangesUpdate
 }: ProfilePageProps) {
   const [activityRefreshTrigger, setActivityRefreshTrigger] = useState(0)
 
@@ -144,7 +150,7 @@ export default function ProfilePage({
   const profileName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown Profile'
 
   return (
-    <div className={`space-y-6 ${!isHeaderless ? 'pt-6' : ''}`}>
+    <div className="space-y-6">
       {!isHeaderless && (
         <div className="fixed top-16 left-64 right-0 z-50 bg-background px-6 py-4 border-b shadow-sm">
           <div className="flex justify-between items-center">
@@ -184,29 +190,28 @@ export default function ProfilePage({
                   </SelectContent>
                 </Select>
               </div>
-              <button
+              <Button
                 onClick={handleSave}
                 disabled={saving || !hasChanges}
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
-                  saving || !hasChanges
-                    ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
-                }`}
+                className={saving || !hasChanges ? "opacity-50 cursor-not-allowed" : ""}
               >
+                <Save className="h-4 w-4 mr-2" />
                 {saving ? 'Saving...' : 'Save'}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={onBack}
-                className="px-4 py-2 rounded-md text-sm font-medium border border-input bg-background hover:bg-accent"
+                variant="ghost"
+                size="icon"
               >
-                ✕
-              </button>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
       )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <div className="pt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ContactPropertiesForm
           profile={editedProfile || profile}
           onInputChange={handleInputChange}
@@ -231,6 +236,7 @@ export default function ProfilePage({
           profile={profile} // Use original profile for timestamps
           refreshTrigger={activityRefreshTrigger}
         />
+      </div>
       </div>
     </div>
   )
