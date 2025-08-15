@@ -664,18 +664,18 @@ export default function ProfilesPage() {
           case "active":
             // Active lifecycle status
             return profile.status === 'active'
-          case "marketing":
-            // Active profiles with marketing channels enabled
-            return profile.status === 'active' && hasMarketingChannel(profile)
           case "archived":
             // Inactive lifecycle status
             return profile.status === 'inactive'
-          case "unsubscribed":
-            // Active or inactive profiles with all marketing disabled
-            return (profile.status === 'active' || profile.status === 'inactive') && allMarketingRevoked(profile)
           case "deleted":
             // Soft deleted profiles
             return profile.status === 'deleted'
+          case "marketing":
+            // Profiles with ANY marketing channel enabled (regardless of status)
+            return profile.status !== 'destroyed' && hasMarketingChannel(profile)
+          case "unsubscribed":
+            // Profiles with ALL marketing channels disabled (regardless of status)
+            return profile.status !== 'destroyed' && allMarketingRevoked(profile)
           default:
             return true
         }
@@ -859,21 +859,21 @@ export default function ProfilesPage() {
     // Active lifecycle status (not about channels, just lifecycle)
     active: profiles.filter(p => p.status === 'active').length,
     
-    // Active profiles with marketing channels enabled (derived state)
-    marketing: profiles.filter(p => 
-      p.status === 'active' && hasMarketingChannel(p)
-    ).length,
-    
     // Inactive lifecycle status (dormant profiles)
     archived: profiles.filter(p => p.status === 'inactive').length,
     
-    // Active/Inactive profiles with all marketing channels disabled (derived state)
-    unsubscribed: profiles.filter(p => 
-      (p.status === 'active' || p.status === 'inactive') && allMarketingRevoked(p)
-    ).length,
-    
     // Soft deleted profiles
     deleted: profiles.filter(p => p.status === 'deleted').length,
+    
+    // Profiles with ANY marketing channel enabled (regardless of status)
+    marketing: profiles.filter(p => 
+      p.status !== 'destroyed' && hasMarketingChannel(p)
+    ).length,
+    
+    // Profiles with ALL marketing channels disabled (regardless of status)
+    unsubscribed: profiles.filter(p => 
+      p.status !== 'destroyed' && allMarketingRevoked(p)
+    ).length,
   }
 
   const handleRowEdit = (profile: Profile) => {
@@ -1232,14 +1232,14 @@ export default function ProfilesPage() {
     switch (selectedType) {
       case "active":
         return "Active Profiles"
-      case "marketing":
-        return "Marketing Profiles"
-      case "suppressed":
-        return "Suppressed Profiles"
-      case "unsubscribed":
-        return "Unsubscribed Profiles"
+      case "archived":
+        return "Inactive Profiles"
       case "deleted":
         return "Deleted Profiles"
+      case "marketing":
+        return "Marketing Enabled Profiles"
+      case "unsubscribed":
+        return "Unsubscribed Profiles"
       default:
         return "All Profiles"
     }
