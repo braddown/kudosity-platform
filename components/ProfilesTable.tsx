@@ -14,7 +14,7 @@ interface ProfileTableData {
   email: string
   mobileNumber: string | null // This can stay as mobileNumber for display purposes
   role: string
-  status: "Active" | "Inactive" | "Unsubscribed" | "Bounced" | "Spam Complaint"
+  status: "Active" | "Inactive" | "Deleted" | "Unsubscribed" | "Bounced" | "Spam Complaint"
   lastLogin: string | null
   teams: string[] | null
   dateAdded: string
@@ -54,7 +54,7 @@ const transformProfileToTableData = (profile: any): ProfileTableData => {
     email: profile.email || "",
     mobileNumber: profile.mobile || null, // Using 'mobile' from database
     role: "User", // Default since role doesn't exist in schema
-    status: (profile.status as "Active" | "Inactive") || "Active",
+    status: (profile.status ? profile.status.charAt(0).toUpperCase() + profile.status.slice(1).toLowerCase() : "Active") as ProfileTableData["status"],
     lastLogin: profile.last_login || null,
     teams: null, // Teams doesn't exist in schema
     dateAdded: profile.created_at || new Date().toISOString(),
@@ -132,6 +132,8 @@ export function ProfilesTable({ onProfileSelect }: ProfilesTableProps) {
         return <Badge variant="translucent-green">Active</Badge>
       case "Inactive":
         return <Badge variant="translucent-gray">Inactive</Badge>
+      case "Deleted":
+        return <Badge variant="translucent-red">Deleted</Badge>
       case "Unsubscribed":
         return <Badge variant="translucent-orange">Unsubscribed</Badge>
       case "Bounced":

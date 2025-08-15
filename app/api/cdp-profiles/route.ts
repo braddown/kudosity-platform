@@ -143,6 +143,8 @@ export async function POST(request: NextRequest) {
     // Ensure account_id is set
     profileData.account_id = accountId
 
+    console.log('Creating profile with data:', JSON.stringify(profileData, null, 2))
+
     const { data: profile, error: insertError } = await supabase
       .from('cdp_profiles')
       .insert([profileData])

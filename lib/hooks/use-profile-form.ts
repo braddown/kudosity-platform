@@ -324,6 +324,13 @@ export function useProfileForm({
           
           console.log(`✅ Updated notification preferences:`, currentPrefs)
           
+          // If the profile status is 'deleted' and we're activating any channel, change status to 'active'
+          const currentStatus = (newProfile.status || profile?.status || '').toLowerCase()
+          if (currentStatus === 'deleted' && checked === true) {
+            console.log(`🔄 Reactivating profile: changing status from 'deleted' to 'active'`)
+            newProfile.status = 'active'
+          }
+          
           // Log consent activity for legal compliance
           const isMarketing = name.startsWith("marketing_")
           const channel = name.replace(/^(marketing_|transactional_)/, '')
@@ -441,14 +448,14 @@ export function useProfileForm({
       // If status is deleted, ensure all notification preferences are turned off
       if (finalProfileToSave.status === 'deleted') {
         cdpProfileUpdate.notification_preferences = {
-          email_marketing: false,
-          email_transactional: false,
-          sms_marketing: false,
-          sms_transactional: false,
-          whatsapp_marketing: false,
-          whatsapp_transactional: false,
-          rcs_marketing: false,
-          rcs_transactional: false
+          marketing_emails: false,
+          transactional_emails: false,
+          marketing_sms: false,
+          transactional_sms: false,
+          marketing_whatsapp: false,
+          transactional_whatsapp: false,
+          marketing_rcs: false,
+          transactional_rcs: false
         }
       }
     }
@@ -492,12 +499,15 @@ export function useProfileForm({
     if (finalProfileToSave.data_retention_date !== undefined) cdpProfileUpdate.data_retention_date = finalProfileToSave.data_retention_date
 
     console.log("Saving profile changes...")
+    console.log("Status being saved:", cdpProfileUpdate.status)
+    console.log("Full update object:", JSON.stringify(cdpProfileUpdate, null, 2))
     
     // Use the profiles API instead of direct Supabase call
     const { data, error } = await profilesApi.updateProfile(profile.id, cdpProfileUpdate)
 
     if (data) {
       console.log("Profile saved successfully")
+      console.log("🔍 Returned profile status:", data.status)
       console.log("🔍 Saved data notification_preferences:", data.notification_preferences)
       
       // Log property changes after successful save

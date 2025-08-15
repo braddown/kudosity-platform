@@ -40,13 +40,14 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
     last_name: "",
     email: "",
     mobile: "",
-    company: "",
-    job_title: "",
-    address: "",
+    address_line_1: "",
+    address_line_2: "",
     city: "",
-    state_province: "",
-    zip_postal_code: "",
+    state: "",
+    postal_code: "",
     country: "",
+    location: "",
+    device: "",
     notes: "",
     status: "pending",
     source: "Manual Entry",
@@ -63,10 +64,11 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
     custom_fields: {},
   })
 
-  const handleInputChange = useCallback((field: string, value: any) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
     setEditedProfile(prev => ({
       ...prev,
-      [field]: value
+      [name]: value
     }))
     setHasChanges(true)
   }, [])
@@ -168,28 +170,65 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
     setSaving(true)
     
     try {
-      // Validate required fields
-      if (!editedProfile.first_name && !editedProfile.last_name && !editedProfile.mobile) {
-        toast.error("Please provide at least a name or mobile number")
+      // Validate required fields - mobile is required in database
+      if (!editedProfile.mobile || editedProfile.mobile.trim() === '') {
+        toast.error("Mobile number is required")
         setSaving(false)
         return
       }
+
+      // Clean the profile data before sending
+      const profileToSave = Object.entries(editedProfile).reduce((acc, [key, value]) => {
+        // Convert empty strings to null for database compatibility
+        if (value === '') {
+          acc[key] = null
+        } else if (value !== undefined) {
+          acc[key] = value
+        }
+        return acc
+      }, {} as any)
+
+      // Ensure notification_preferences is properly structured
+      profileToSave.notification_preferences = editedProfile.notification_preferences || {}
+      // Ensure custom_fields is properly structured  
+      profileToSave.custom_fields = editedProfile.custom_fields || {}
+      
+      // Convert pending status to active when saving
+      if (profileToSave.status === 'pending') {
+        profileToSave.status = 'active'
+      }
+
+      console.log('Saving profile:', JSON.stringify(profileToSave, null, 2))
 
       const response = await fetch('/api/cdp-profiles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(editedProfile),
+        body: JSON.stringify(profileToSave),
       })
 
+      const responseText = await response.text()
+      console.log('Response status:', response.status)
+      console.log('Response text:', responseText)
+
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Failed to create profile')
+        let error
+        try {
+          error = JSON.parse(responseText)
+        } catch {
+          error = { message: responseText }
+        }
+        console.error('API Error:', error)
+        throw new Error(error.details || error.message || 'Failed to create profile')
       }
 
-      const result = await response.json()
+      const result = JSON.parse(responseText)
       const newProfile = result.data
+      
+      if (!newProfile) {
+        throw new Error('No profile data returned')
+      }
       
       // Log the profile creation activity
       try {
@@ -309,9 +348,8 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
           <div className="space-y-6">
             <ContactPropertiesForm
               profile={editedProfile as CDPProfile}
-              editedProfile={editedProfile as CDPProfile}
-              handleInputChange={handleInputChange}
-              handleSelectChange={handleSelectChange}
+              onInputChange={handleInputChange}
+              onSelectChange={handleSelectChange}
             />
             
             <NotificationPreferences
@@ -324,9 +362,8 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
           <div className="space-y-6">
             <CustomFieldsSection
               profile={editedProfile as CDPProfile}
-              editedProfile={editedProfile as CDPProfile}
               customFieldsSchema={customFieldsSchema}
-              handleCustomFieldChange={handleCustomFieldChange}
+              onCustomFieldChange={handleCustomFieldChange}
             />
             
             <ProfileActivityTimeline 

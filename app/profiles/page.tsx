@@ -311,7 +311,6 @@ export default function ProfilesPage() {
         try {
           const profileData: any = {
             status: "Active",
-            country: "Australia",
             updated_at: new Date().toISOString(),
           }
 
@@ -1021,7 +1020,7 @@ export default function ProfilesPage() {
       id: "country",
       header: "Country",
       width: "150px",
-      cell: (row) => row.country || "Australia",
+      cell: (row) => row.country || "",
     },
     {
       id: "created_at",
@@ -1043,11 +1042,26 @@ export default function ProfilesPage() {
       width: "100px",
       cell: (row) => {
         const getStatusBadge = (status: string) => {
-          switch (status) {
+          // Normalize status to handle case variations
+          const normalizedStatus = status ? status.charAt(0).toUpperCase() + status.slice(1).toLowerCase() : "Active"
+          
+          switch (normalizedStatus) {
             case "Active":
               return (
                 <Badge variant="translucent-green" className="font-medium">
                   Active
+                </Badge>
+              )
+            case "Deleted":
+              return (
+                <Badge variant="translucent-red" className="font-medium">
+                  Deleted
+                </Badge>
+              )
+            case "Inactive":
+              return (
+                <Badge variant="translucent-gray" className="font-medium">
+                  Inactive
                 </Badge>
               )
             case "Marketing":
@@ -1066,12 +1080,6 @@ export default function ProfilesPage() {
               return (
                 <Badge variant="translucent-orange" className="font-medium">
                   Unsubscribed
-                </Badge>
-              )
-            case "Inactive":
-              return (
-                <Badge variant="translucent-red" className="font-medium">
-                  Deleted
                 </Badge>
               )
             default:

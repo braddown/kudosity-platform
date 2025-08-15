@@ -115,6 +115,7 @@ export function useProfileData({
       // Map CDP profile to expected format for compatibility
       const mappedProfile = {
         id: data.id,
+        status: data.status, // CRITICAL: Include status field!
         first_name: data.first_name,
         last_name: data.last_name,
         email: data.email,

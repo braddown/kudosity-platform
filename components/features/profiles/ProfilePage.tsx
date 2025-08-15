@@ -98,34 +98,47 @@ export default function ProfilePage({
     refetch,
     onProfileUpdate: updateProfile
   })
+  
+  // Debug logging - must be before any returns
+  useEffect(() => {
+    console.log('ProfilePage status debug:', {
+      profileExists: !!profile,
+      profileStatus: profile?.status,
+      editedProfileExists: !!editedProfile,
+      editedProfileStatus: editedProfile?.status,
+      willUseStatus: editedProfile?.status || profile?.status || 'active'
+    })
+  }, [profile, editedProfile])
 
 
 
   // Handle status change
   const handleStatusChange = useCallback((newStatus: string) => {
     setEditedProfile(prev => {
+      // Use the existing edited profile or fall back to the original profile
+      const base = prev || profile
       const updated = {
-        ...prev,
+        ...base,
         status: newStatus
       }
       
       // If status is changed to deleted, turn off all notification preferences
       if (newStatus === 'deleted') {
         updated.notification_preferences = {
-          email_marketing: false,
-          email_transactional: false,
-          sms_marketing: false,
-          sms_transactional: false,
-          whatsapp_marketing: false,
-          whatsapp_transactional: false,
-          rcs_marketing: false,
-          rcs_transactional: false
+          marketing_emails: false,
+          transactional_emails: false,
+          marketing_sms: false,
+          transactional_sms: false,
+          marketing_whatsapp: false,
+          transactional_whatsapp: false,
+          marketing_rcs: false,
+          transactional_rcs: false
         }
       }
       
       return updated
     })
-  }, [setEditedProfile])
+  }, [setEditedProfile, profile])
 
 
 
@@ -147,7 +160,21 @@ export default function ProfilePage({
   }
 
   // Get profile name for header
-  const profileName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown Profile'
+  const profileName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Unknown Profile'
+  
+  // Get the current status to display (normalize to lowercase)
+  // Use the edited status if available, otherwise use the profile status
+  const statusToUse = editedProfile?.status || profile?.status || 'active'
+  const currentStatus = statusToUse.toLowerCase()
+  
+  // Log the status resolution
+  console.log('Status resolution:', {
+    hasEditedProfile: !!editedProfile,
+    editedProfileStatus: editedProfile?.status,
+    profileStatus: profile?.status,
+    statusToUse: statusToUse,
+    currentStatus: currentStatus
+  })
 
   return (
     <div className="space-y-6">
@@ -160,35 +187,39 @@ export default function ProfilePage({
             <div className="flex items-center space-x-3">
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-muted-foreground">Status:</span>
-                <Select
-                  value={editedProfile?.status || profile.status || 'active'}
-                  onValueChange={handleStatusChange}
-                  disabled={saving}
-                >
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500" />
-                        <span>Active</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="inactive">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                        <span>Inactive</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="deleted">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 rounded-full bg-red-500" />
-                        <span>Deleted</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                {profile ? (
+                  <Select
+                    value={currentStatus}
+                    onValueChange={handleStatusChange}
+                    disabled={saving}
+                  >
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-2 h-2 rounded-full bg-green-500" />
+                          <span>Active</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="inactive">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                          <span>Inactive</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="deleted">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-2 h-2 rounded-full bg-red-500" />
+                          <span>Deleted</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="w-[140px] h-8 bg-muted animate-pulse rounded" />
+                )}
               </div>
               <Button
                 onClick={handleSave}
