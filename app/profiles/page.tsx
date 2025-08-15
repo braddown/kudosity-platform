@@ -818,12 +818,14 @@ export default function ProfilesPage() {
         ? JSON.parse(profile.notification_preferences) 
         : profile.notification_preferences
       
-      // Check if any marketing channel is active
+      // Check if any marketing channel is active (true)
       return (
         prefs.marketing_email === true ||
         prefs.marketing_sms === true ||
         prefs.marketing_whatsapp === true ||
-        prefs.marketing_rcs === true
+        prefs.marketing_rcs === true ||
+        prefs.marketing_push === true ||
+        prefs.marketing_in_app === true
       )
     } catch {
       return false
@@ -832,22 +834,43 @@ export default function ProfilesPage() {
 
   // Helper function to check if all marketing channels are revoked
   const allMarketingRevoked = (profile: Profile): boolean => {
-    if (!profile.notification_preferences) return true
+    if (!profile.notification_preferences) return false // No preferences means not unsubscribed
     
     try {
       const prefs = typeof profile.notification_preferences === 'string' 
         ? JSON.parse(profile.notification_preferences) 
         : profile.notification_preferences
       
-      // Check if ALL marketing channels are false/revoked
-      return (
-        prefs.marketing_email !== true &&
-        prefs.marketing_sms !== true &&
-        prefs.marketing_whatsapp !== true &&
-        prefs.marketing_rcs !== true
-      )
-    } catch {
+      // List of all marketing channel keys
+      const marketingChannels = [
+        'marketing_email',
+        'marketing_sms',
+        'marketing_whatsapp',
+        'marketing_rcs',
+        'marketing_push',
+        'marketing_in_app'
+      ]
+      
+      // Check if at least one marketing channel is defined
+      const hasAnyChannelDefined = marketingChannels.some(channel => channel in prefs)
+      
+      if (!hasAnyChannelDefined) {
+        return false // No marketing channels defined means not unsubscribed
+      }
+      
+      // Check that ALL defined marketing channels are false (not true)
+      // If a channel is not defined, we ignore it
+      // If any defined channel is true, the profile is not unsubscribed
+      for (const channel of marketingChannels) {
+        if (channel in prefs && prefs[channel] === true) {
+          return false // Found an active channel, not unsubscribed
+        }
+      }
+      
+      // All defined channels are false or undefined
       return true
+    } catch {
+      return false // Error parsing means not unsubscribed
     }
   }
 
