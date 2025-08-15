@@ -834,31 +834,35 @@ export default function ProfilesPage() {
 
   // Helper function to check if all marketing channels are revoked
   const allMarketingRevoked = (profile: Profile): boolean => {
-    if (!profile.notification_preferences) return false // No preferences means not unsubscribed
+    if (!profile.notification_preferences) {
+      // No preferences at all - consider this as all channels off
+      return true
+    }
     
     try {
       const prefs = typeof profile.notification_preferences === 'string' 
         ? JSON.parse(profile.notification_preferences) 
         : profile.notification_preferences
       
-      // Check each marketing channel - ALL must be explicitly false
-      // We don't check push and in_app as they might not be implemented yet
-      const isEmailOff = prefs.marketing_email === false
-      const isSmsOff = prefs.marketing_sms === false
-      const isWhatsappOff = prefs.marketing_whatsapp === false
-      const isRcsOff = prefs.marketing_rcs === false
+      // Check if ANY marketing channel is enabled (true)
+      // If any channel is explicitly true, they are NOT unsubscribed
+      const hasActiveEmail = prefs.marketing_email === true
+      const hasActiveSms = prefs.marketing_sms === true
+      const hasActiveWhatsapp = prefs.marketing_whatsapp === true
+      const hasActiveRcs = prefs.marketing_rcs === true
+      const hasActivePush = prefs.marketing_push === true
+      const hasActiveInApp = prefs.marketing_in_app === true
       
-      // Optional channels - only check if they exist
-      const isPushOff = !('marketing_push' in prefs) || prefs.marketing_push === false
-      const isInAppOff = !('marketing_in_app' in prefs) || prefs.marketing_in_app === false
+      // If ANY channel is active, not unsubscribed
+      if (hasActiveEmail || hasActiveSms || hasActiveWhatsapp || 
+          hasActiveRcs || hasActivePush || hasActiveInApp) {
+        return false
+      }
       
-      // ALL channels must be off (false) to be considered unsubscribed
-      // If any channel is true or undefined/null (except push/in_app), not unsubscribed
-      const allOff = isEmailOff && isSmsOff && isWhatsappOff && isRcsOff && isPushOff && isInAppOff
-      
-      return allOff
+      // All channels are either false, undefined, or null - considered unsubscribed
+      return true
     } catch {
-      return false // Error parsing means not unsubscribed
+      return true // Error parsing - treat as unsubscribed
     }
   }
 
