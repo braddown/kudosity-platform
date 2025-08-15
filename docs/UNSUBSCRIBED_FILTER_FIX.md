@@ -1,14 +1,14 @@
 # Unsubscribed Filter Fix
 
 ## Issue
-The "Unsubscribed" filter was incorrectly showing profiles with marketing channels enabled. It was treating undefined/missing channels as "disabled" when they should be ignored.
+The "Unsubscribed" filter was incorrectly showing profiles with marketing channels enabled. It was treating undefined/missing/null channels as "disabled" when they should require explicit false values.
 
 ## Solution
 
 ### Updated Logic for "Unsubscribed" Status
 A profile is considered "Unsubscribed" when:
-1. It has at least one marketing channel defined in notification_preferences
-2. ALL defined marketing channels are set to false (or undefined)
+1. ALL four main marketing channels (email, sms, whatsapp, rcs) are explicitly set to false
+2. Optional channels (push, in_app) are either false or not defined
 3. NO marketing channels are set to true
 
 ### Updated Logic for "Marketing Enabled" Status
@@ -26,14 +26,14 @@ A profile is considered "Marketing Enabled" when:
 
 ### 1. allMarketingRevoked Function
 **Before**: 
-- Returned true if channels were undefined or not equal to true
+- Returned true if channels were not equal to true (including undefined/null)
 - Treated missing preferences as unsubscribed
 
 **After**:
 - Returns false if no preferences exist
-- Returns false if no marketing channels are defined
-- Only returns true if at least one channel is defined AND none are true
-- Handles all 6 marketing channel types
+- Requires ALL main channels (email, sms, whatsapp, rcs) to be explicitly false
+- Optional channels (push, in_app) can be false or undefined
+- Only returns true when all channels are properly disabled
 
 ### 2. hasMarketingChannel Function
 **Before**:

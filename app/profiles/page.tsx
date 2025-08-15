@@ -841,34 +841,22 @@ export default function ProfilesPage() {
         ? JSON.parse(profile.notification_preferences) 
         : profile.notification_preferences
       
-      // List of all marketing channel keys
-      const marketingChannels = [
-        'marketing_email',
-        'marketing_sms',
-        'marketing_whatsapp',
-        'marketing_rcs',
-        'marketing_push',
-        'marketing_in_app'
-      ]
+      // Check each marketing channel - ALL must be explicitly false
+      // We don't check push and in_app as they might not be implemented yet
+      const isEmailOff = prefs.marketing_email === false
+      const isSmsOff = prefs.marketing_sms === false
+      const isWhatsappOff = prefs.marketing_whatsapp === false
+      const isRcsOff = prefs.marketing_rcs === false
       
-      // Check if at least one marketing channel is defined
-      const hasAnyChannelDefined = marketingChannels.some(channel => channel in prefs)
+      // Optional channels - only check if they exist
+      const isPushOff = !('marketing_push' in prefs) || prefs.marketing_push === false
+      const isInAppOff = !('marketing_in_app' in prefs) || prefs.marketing_in_app === false
       
-      if (!hasAnyChannelDefined) {
-        return false // No marketing channels defined means not unsubscribed
-      }
+      // ALL channels must be off (false) to be considered unsubscribed
+      // If any channel is true or undefined/null (except push/in_app), not unsubscribed
+      const allOff = isEmailOff && isSmsOff && isWhatsappOff && isRcsOff && isPushOff && isInAppOff
       
-      // Check that ALL defined marketing channels are false (not true)
-      // If a channel is not defined, we ignore it
-      // If any defined channel is true, the profile is not unsubscribed
-      for (const channel of marketingChannels) {
-        if (channel in prefs && prefs[channel] === true) {
-          return false // Found an active channel, not unsubscribed
-        }
-      }
-      
-      // All defined channels are false or undefined
-      return true
+      return allOff
     } catch {
       return false // Error parsing means not unsubscribed
     }
