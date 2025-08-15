@@ -122,7 +122,7 @@ function CustomFieldInput({
               className="data-[state=checked]:bg-blue-600"
             />
             <Label htmlFor={fieldId} className="text-sm text-gray-600">
-              {fieldSchema.description || `Enable ${fieldSchema.label || fieldKey}`}
+              {fieldSchema.description || fieldLabel}
             </Label>
           </div>
         )
@@ -157,10 +157,6 @@ function CustomFieldInput({
       </Label>
       
       {renderInput()}
-
-      {fieldSchema.description && (
-        <p className="text-xs text-gray-500">{fieldSchema.description}</p>
-      )}
     </div>
   )
 }
