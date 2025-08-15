@@ -97,7 +97,7 @@ export function NotificationPreferences({
               
               {['emails', 'sms', 'whatsapp', 'rcs'].map(channel => {
                 const info = getChannelInfo(channel, 'marketing')
-                const isEnabled = preferences[`marketing_${channel}`]
+                const isEnabled = preferences[`marketing_${channel}`] === true
                 
                 return (
                   <div key={`marketing_${channel}`} className="space-y-3 p-3 border rounded-md h-32 flex flex-col justify-between">
@@ -152,7 +152,7 @@ export function NotificationPreferences({
               
               {['emails', 'sms', 'whatsapp', 'rcs'].map(channel => {
                 const info = getChannelInfo(channel, 'transactional')
-                const isEnabled = preferences[`transactional_${channel}`] !== false
+                const isEnabled = preferences[`transactional_${channel}`] === true
                 
                 return (
                   <div key={`transactional_${channel}`} className="space-y-3 p-3 border rounded-md h-32 flex flex-col justify-between">

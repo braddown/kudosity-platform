@@ -51,14 +51,14 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
     status: "pending",
     source: "Manual Entry",
     notification_preferences: {
-      email_marketing: false,
-      email_transactional: false,
-      sms_marketing: false,
-      sms_transactional: false,
-      whatsapp_marketing: false,
-      whatsapp_transactional: false,
-      rcs_marketing: false,
-      rcs_transactional: false,
+      marketing_emails: false,
+      transactional_emails: false,
+      marketing_sms: false,
+      transactional_sms: false,
+      marketing_whatsapp: false,
+      transactional_whatsapp: false,
+      marketing_rcs: false,
+      transactional_rcs: false,
     },
     custom_fields: {},
   })
@@ -148,14 +148,14 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
       // If status is changed to deleted, ensure all notification preferences are turned off
       if (newStatus === 'deleted') {
         updated.notification_preferences = {
-          email_marketing: false,
-          email_transactional: false,
-          sms_marketing: false,
-          sms_transactional: false,
-          whatsapp_marketing: false,
-          whatsapp_transactional: false,
-          rcs_marketing: false,
-          rcs_transactional: false,
+          marketing_emails: false,
+          transactional_emails: false,
+          marketing_sms: false,
+          transactional_sms: false,
+          marketing_whatsapp: false,
+          transactional_whatsapp: false,
+          marketing_rcs: false,
+          transactional_rcs: false,
         }
       }
 
