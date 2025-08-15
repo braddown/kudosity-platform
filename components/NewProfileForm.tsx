@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useCallback } from "react"
+import React, { useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Save, X } from "lucide-react"
@@ -16,6 +16,7 @@ import { ContactPropertiesForm } from "./features/profiles/ContactPropertiesForm
 import { CustomFieldsSection } from "./features/profiles/CustomFieldsSection"
 import { NotificationPreferences } from "./features/profiles/NotificationPreferences"
 import { ProfileActivityTimeline } from "./features/profiles/ProfileActivityTimeline"
+import { profilesApi } from "@/lib/api/profiles-api"
 import type { CDPProfile } from "@/lib/types/cdp-types"
 
 interface NewProfileFormProps {
@@ -30,6 +31,8 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
+  const [customFieldsSchema, setCustomFieldsSchema] = useState<Record<string, any>>({})
+  const [loadingSchema, setLoadingSchema] = useState(true)
   
   // Initialize with a new empty profile
   const [editedProfile, setEditedProfile] = useState<Partial<CDPProfile>>({
@@ -45,17 +48,17 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
     zip_postal_code: "",
     country: "",
     notes: "",
-    status: "active",
+    status: "pending",
     source: "Manual Entry",
     notification_preferences: {
-      email_marketing: true,
-      email_transactional: true,
-      sms_marketing: true,
-      sms_transactional: true,
-      whatsapp_marketing: true,
-      whatsapp_transactional: true,
-      rcs_marketing: true,
-      rcs_transactional: true,
+      email_marketing: false,
+      email_transactional: false,
+      sms_marketing: false,
+      sms_transactional: false,
+      whatsapp_marketing: false,
+      whatsapp_transactional: false,
+      rcs_marketing: false,
+      rcs_transactional: false,
     },
     custom_fields: {},
   })
@@ -96,6 +99,43 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
       }
     }))
     setHasChanges(true)
+  }, [])
+
+  // Fetch custom fields schema
+  useEffect(() => {
+    const fetchCustomFieldsSchema = async () => {
+      try {
+        setLoadingSchema(true)
+        const { data: schema, error } = await profilesApi.getCustomFieldsSchema()
+        
+        if (error) {
+          console.error('Error fetching custom fields schema:', error)
+          toast.error('Failed to load custom fields')
+        } else {
+          setCustomFieldsSchema(schema || {})
+          
+          // Initialize custom fields with defaults
+          const defaultCustomFields: Record<string, any> = {}
+          Object.entries(schema || {}).forEach(([key, fieldSchema]: [string, any]) => {
+            defaultCustomFields[key] = fieldSchema.defaultValue || 
+              (fieldSchema.type === 'number' ? 0 : 
+               fieldSchema.type === 'boolean' ? false : '')
+          })
+          
+          setEditedProfile(prev => ({
+            ...prev,
+            custom_fields: defaultCustomFields
+          }))
+        }
+      } catch (error) {
+        console.error('Error fetching custom fields schema:', error)
+        toast.error('Failed to load custom fields')
+      } finally {
+        setLoadingSchema(false)
+      }
+    }
+    
+    fetchCustomFieldsSchema()
   }, [])
 
   const handleStatusChange = useCallback((newStatus: string) => {
@@ -264,21 +304,14 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
 
       {/* Main content with padding for fixed header */}
       <div className="pt-20 px-6 pb-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left column - Profile details (2/3 width) */}
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left column - Profile details */}
+          <div className="space-y-6">
             <ContactPropertiesForm
               profile={editedProfile as CDPProfile}
               editedProfile={editedProfile as CDPProfile}
               handleInputChange={handleInputChange}
               handleSelectChange={handleSelectChange}
-            />
-            
-            <CustomFieldsSection
-              profile={editedProfile as CDPProfile}
-              editedProfile={editedProfile as CDPProfile}
-              customFieldsSchema={[]} // Empty for new profiles
-              handleCustomFieldChange={handleCustomFieldChange}
             />
             
             <NotificationPreferences
@@ -288,8 +321,15 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
             />
           </div>
 
-          {/* Right column - Activity timeline (1/3 width) */}
-          <div className="lg:col-span-1">
+          {/* Right column - Custom fields and Activity timeline */}
+          <div className="space-y-6">
+            <CustomFieldsSection
+              profile={editedProfile as CDPProfile}
+              editedProfile={editedProfile as CDPProfile}
+              customFieldsSchema={customFieldsSchema}
+              handleCustomFieldChange={handleCustomFieldChange}
+            />
+            
             <ProfileActivityTimeline 
               profileId={null} // No ID yet for new profiles
               refreshTrigger={0}

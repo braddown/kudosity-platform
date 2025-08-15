@@ -211,20 +211,14 @@ export default function ProfilePage({
       )}
       
       <div className="pt-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left column - Profile details (2/3 width) */}
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left column - Profile details */}
+          <div className="space-y-6">
             <ContactPropertiesForm
               profile={editedProfile || profile}
               onInputChange={handleInputChange}
               onSelectChange={handleSelectChange}
               onSave={handleSave}
-            />
-
-            <CustomFieldsSection
-              profile={editedProfile || profile}
-              customFieldsSchema={customFieldsSchema}
-              onCustomFieldChange={handleCustomFieldChange}
             />
 
             <NotificationPreferences
@@ -233,8 +227,14 @@ export default function ProfilePage({
             />
           </div>
 
-          {/* Right column - Activity timeline (1/3 width) */}
-          <div className="lg:col-span-1">
+          {/* Right column - Custom fields and Activity timeline */}
+          <div className="space-y-6">
+            <CustomFieldsSection
+              profile={editedProfile || profile}
+              customFieldsSchema={customFieldsSchema}
+              onCustomFieldChange={handleCustomFieldChange}
+            />
+
             <ProfileActivityTimeline
               profile={profile} // Use original profile for timestamps
               profileId={profileId}

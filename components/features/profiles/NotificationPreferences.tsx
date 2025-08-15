@@ -190,7 +190,7 @@ export function NotificationPreferences({
                         </>
                       )}
                       {!info && isEnabled && (
-                        <p className="text-xs text-blue-600">ℹ️ No activation info recorded</p>
+                        <p className="text-xs text-gray-400">Not activated</p>
                       )}
                       {!info && !isEnabled && (
                         <p className="text-xs text-gray-400">Channel inactive</p>
