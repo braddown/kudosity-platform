@@ -25,6 +25,8 @@ export interface DataTableProps<T> {
   onSearch?: (value: string) => void
   selectable?: boolean
   onSelectionChange?: (selectedRows: T[]) => void
+  onSelectAllFiltered?: () => void  // New prop for selecting all filtered results
+  allFilteredData?: T[]  // All filtered results (not just current page)
   filterOptions?: { label: string; value: string }[]
   onFilterChange?: (value: string) => void
   actions?: Array<{
@@ -60,6 +62,8 @@ export function DataTable<T extends { id: string | number; status?: string }>({
   onSearch,
   selectable = false,
   onSelectionChange,
+  onSelectAllFiltered,
+  allFilteredData,
   filterOptions,
   onFilterChange,
   actions,
@@ -87,21 +91,32 @@ export function DataTable<T extends { id: string | number; status?: string }>({
   }, [propsSelectedFilter])
 
   // Update the indeterminate state when selectedRows changes
+  // Check if some but not all are selected (indeterminate state) - moved before useEffect
+  const isIndeterminate = allFilteredData
+    ? selectedRows.length > 0 && selectedRows.length < allFilteredData.length
+    : selectedRows.length > 0 && selectedRows.length < data.length
+
   React.useEffect(() => {
     if (checkboxRef.current) {
-      const isIndeterminate = selectedRows.length > 0 && selectedRows.length < data.length
       // Access the DOM element and set the indeterminate property
       const checkboxElement = checkboxRef.current as unknown as HTMLInputElement
       if (checkboxElement) {
         checkboxElement.indeterminate = isIndeterminate
       }
     }
-  }, [selectedRows, data])
+  }, [isIndeterminate])
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedRows(data)
-      onSelectionChange?.(data)
+      // If allFilteredData is provided, select all filtered results
+      const dataToSelect = allFilteredData || data
+      setSelectedRows(dataToSelect)
+      onSelectionChange?.(dataToSelect)
+      
+      // If we have onSelectAllFiltered and we're selecting all filtered data
+      if (allFilteredData && onSelectAllFiltered) {
+        onSelectAllFiltered()
+      }
     } else {
       setSelectedRows([])
       onSelectionChange?.([])
@@ -129,7 +144,10 @@ export function DataTable<T extends { id: string | number; status?: string }>({
     onFilterChange?.(value)
   }
 
-  const isAllSelected = data.length > 0 && selectedRows.length === data.length
+  // Check if all items are selected (either current page or all filtered)
+  const isAllSelected = allFilteredData 
+    ? allFilteredData.length > 0 && selectedRows.length === allFilteredData.length
+    : data.length > 0 && selectedRows.length === data.length
 
   return (
     <div className="w-full bg-card rounded-lg shadow-sm border border-border">
@@ -258,7 +276,16 @@ export function DataTable<T extends { id: string | number; status?: string }>({
             <TableRow className="border-b border-border hover:bg-muted/50">
               {selectable && (
                 <TableHead className="w-[50px] bg-muted/50">
-                  <Checkbox ref={checkboxRef} checked={isAllSelected} onCheckedChange={handleSelectAll} />
+                  <div className="flex items-center gap-2">
+                    <Checkbox ref={checkboxRef} checked={isAllSelected} onCheckedChange={handleSelectAll} />
+                    {allFilteredData && selectedRows.length > 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        {selectedRows.length === allFilteredData.length 
+                          ? `All ${allFilteredData.length}` 
+                          : `${selectedRows.length} of ${allFilteredData.length}`}
+                      </span>
+                    )}
+                  </div>
                 </TableHead>
               )}
               {columns.map((column) => (

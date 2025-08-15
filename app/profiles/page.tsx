@@ -175,7 +175,7 @@ export default function ProfilesPage() {
   const [selectedSegment, setSelectedSegment] = useState<string | null>(null)
   const [segmentName, setSegmentName] = useState("")
   const [isSavingSegment, setIsSavingSegment] = useState(false)
-  const [selectedContacts, setSelectedContacts] = useState<Set<number>>(new Set())
+  const [selectedProfiles, setSelectedProfiles] = useState<Profile[]>([])
 
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
@@ -204,7 +204,7 @@ export default function ProfilesPage() {
   // CSV Export function
   const exportToCSV = () => {
     const dataToExport =
-      selectedContacts.size > 0 ? filteredProfiles.filter((_, index) => selectedContacts.has(index)) : filteredProfiles
+      selectedProfiles.length > 0 ? selectedProfiles : filteredProfiles
 
     const headers = exportFields.map((field) => availableFields.find((f) => f.value === field)?.label || field)
 
@@ -1120,16 +1120,13 @@ export default function ProfilesPage() {
     })),
   ]
 
-  const tableActions = [
+  // Data operations - for the filter dropdown
+  const dataOperations = [
     {
       label: "Filter Profiles",
       icon: <Filter className="h-4 w-4" />,
       onClick: () => setShowInlineFilter(!showInlineFilter),
     },
-    { label: "Tag", icon: <Tag className="h-4 w-4" />, onClick: () => console.log("Tag selected") },
-    { label: "Unsubscribe", icon: <UserX className="h-4 w-4" />, onClick: () => console.log("Unsubscribe selected") },
-    { label: "Delete", icon: <Trash2 className="h-4 w-4" />, onClick: () => console.log("Delete selected") },
-    { label: "Add to List", icon: <List className="h-4 w-4" />, onClick: () => console.log("Add to list") },
     {
       label: "Export CSV",
       icon: <Download className="h-4 w-4" />,
@@ -1139,6 +1136,55 @@ export default function ProfilesPage() {
       label: "Import CSV",
       icon: <Upload className="h-4 w-4" />,
       onClick: () => setShowImportDialog(true),
+    },
+  ]
+
+  // Bulk actions - for selected profiles
+  const bulkActions = [
+    { 
+      label: "Tag", 
+      icon: <Tag className="h-4 w-4" />, 
+      onClick: () => {
+        if (selectedProfiles.length === 0) {
+          toast({
+            title: "No profiles selected",
+            description: "Please select profiles to tag",
+            variant: "destructive",
+          })
+          return
+        }
+        console.log("Tag selected profiles:", selectedProfiles.length)
+      }
+    },
+    { 
+      label: "Delete", 
+      icon: <Trash2 className="h-4 w-4" />, 
+      onClick: () => {
+        if (selectedProfiles.length === 0) {
+          toast({
+            title: "No profiles selected",
+            description: "Please select profiles to delete",
+            variant: "destructive",
+          })
+          return
+        }
+        console.log("Delete selected profiles:", selectedProfiles.length)
+      }
+    },
+    { 
+      label: "Add to List", 
+      icon: <List className="h-4 w-4" />, 
+      onClick: () => {
+        if (selectedProfiles.length === 0) {
+          toast({
+            title: "No profiles selected",
+            description: "Please select profiles to add to a list",
+            variant: "destructive",
+          })
+          return
+        }
+        console.log("Add to list:", selectedProfiles.length)
+      }
     },
   ]
 
@@ -1402,6 +1448,7 @@ export default function ProfilesPage() {
           <div>
             <DataTable
               data={currentProfiles}
+              allFilteredData={filteredProfiles}  // Pass all filtered results
               columns={columns}
               title={getTableTitle()}
               searchPlaceholder="Search profiles..."
@@ -1418,7 +1465,9 @@ export default function ProfilesPage() {
                 }
               }}
               selectedFilter={selectedSegment ? `segment_${selectedSegment}` : selectedType}
-              actions={tableActions}
+              actions={dataOperations}
+              bulkActions={bulkActions}
+              onSelectionChange={setSelectedProfiles}
               onRowEdit={handleRowEdit}
               onRowDelete={async (profile) => {
                 try {
@@ -1603,8 +1652,8 @@ export default function ProfilesPage() {
 
               <div className="mb-4">
                 <p className="text-sm text-muted-foreground mb-2">
-                  {selectedContacts.size > 0
-                    ? `Exporting ${selectedContacts.size} selected profiles`
+                  {selectedProfiles.length > 0
+                    ? `Exporting ${selectedProfiles.length} selected profiles`
                     : `Exporting ${filteredProfiles.length} profiles`}
                 </p>
               </div>
