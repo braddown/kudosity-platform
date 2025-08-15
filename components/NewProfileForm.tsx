@@ -15,6 +15,7 @@ import {
 import { ContactPropertiesForm } from "./features/profiles/ContactPropertiesForm"
 import { CustomFieldsSection } from "./features/profiles/CustomFieldsSection"
 import { NotificationPreferences } from "./features/profiles/NotificationPreferences"
+import { ProfileActivityTimeline } from "./features/profiles/ProfileActivityTimeline"
 import type { CDPProfile } from "@/lib/types/cdp-types"
 
 interface NewProfileFormProps {
@@ -239,26 +240,38 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
 
       {/* Main content with padding for fixed header */}
       <div className="pt-20 px-6 pb-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <ContactPropertiesForm
-            profile={editedProfile as CDPProfile}
-            editedProfile={editedProfile as CDPProfile}
-            handleInputChange={handleInputChange}
-            handleSelectChange={handleSelectChange}
-          />
-          
-          <CustomFieldsSection
-            profile={editedProfile as CDPProfile}
-            editedProfile={editedProfile as CDPProfile}
-            customFieldsSchema={[]} // Empty for new profiles
-            handleCustomFieldChange={handleCustomFieldChange}
-          />
-          
-          <NotificationPreferences
-            profile={editedProfile as CDPProfile}
-            editedProfile={editedProfile as CDPProfile}
-            handleToggleChange={handleToggleChange}
-          />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left column - Profile details (2/3 width) */}
+          <div className="lg:col-span-2 space-y-6">
+            <ContactPropertiesForm
+              profile={editedProfile as CDPProfile}
+              editedProfile={editedProfile as CDPProfile}
+              handleInputChange={handleInputChange}
+              handleSelectChange={handleSelectChange}
+            />
+            
+            <CustomFieldsSection
+              profile={editedProfile as CDPProfile}
+              editedProfile={editedProfile as CDPProfile}
+              customFieldsSchema={[]} // Empty for new profiles
+              handleCustomFieldChange={handleCustomFieldChange}
+            />
+            
+            <NotificationPreferences
+              profile={editedProfile as CDPProfile}
+              editedProfile={editedProfile as CDPProfile}
+              handleToggleChange={handleToggleChange}
+            />
+          </div>
+
+          {/* Right column - Activity timeline (1/3 width) */}
+          <div className="lg:col-span-1">
+            <ProfileActivityTimeline 
+              profileId={null} // No ID yet for new profiles
+              refreshTrigger={0}
+              isNewProfile={true}
+            />
+          </div>
         </div>
       </div>
 

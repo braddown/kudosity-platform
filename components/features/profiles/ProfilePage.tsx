@@ -211,32 +211,38 @@ export default function ProfilePage({
       )}
       
       <div className="pt-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ContactPropertiesForm
-          profile={editedProfile || profile}
-          onInputChange={handleInputChange}
-          onSelectChange={handleSelectChange}
-          onSave={handleSave}
-        />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left column - Profile details (2/3 width) */}
+          <div className="lg:col-span-2 space-y-6">
+            <ContactPropertiesForm
+              profile={editedProfile || profile}
+              onInputChange={handleInputChange}
+              onSelectChange={handleSelectChange}
+              onSave={handleSave}
+            />
 
-        <CustomFieldsSection
-          profile={editedProfile || profile}
-          customFieldsSchema={customFieldsSchema}
-          onCustomFieldChange={handleCustomFieldChange}
-        />
-      </div>
+            <CustomFieldsSection
+              profile={editedProfile || profile}
+              customFieldsSchema={customFieldsSchema}
+              onCustomFieldChange={handleCustomFieldChange}
+            />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <NotificationPreferences
-          profile={editedProfile || profile}
-          onToggleChange={handleToggleChange}
-        />
+            <NotificationPreferences
+              profile={editedProfile || profile}
+              onToggleChange={handleToggleChange}
+            />
+          </div>
 
-        <ProfileActivityTimeline
-          profile={profile} // Use original profile for timestamps
-          refreshTrigger={activityRefreshTrigger}
-        />
-      </div>
+          {/* Right column - Activity timeline (1/3 width) */}
+          <div className="lg:col-span-1">
+            <ProfileActivityTimeline
+              profile={profile} // Use original profile for timestamps
+              profileId={profileId}
+              refreshTrigger={activityRefreshTrigger}
+              isNewProfile={false}
+            />
+          </div>
+        </div>
       </div>
     </div>
   )

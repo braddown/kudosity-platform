@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
 interface ProfileActivityTimelineProps {
-  profile: any
+  profile?: any
+  profileId?: string | null
   refreshTrigger?: number // Add a trigger to force refresh
+  isNewProfile?: boolean
 }
 
 /**
@@ -24,18 +26,24 @@ interface ProfileActivityTimelineProps {
  */
 export function ProfileActivityTimeline({
   profile,
-  refreshTrigger
+  profileId,
+  refreshTrigger,
+  isNewProfile = false
 }: ProfileActivityTimelineProps) {
   const [activityLogs, setActivityLogs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchActivityLogs = async () => {
-      if (!profile?.id) return
+      const id = profileId || profile?.id
+      if (!id || isNewProfile) {
+        setLoading(false)
+        return
+      }
       
       try {
         // Use the API endpoint instead of direct Supabase query
-        const response = await fetch(`/api/cdp-profiles/${profile.id}/activity`, {
+        const response = await fetch(`/api/cdp-profiles/${id}/activity`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -152,8 +160,8 @@ export function ProfileActivityTimeline({
           <Clock className="h-4 w-4 text-cyan-500" />
           Recent Activity
         </CardTitle>
-        {hasMore && (
-          <Link href={`/profiles/${profile.id}/activity`}>
+        {hasMore && !isNewProfile && (
+          <Link href={`/profiles/${profileId || profile?.id}/activity`}>
             <Button variant="ghost" size="sm" className="text-xs">
               View All ({allEvents.length})
               <ChevronRight className="h-3 w-3 ml-1" />
@@ -165,7 +173,15 @@ export function ProfileActivityTimeline({
         <div className="space-y-4">
           {/* Activity Logs */}
           <div className="space-y-3">
-            {loading ? (
+            {isNewProfile ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <FileEdit className="h-8 w-8 mx-auto mb-2 text-gray-400 dark:text-gray-500" />
+                <p className="text-sm">Activity will appear here once the profile is created</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                  Save the profile to start tracking activity
+                </p>
+              </div>
+            ) : loading ? (
               <div className="text-sm text-gray-500">Loading activity history...</div>
             ) : (
               <>
