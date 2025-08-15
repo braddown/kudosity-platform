@@ -316,8 +316,7 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
             
             <NotificationPreferences
               profile={editedProfile as CDPProfile}
-              editedProfile={editedProfile as CDPProfile}
-              handleToggleChange={handleToggleChange}
+              onToggleChange={handleToggleChange}
             />
           </div>
 

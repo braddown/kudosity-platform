@@ -108,7 +108,7 @@ export function NotificationPreferences({
                       <Switch
                         checked={isEnabled || false}
                         onCheckedChange={(checked) => onToggleChange(`marketing_${channel}`, checked)}
-                        className="data-[state=checked]:bg-blue-600"
+                        className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-gray-200 dark:data-[state=unchecked]:bg-gray-700"
                       />
                     </div>
                     
@@ -161,9 +161,9 @@ export function NotificationPreferences({
                         <p className="text-sm font-medium">{formatChannelName(channel)}</p>
                       </div>
                       <Switch
-                        checked={isEnabled}
+                        checked={isEnabled || false}
                         onCheckedChange={(checked) => onToggleChange(`transactional_${channel}`, checked)}
-                        className="data-[state=checked]:bg-green-600"
+                        className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-200 dark:data-[state=unchecked]:bg-gray-700"
                       />
                     </div>
                     
