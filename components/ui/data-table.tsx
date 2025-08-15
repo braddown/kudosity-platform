@@ -216,7 +216,7 @@ export function DataTable<T extends { id: string | number; status?: string }>({
               </TableRow>
             ) : (
               data.map((row, index) => {
-                const isDeleted = row.status === "Inactive"
+                const isDeleted = row.status === "deleted"
 
                 return (
                   <TableRow
@@ -262,11 +262,12 @@ export function DataTable<T extends { id: string | number; status?: string }>({
                               {onRowDestroy && (
                                 <DropdownMenuItem
                                   onClick={() => {
-                                    if (
-                                      window.confirm(
-                                        "Are you sure you want to permanently destroy this profile? This action cannot be undone and will remove all data from the database.",
-                                      )
-                                    ) {
+                                    const confirmMessage = 
+                                      'first_name' in row && 'last_name' in row
+                                        ? `⚠️ PERMANENT DELETION WARNING ⚠️\n\nAre you sure you want to permanently destroy the profile for ${(row as any).first_name} ${(row as any).last_name}?\n\nThis will:\n• Remove the profile completely from the database\n• Delete all associated activity logs\n• Remove from all lists and segments\n• Delete all related metadata\n\nThis action CANNOT be undone.`
+                                        : "⚠️ PERMANENT DELETION WARNING ⚠️\n\nAre you sure you want to permanently destroy this item?\n\nThis will remove all data from the database and CANNOT be undone."
+                                    
+                                    if (window.confirm(confirmMessage)) {
                                       onRowDestroy(row)
                                     }
                                   }}
@@ -290,11 +291,12 @@ export function DataTable<T extends { id: string | number; status?: string }>({
                               {onRowDelete && (
                                 <DropdownMenuItem
                                   onClick={() => {
-                                    if (
-                                      window.confirm(
-                                        "Are you sure you want to delete this item? This action will mark it as deleted but preserve the data.",
-                                      )
-                                    ) {
+                                    const confirmMessage = 
+                                      'first_name' in row && 'last_name' in row
+                                        ? `Are you sure you want to delete the profile for ${(row as any).first_name} ${(row as any).last_name}?\n\nThis will mark the profile as deleted but preserve the data.`
+                                        : "Are you sure you want to delete this item? This action will mark it as deleted but preserve the data."
+                                    
+                                    if (window.confirm(confirmMessage)) {
                                       onRowDelete(row)
                                     }
                                   }}

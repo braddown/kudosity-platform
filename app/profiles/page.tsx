@@ -2,13 +2,14 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import MainLayout from "@/components/MainLayout"
 import { ProfileCounts } from "@/components/ProfileCounts"
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table"
 import { Badge } from "@/components/ui/badge"
 import { UserPlus, Filter, Tag, UserX, Trash2, List, Download, Upload, Plus, X } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useToast } from "@/components/ui/use-toast"
 import {
   getProfiles,
   createProfile,
@@ -157,6 +158,7 @@ const getCountryFlag = (country?: string) => {
 
 export default function ProfilesPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [filteredProfiles, setFilteredProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
@@ -164,6 +166,7 @@ export default function ProfilesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const isDeletionRef = useRef(false)
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([])
   const [showInlineFilter, setShowInlineFilter] = useState(false)
   const [customFields, setCustomFields] = useState<{ value: string; label: string }[]>([])
@@ -771,7 +774,14 @@ export default function ProfilesPage() {
     }
 
     setFilteredProfiles(filtered)
-    setCurrentPage(1) // Reset to first page when filtering
+    
+    // Only reset to first page if this is not a deletion operation
+    if (!isDeletionRef.current) {
+      setCurrentPage(1)
+    } else {
+      // Reset the flag after using it
+      isDeletionRef.current = false
+    }
   }, [profiles, selectedType, searchTerm, filterConditions, selectedSegment, segments])
 
   // Helper function to check if profile has any active channel
@@ -1412,33 +1422,58 @@ export default function ProfilesPage() {
               onRowEdit={handleRowEdit}
               onRowDelete={async (profile) => {
                 try {
-                  // Show confirmation dialog
-                  const confirmDelete = confirm(
-                    `Are you sure you want to delete the profile for ${profile.first_name} ${profile.last_name}?\n\nThis will mark the profile as deleted but preserve the data.`,
-                  )
-
-                  if (!confirmDelete) return // User cancelled
-
+                  // Note: Confirmation dialog is already shown in DataTable component
                   setLoading(true)
 
                   // Use soft delete by default
                   const result = await softDeleteProfile(profile.id)
 
                   if (result.error) {
-                    alert(`Error deleting profile: ${result.error}`)
+                    toast({
+                      title: "Error deleting profile",
+                      description: result.error,
+                      variant: "destructive",
+                    })
                     return
                   }
 
-                  // Update the profile status in local state to "Inactive"
-                  const updatedProfile = { ...profile, status: "Inactive" }
+                  // Update the profile status in local state to "deleted"
+                  const updatedProfile = { ...profile, status: "deleted" }
 
+                  // Set flag to prevent page reset
+                  isDeletionRef.current = true
                   setProfiles((prev) => prev.map((p) => (p.id === profile.id ? updatedProfile : p)))
-                  setFilteredProfiles((prev) => prev.map((p) => (p.id === profile.id ? updatedProfile : p)))
+                  
+                  // If we're filtering by a specific type that excludes deleted profiles,
+                  // we need to remove it from the filtered list
+                  if (selectedType !== "all" && selectedType !== "deleted") {
+                    setFilteredProfiles((prev) => {
+                      const newFiltered = prev.filter((p) => p.id !== profile.id)
+                      
+                      // Check if we need to adjust the current page
+                      const newTotalPages = Math.ceil(newFiltered.length / pageSize)
+                      if (currentPage > newTotalPages && newTotalPages > 0) {
+                        setCurrentPage(newTotalPages)
+                      }
+                      
+                      return newFiltered
+                    })
+                  } else {
+                    // Otherwise, just update the status
+                    setFilteredProfiles((prev) => prev.map((p) => (p.id === profile.id ? updatedProfile : p)))
+                  }
 
-                  alert("Profile marked as deleted successfully")
+                  toast({
+                    title: "Profile deleted",
+                    description: `${profile.first_name} ${profile.last_name} has been marked as deleted.`,
+                  })
                 } catch (error) {
                   console.error("Error deleting profile:", error)
-                  alert("Failed to delete profile. Please try again.")
+                  toast({
+                    title: "Failed to delete profile",
+                    description: "Please try again.",
+                    variant: "destructive",
+                  })
                 } finally {
                   setLoading(false)
                 }
@@ -1450,20 +1485,50 @@ export default function ProfilesPage() {
                   const result = await restoreProfile(profile.id)
 
                   if (result.error) {
-                    alert(`Error restoring profile: ${result.error}`)
+                    toast({
+                      title: "Error restoring profile",
+                      description: result.error,
+                      variant: "destructive",
+                    })
                     return
                   }
 
-                  // Update the profile status in local state to "Active"
-                  const updatedProfile = { ...profile, status: "Active" }
+                  // Update the profile status in local state to "active"
+                  const updatedProfile = { ...profile, status: "active" }
 
+                  // Set flag to prevent page reset
+                  isDeletionRef.current = true
                   setProfiles((prev) => prev.map((p) => (p.id === profile.id ? updatedProfile : p)))
-                  setFilteredProfiles((prev) => prev.map((p) => (p.id === profile.id ? updatedProfile : p)))
+                  
+                  // If we're filtering by deleted profiles only, remove it from the filtered list
+                  if (selectedType === "deleted") {
+                    setFilteredProfiles((prev) => {
+                      const newFiltered = prev.filter((p) => p.id !== profile.id)
+                      
+                      // Check if we need to adjust the current page
+                      const newTotalPages = Math.ceil(newFiltered.length / pageSize)
+                      if (currentPage > newTotalPages && newTotalPages > 0) {
+                        setCurrentPage(newTotalPages)
+                      }
+                      
+                      return newFiltered
+                    })
+                  } else {
+                    // Otherwise, just update the status
+                    setFilteredProfiles((prev) => prev.map((p) => (p.id === profile.id ? updatedProfile : p)))
+                  }
 
-                  alert("Profile restored successfully")
+                  toast({
+                    title: "Profile restored",
+                    description: `${profile.first_name} ${profile.last_name} has been restored.`,
+                  })
                 } catch (error) {
                   console.error("Error restoring profile:", error)
-                  alert("Failed to restore profile. Please try again.")
+                  toast({
+                    title: "Failed to restore profile",
+                    description: "Please try again.",
+                    variant: "destructive",
+                  })
                 } finally {
                   setLoading(false)
                 }
@@ -1475,18 +1540,42 @@ export default function ProfilesPage() {
                   const result = await deleteProfile(profile.id)
 
                   if (result.error) {
-                    alert(`Error destroying profile: ${result.error}`)
+                    toast({
+                      title: "Error destroying profile",
+                      description: result.error,
+                      variant: "destructive",
+                    })
                     return
                   }
 
                   // Remove the profile from local state completely
+                  // Set flag to prevent page reset
+                  isDeletionRef.current = true
                   setProfiles((prev) => prev.filter((p) => p.id !== profile.id))
-                  setFilteredProfiles((prev) => prev.filter((p) => p.id !== profile.id))
+                  
+                  setFilteredProfiles((prev) => {
+                    const newFiltered = prev.filter((p) => p.id !== profile.id)
+                    
+                    // Check if we need to adjust the current page
+                    const newTotalPages = Math.ceil(newFiltered.length / pageSize)
+                    if (currentPage > newTotalPages && newTotalPages > 0) {
+                      setCurrentPage(newTotalPages)
+                    }
+                    
+                    return newFiltered
+                  })
 
-                  alert("Profile permanently destroyed")
+                  toast({
+                    title: "Profile destroyed",
+                    description: `${profile.first_name} ${profile.last_name} has been permanently removed.`,
+                  })
                 } catch (error) {
                   console.error("Error destroying profile:", error)
-                  alert("Failed to destroy profile. Please try again.")
+                  toast({
+                    title: "Failed to destroy profile",
+                    description: "Please try again.",
+                    variant: "destructive",
+                  })
                 } finally {
                   setLoading(false)
                 }

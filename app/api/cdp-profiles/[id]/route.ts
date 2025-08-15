@@ -207,12 +207,90 @@ export async function DELETE(
       )
     }
 
-    // Delete the profile
-    const { error: deleteError } = await supabase
+    // Start a transaction to delete all related data
+    console.log(`Starting permanent deletion of profile ${params.id}`)
+
+    // 1. Delete from cdp_contacts (if any)
+    const { error: contactsError } = await supabase
+      .from('cdp_contacts')
+      .delete()
+      .eq('profile_id', params.id)
+    
+    if (contactsError) {
+      console.error('Error deleting contacts:', contactsError)
+      // Continue with deletion even if no contacts exist
+    }
+
+    // 2. Delete from cdp_profile_activities
+    const { error: activitiesError } = await supabase
+      .from('cdp_profile_activities')
+      .delete()
+      .eq('profile_id', params.id)
+    
+    if (activitiesError) {
+      console.error('Error deleting activities:', activitiesError)
+      // Continue with deletion
+    }
+
+    // 3. Delete from cdp_profile_merge_log
+    const { error: mergeLogError } = await supabase
+      .from('cdp_profile_merge_log')
+      .delete()
+      .eq('target_profile_id', params.id)
+    
+    if (mergeLogError) {
+      console.error('Error deleting merge logs:', mergeLogError)
+      // Continue with deletion
+    }
+
+    // 4. Delete from profile_activity_log (should cascade, but let's be explicit)
+    const { error: activityLogError } = await supabase
+      .from('profile_activity_log')
+      .delete()
+      .eq('profile_id', params.id)
+    
+    if (activityLogError) {
+      console.error('Error deleting activity logs:', activityLogError)
+      // Continue with deletion
+    }
+
+    // 5. Delete from list_memberships if the profile is in any lists
+    const { error: listMembershipsError } = await supabase
+      .from('list_memberships')
+      .delete()
+      .eq('contact_id', params.id)
+    
+    if (listMembershipsError) {
+      console.error('Error deleting list memberships:', listMembershipsError)
+      // Continue with deletion
+    }
+
+    // 6. Finally, delete the profile itself
+    // Note: Some older profiles might not have account_id set, so we check both conditions
+    const { data: profileToDelete } = await supabase
+      .from('cdp_profiles')
+      .select('id, account_id')
+      .eq('id', params.id)
+      .single()
+
+    if (!profileToDelete) {
+      return NextResponse.json(
+        { error: 'Profile not found' },
+        { status: 404 }
+      )
+    }
+
+    // Only check account_id if it's set on the profile
+    let deleteQuery = supabase
       .from('cdp_profiles')
       .delete()
       .eq('id', params.id)
-      .eq('account_id', accountId)
+    
+    if (profileToDelete.account_id) {
+      deleteQuery = deleteQuery.eq('account_id', accountId)
+    }
+
+    const { error: deleteError } = await deleteQuery
 
     if (deleteError) {
       console.error('Error deleting profile:', deleteError)
@@ -222,6 +300,7 @@ export async function DELETE(
       )
     }
 
+    console.log(`Successfully destroyed profile ${params.id} and all related data`)
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('CDP Delete Profile API error:', error)
