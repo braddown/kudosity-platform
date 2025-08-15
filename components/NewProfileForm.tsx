@@ -148,7 +148,31 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
         throw new Error(error.message || 'Failed to create profile')
       }
 
-      const newProfile = await response.json()
+      const result = await response.json()
+      const newProfile = result.data
+      
+      // Log the profile creation activity
+      try {
+        await fetch('/api/user-activity', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            activity_type: 'profile_created',
+            description: `Created profile: ${newProfile.first_name || ''} ${newProfile.last_name || ''} ${newProfile.mobile || ''}`.trim(),
+            entity_type: 'profile',
+            entity_id: newProfile.id,
+            metadata: {
+              profile_id: newProfile.id,
+              profile_name: `${newProfile.first_name || ''} ${newProfile.last_name || ''}`.trim() || newProfile.mobile
+            }
+          }),
+        })
+      } catch (activityError) {
+        console.error('Failed to log activity:', activityError)
+        // Don't fail the whole operation if activity logging fails
+      }
       
       toast.success("Profile created successfully!")
       

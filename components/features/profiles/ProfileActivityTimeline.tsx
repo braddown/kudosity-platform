@@ -137,7 +137,7 @@ export function ProfileActivityTimeline({
       type: 'activity'
     })),
     // Profile system events
-    ...(profile.created_at ? [{
+    ...(profile?.created_at ? [{
       id: 'profile_created',
       timestamp: profile.created_at,
       type: 'system',
