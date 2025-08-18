@@ -695,6 +695,11 @@ export default function ProfilesPage() {
     if (conditions.length > 0) {
       filtered = filtered.filter((profile) => {
         return conditions.every((condition) => {
+          // Skip empty filter conditions
+          if (!condition.value || condition.value.trim() === "") {
+            return true
+          }
+
           let fieldValue: any
 
           // Handle custom fields
@@ -1534,6 +1539,10 @@ export default function ProfilesPage() {
               onFilterChange={(value) => {
                 if (value === "filter_profiles") {
                   setShowInlineFilter(!showInlineFilter)
+                  // Add an initial filter condition if none exist
+                  if (!showInlineFilter && filterConditions.length === 0) {
+                    setFilterConditions([{ field: "first_name", operator: "contains", value: "" }])
+                  }
                 } else if (value === "import_csv") {
                   setShowImportDialog(true)
                 } else if (value.startsWith("divider")) {
