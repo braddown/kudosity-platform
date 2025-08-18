@@ -1242,7 +1242,69 @@ export default function ProfilesPage() {
     },
   ]
 
-
+  // Add Destroy bulk action if all selected profiles are deleted
+  const allSelectedDeleted = selectedProfiles.length > 0 && 
+    selectedProfiles.every(p => p.status === 'deleted')
+  
+  if (allSelectedDeleted) {
+    dataOperations.push({
+      label: "---divider---",
+      icon: null,
+      onClick: () => {},
+    })
+    dataOperations.push({
+      label: "Destroy Permanently",
+      icon: <Trash2 className="h-4 w-4 text-red-600" />,
+      disabled: false,
+      onClick: async () => {
+        const confirmMessage = `⚠️ WARNING: You are about to permanently destroy ${selectedProfiles.length} profile(s).\n\n` +
+          `This will:\n` +
+          `• Completely remove all profile data from the database\n` +
+          `• Delete all associated activity logs\n` +
+          `• Remove from all lists and segments\n` +
+          `• Delete all related metadata\n\n` +
+          `This action CANNOT be undone.\n\n` +
+          `Are you absolutely sure you want to destroy ${selectedProfiles.length} profile(s)?`
+        
+        if (window.confirm(confirmMessage)) {
+          setLoading(true)
+          let successCount = 0
+          let errorCount = 0
+          
+          for (const profile of selectedProfiles) {
+            try {
+              const result = await deleteProfile(profile.id)
+              if (result.error) {
+                errorCount++
+                console.error(`Failed to destroy profile ${profile.id}:`, result.error)
+              } else {
+                successCount++
+              }
+            } catch (error) {
+              errorCount++
+              console.error(`Error destroying profile ${profile.id}:`, error)
+            }
+          }
+          
+          // Refresh profiles
+          const result = await getProfiles()
+          if (result.data) {
+            setProfiles(result.data)
+            setFilteredProfiles(result.data)
+          }
+          
+          setSelectedProfiles([])
+          setLoading(false)
+          
+          toast({
+            title: "Bulk destroy completed",
+            description: `Successfully destroyed ${successCount} profiles${errorCount > 0 ? `, ${errorCount} failed` : ''}`,
+            variant: errorCount > 0 ? "destructive" : "default",
+          })
+        }
+      },
+    })
+  }
 
   const pageActions = [
     {
