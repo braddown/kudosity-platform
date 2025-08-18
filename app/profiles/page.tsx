@@ -917,27 +917,12 @@ export default function ProfilesPage() {
 
     setIsSavingSegment(true)
     try {
-      // Get an existing profile ID to use as creator_id (due to foreign key constraint)
-      let creatorId = "00000000-0000-0000-0000-000000000001" // fallback
-
-      if (profiles.length > 0) {
-        // Use the first available profile ID as creator
-        creatorId = profiles[0].id
-      } else {
-        // If no profiles exist, try to fetch one
-        const profilesResult = await getProfiles()
-        if (profilesResult.data && profilesResult.data.length > 0) {
-          creatorId = profilesResult.data[0].id
-        } else {
-          alert("Cannot create segment: No profiles found in the system. Please create a profile first.")
-          return
-        }
-      }
+      // creator_id is optional and can be null
+      // We don't need to set it since it's not critical for segment functionality
 
       const result = await segmentsApi.createSegment({
         name: segmentName,
         description: `Segment with ${filteredProfiles.length} profiles`,
-        creator_id: creatorId,
         filter_criteria: {
           conditions: filterConditions,
           profileType: selectedType,

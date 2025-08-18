@@ -75,21 +75,13 @@ export const segmentsApi = {
         throw new Error("No account selected. Please select an account first.");
       }
 
-      // If no creator_id provided, try to get a valid one
-      let creatorId = segment.creator_id
-
-      if (!creatorId) {
-        // Try to get any existing profile to use as creator
-        const { data: profiles } = await supabase.from("profiles").select("id").limit(1)
-        if (profiles && profiles.length > 0) {
-          creatorId = profiles[0].id
-        }
-      }
+      // creator_id is optional - just use null if not provided
+      // This avoids foreign key issues with profiles table
 
       const segmentData = {
         name: segment.name,
         description: segment.description || null,
-        creator_id: creatorId || null,
+        creator_id: segment.creator_id || null,
         filter_criteria: segment.filter_criteria || {},
         estimated_size: segment.estimated_size || 0,
         auto_update: segment.auto_update !== false,
@@ -123,27 +115,13 @@ export const segmentsApi = {
       // Normalize the list name to create a tag
       const tagName = listName.toLowerCase().replace(/[^a-z0-9]/g, "-")
 
-      // Use a valid creator_id or null if not provided
-      let validCreatorId = creatorId || null
-
-      // If no creator_id provided, try to get the first available profile ID
-      if (!validCreatorId && profileIds.length > 0) {
-        validCreatorId = profileIds[0]
-      }
-
-      // If still no valid creator_id, try to fetch any existing profile
-      if (!validCreatorId) {
-        const { data: profiles } = await supabase.from("profiles").select("id").limit(1)
-        if (profiles && profiles.length > 0) {
-          validCreatorId = profiles[0].id
-        }
-      }
+      // creator_id is optional - just use null to avoid foreign key issues
 
       // Create the segment with tag-based filter criteria
       const segmentData = {
         name: listName,
         description,
-        creator_id: validCreatorId,
+        creator_id: null,
         filter_criteria: {
           conditions: [
             {
