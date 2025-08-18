@@ -20,6 +20,7 @@ export interface DataTableColumn<T> {
 
 export interface DataTableProps<T> {
   data: T[]
+  allFilteredData?: T[]  // All filtered results (not just current page)
   columns: DataTableColumn<T>[]
   searchPlaceholder?: string
   onSearch?: (value: string) => void
@@ -29,6 +30,13 @@ export interface DataTableProps<T> {
   onFilterChange?: (value: string) => void
   actions?: Array<{
     label: string
+    icon?: React.ReactNode
+    onClick: () => void
+    disabled?: boolean
+  }>
+  bulkActions?: Array<{
+    label: string
+    icon?: React.ReactNode
     onClick: () => void
   }>
   pagination?: {
@@ -49,6 +57,7 @@ export interface DataTableProps<T> {
 
 export function DataTable<T extends { id: string | number; status?: string }>({
   data,
+  allFilteredData,
   columns,
   searchPlaceholder = "Search...",
   onSearch,
@@ -57,6 +66,7 @@ export function DataTable<T extends { id: string | number; status?: string }>({
   filterOptions,
   onFilterChange,
   actions,
+  bulkActions,
   pagination,
   title = "All Items",
   onRowEdit,
@@ -69,6 +79,7 @@ export function DataTable<T extends { id: string | number; status?: string }>({
   const [selectedRows, setSelectedRows] = React.useState<T[]>([])
   const [searchValue, setSearchValue] = React.useState("")
   const [selectedFilter, setSelectedFilter] = React.useState(propsSelectedFilter || filterOptions?.[0]?.value || "all")
+  const [selectAllMode, setSelectAllMode] = React.useState<'page' | 'all' | 'none'>('none')
 
   // Create a ref for the indeterminate checkbox
   const checkboxRef = React.useRef<HTMLButtonElement>(null)
@@ -93,11 +104,27 @@ export function DataTable<T extends { id: string | number; status?: string }>({
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedRows(data)
-      onSelectionChange?.(data)
+      if (allFilteredData && allFilteredData.length > data.length) {
+        // If there are more filtered results than current page, show option to select all
+        setSelectAllMode('page')
+        setSelectedRows(data)
+        onSelectionChange?.(data)
+      } else {
+        setSelectedRows(data)
+        onSelectionChange?.(data)
+      }
     } else {
+      setSelectAllMode('none')
       setSelectedRows([])
       onSelectionChange?.([])
+    }
+  }
+
+  const handleSelectAllFiltered = () => {
+    if (allFilteredData) {
+      setSelectAllMode('all')
+      setSelectedRows(allFilteredData)
+      onSelectionChange?.(allFilteredData)
     }
   }
 
@@ -127,59 +154,111 @@ export function DataTable<T extends { id: string | number; status?: string }>({
   return (
     <div className="w-full bg-card rounded-lg shadow-sm border border-border">
       {/* Table Controls */}
-      <div className="flex items-center justify-between p-6 border-b border-border">
-        <div className="flex items-center space-x-4">
-          <h3 className="text-lg font-medium text-card-foreground">{title}</h3>
-          {filterOptions && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-10 hover:bg-accent">
-                  {filterOptions?.find((f) => f.value === selectedFilter)?.label || "All"}
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-card border-border">
-                {filterOptions.map((option) => (
-                  <DropdownMenuItem
-                    key={option.value}
-                    onClick={() => handleFilterChange(option.value)}
-                    className="hover:bg-accent text-foreground"
-                  >
-                    {option.label}
-                  </DropdownMenuItem>
-                ))}
+      <div className="flex flex-col">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <div className="flex items-center space-x-4">
+            <h3 className="text-lg font-medium text-card-foreground">
+              {title}
+              {selectedRows.length > 0 && (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  ({selectedRows.length} selected)
+                </span>
+              )}
+            </h3>
+            {filterOptions && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-10 hover:bg-accent">
+                    {filterOptions?.find((f) => f.value === selectedFilter)?.label || "All"}
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                              <DropdownMenuContent className="bg-card border-border">
+                {filterOptions.map((option) => {
+                  if (option.label === "---") {
+                    return <div key={option.value} className="my-1 border-t border-border" />
+                  }
+                  return (
+                    <DropdownMenuItem
+                      key={option.value}
+                      onClick={() => handleFilterChange(option.value)}
+                      className="hover:bg-accent text-foreground"
+                    >
+                      {option.label}
+                    </DropdownMenuItem>
+                  )
+                })}
               </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
-            <Input
-              placeholder={searchPlaceholder}
-              value={searchValue}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="pl-10 w-[250px] h-10 bg-background border-border"
-            />
+              </DropdownMenu>
+            )}
+
           </div>
-          {actions && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-10 hover:bg-accent">
-                  Actions
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-card border-border">
-                {actions.map((action, index) => (
-                  <DropdownMenuItem key={index} onClick={action.onClick} className="hover:bg-accent text-foreground">
-                    {action.label}
-                  </DropdownMenuItem>
-                ))}
+          <div className="flex items-center space-x-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+              <Input
+                placeholder={searchPlaceholder}
+                value={searchValue}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-10 w-[250px] h-10 bg-background border-border"
+              />
+            </div>
+            {actions && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-10 hover:bg-accent">
+                    Actions
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                              <DropdownMenuContent className="bg-card border-border">
+                {actions.map((action, index) => {
+                  if (action.label === "---divider---") {
+                    return <div key={index} className="my-1 border-t border-border" />
+                  }
+                  return (
+                    <DropdownMenuItem 
+                      key={index} 
+                      onClick={action.disabled ? undefined : action.onClick}
+                      disabled={action.disabled}
+                      className={`flex items-center gap-2 ${
+                        action.disabled 
+                          ? 'text-muted-foreground cursor-not-allowed opacity-50' 
+                          : 'hover:bg-accent text-foreground cursor-pointer'
+                      }`}
+                    >
+                      {action.icon}
+                      {action.label}
+                    </DropdownMenuItem>
+                  )
+                })}
               </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+              </DropdownMenu>
+            )}
+          </div>
         </div>
+        {/* Select All Filtered Notification */}
+        {selectAllMode === 'page' && allFilteredData && allFilteredData.length > data.length && (
+          <div className="px-6 py-3 bg-blue-50 dark:bg-blue-950 border-b border-border flex items-center justify-between">
+            <span className="text-sm text-blue-800 dark:text-blue-200">
+              All {data.length} items on this page are selected.
+            </span>
+            <Button 
+              variant="link" 
+              onClick={handleSelectAllFiltered}
+              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 p-0 h-auto"
+            >
+              Select all {allFilteredData.length} filtered items
+            </Button>
+          </div>
+        )}
+        {selectAllMode === 'all' && allFilteredData && (
+          <div className="px-6 py-3 bg-blue-50 dark:bg-blue-950 border-b border-border">
+            <span className="text-sm text-blue-800 dark:text-blue-200">
+              All {allFilteredData.length} filtered items are selected.
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Table */}

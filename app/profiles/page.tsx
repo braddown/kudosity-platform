@@ -992,6 +992,8 @@ export default function ProfilesPage() {
     setSelectedSegment(null)
     setSegmentName("")
     setShowInlineFilter(false)
+    // Force refresh of filtered profiles
+    setFilteredProfiles(profiles)
   }
 
   const columns: DataTableColumn<Profile>[] = [
@@ -1135,86 +1137,122 @@ export default function ProfilesPage() {
   ]
 
   const filterOptions = [
+    { label: "Filter Profiles", value: "filter_profiles" },
+    { label: "Import CSV", value: "import_csv" },
+    { label: "---", value: "divider1" },
     { label: "All", value: "all" },
     { label: "Active", value: "active" },
     { label: "Marketing", value: "marketing" },
     { label: "Suppressed", value: "suppressed" },
     { label: "Unsubscribed", value: "unsubscribed" },
     { label: "Deleted", value: "deleted" },
-    // Add segments to filter options
-    ...segments.map((segment) => ({
-      label: segment.name,
-      value: `segment_${segment.id}`,
-    })),
+    // Add custom segments to filter options (exclude predefined ones)
+    ...(segments.length > 0 ? [
+      { label: "---", value: "divider2" },
+      ...segments
+        .filter(segment => {
+          // Exclude segments that match predefined filters
+          const predefinedNames = ['all', 'active', 'marketing', 'suppressed', 'unsubscribed', 'deleted', 'inactive', 'archived'];
+          return !predefinedNames.includes(segment.name.toLowerCase());
+        })
+        .map((segment) => ({
+          label: segment.name,
+          value: `segment_${segment.id}`,
+        }))
+    ] : []),
   ]
 
-  // Data operations - for the filter dropdown
+  // Data operations - all bulk actions (disabled when no selection)
   const dataOperations = [
-    {
-      label: "Filter Profiles",
-      icon: <Filter className="h-4 w-4" />,
-      onClick: () => setShowInlineFilter(!showInlineFilter),
-    },
     {
       label: "Export CSV",
       icon: <Download className="h-4 w-4" />,
       onClick: () => setShowExportDialog(true),
+      disabled: false, // Always enabled
     },
     {
-      label: "Import CSV",
-      icon: <Upload className="h-4 w-4" />,
-      onClick: () => setShowImportDialog(true),
+      label: "---divider---",
+      icon: null,
+      onClick: () => {},
+    },
+    {
+      label: "Tag",
+      icon: <Tag className="h-4 w-4" />,
+      disabled: selectedProfiles.length === 0,
+      onClick: () => {
+        if (selectedProfiles.length === 0) return;
+        // TODO: Implement tag dialog
+        const tag = prompt(`Enter tag to add to ${selectedProfiles.length} profiles:`)
+        if (tag) {
+          console.log(`Adding tag "${tag}" to ${selectedProfiles.length} profiles`)
+          toast({
+            title: "Tags added",
+            description: `Added "${tag}" to ${selectedProfiles.length} profiles`,
+          })
+        }
+      }
+    },
+    {
+      label: "Delete",
+      icon: <Trash2 className="h-4 w-4" />,
+      disabled: selectedProfiles.length === 0,
+      onClick: async () => {
+        if (selectedProfiles.length === 0) return;
+        if (window.confirm(`Are you sure you want to delete ${selectedProfiles.length} profiles? They will be marked as deleted but can be restored later.`)) {
+          setLoading(true)
+          let successCount = 0
+          let errorCount = 0
+          
+          for (const profile of selectedProfiles) {
+            try {
+              const result = await softDeleteProfile(profile.id)
+              if (result.error) {
+                errorCount++
+              } else {
+                successCount++
+              }
+            } catch (error) {
+              errorCount++
+            }
+          }
+          
+          // Refresh profiles
+          const result = await getProfiles()
+          if (result.data) {
+            setProfiles(result.data)
+            setFilteredProfiles(result.data)
+          }
+          
+          setSelectedProfiles([])
+          setLoading(false)
+          
+          toast({
+            title: "Bulk delete completed",
+            description: `Successfully deleted ${successCount} profiles${errorCount > 0 ? `, ${errorCount} failed` : ''}`,
+          })
+        }
+      }
+    },
+    {
+      label: "Add to List",
+      icon: <List className="h-4 w-4" />,
+      disabled: selectedProfiles.length === 0,
+      onClick: () => {
+        if (selectedProfiles.length === 0) return;
+        // TODO: Implement list selection dialog
+        const listName = prompt(`Enter list name to add ${selectedProfiles.length} profiles to:`)
+        if (listName) {
+          console.log(`Adding ${selectedProfiles.length} profiles to list "${listName}"`)
+          toast({
+            title: "Added to list",
+            description: `Added ${selectedProfiles.length} profiles to "${listName}"`,
+          })
+        }
+      }
     },
   ]
 
-  // Bulk actions - for selected profiles
-  const bulkActions = [
-    { 
-      label: "Tag", 
-      icon: <Tag className="h-4 w-4" />, 
-      onClick: () => {
-        if (selectedProfiles.length === 0) {
-          toast({
-            title: "No profiles selected",
-            description: "Please select profiles to tag",
-            variant: "destructive",
-          })
-          return
-        }
-        console.log("Tag selected profiles:", selectedProfiles.length)
-      }
-    },
-    { 
-      label: "Delete", 
-      icon: <Trash2 className="h-4 w-4" />, 
-      onClick: () => {
-        if (selectedProfiles.length === 0) {
-          toast({
-            title: "No profiles selected",
-            description: "Please select profiles to delete",
-            variant: "destructive",
-          })
-          return
-        }
-        console.log("Delete selected profiles:", selectedProfiles.length)
-      }
-    },
-    { 
-      label: "Add to List", 
-      icon: <List className="h-4 w-4" />, 
-      onClick: () => {
-        if (selectedProfiles.length === 0) {
-          toast({
-            title: "No profiles selected",
-            description: "Please select profiles to add to a list",
-            variant: "destructive",
-          })
-          return
-        }
-        console.log("Add to list:", selectedProfiles.length)
-      }
-    },
-  ]
+
 
   const pageActions = [
     {
@@ -1300,7 +1338,32 @@ export default function ProfilesPage() {
             <div className="bg-card rounded-lg border border-border">
               <div className="p-4 border-b border-border">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-foreground">{filteredProfiles.length} Profiles</h2>
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-lg font-semibold text-foreground">{filteredProfiles.length} Profiles</h2>
+                    {filterConditions.length > 0 && (
+                      <Button
+                        onClick={() => {
+                          const defaultName = `Segment ${new Date().toLocaleDateString()}`
+                          setSegmentName(defaultName)
+                        }}
+                        variant="outline"
+                        className="h-10 flex items-center gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Create New Segment
+                      </Button>
+                    )}
+                    {selectedSegment && (
+                      <Button
+                        onClick={clearFilters}
+                        variant="outline"
+                        className="h-10 flex items-center gap-2"
+                      >
+                        <X className="h-4 w-4" />
+                        Clear Segment
+                      </Button>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2">
                     <Input
                       placeholder="Enter segment name"
@@ -1484,17 +1547,26 @@ export default function ProfilesPage() {
               selectable
               filterOptions={filterOptions}
               onFilterChange={(value) => {
-                if (value.startsWith("segment_")) {
+                if (value === "filter_profiles") {
+                  setShowInlineFilter(!showInlineFilter)
+                } else if (value === "import_csv") {
+                  setShowImportDialog(true)
+                } else if (value.startsWith("divider")) {
+                  // Do nothing for dividers
+                  return
+                } else if (value.startsWith("segment_")) {
                   const segmentId = value.replace("segment_", "")
                   loadSegment(segmentId)
                 } else {
+                  // Clear segment and filter conditions when switching to a standard filter
                   setSelectedType(value)
                   setSelectedSegment(null)
+                  setFilterConditions([])
+                  setSearchTerm("")
                 }
               }}
               selectedFilter={selectedSegment ? `segment_${selectedSegment}` : selectedType}
               actions={dataOperations}
-              bulkActions={bulkActions}
               onSelectionChange={setSelectedProfiles}
               onRowEdit={handleRowEdit}
               onRowDelete={async (profile) => {

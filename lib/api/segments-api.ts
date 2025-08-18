@@ -62,6 +62,16 @@ export const segmentsApi = {
   // Create a new segment
   createSegment: async (segment: Omit<Segment, "id" | "created_at" | "updated_at">) => {
     try {
+      // Get the current account from cookies
+      const currentAccountId = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('current_account='))
+        ?.split('=')[1];
+
+      if (!currentAccountId) {
+        throw new Error("No account selected. Please select an account first.");
+      }
+
       // If no creator_id provided, try to get a valid one
       let creatorId = segment.creator_id
 
@@ -84,6 +94,7 @@ export const segmentsApi = {
         shared: segment.shared || false,
         tags: segment.tags || [],
         tag: segment.tag || null,
+        account_id: currentAccountId, // Include account_id
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }
