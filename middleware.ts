@@ -64,6 +64,8 @@ export async function middleware(request: NextRequest) {
     '/auth/verify-email',
     '/auth/callback',
     '/auth/error',
+    '/debug-account', // Temporary debug route
+    '/auth/setup-account-alt', // Alternative setup page for debugging
   ]
 
   const isPublicRoute = publicRoutes.some(route => 
@@ -71,31 +73,55 @@ export async function middleware(request: NextRequest) {
   )
 
   // If user is not authenticated and trying to access protected route
-  if (!user && !isPublicRoute && !request.nextUrl.pathname.startsWith('/api/auth')) {
+  if (!user && !isPublicRoute && !request.nextUrl.pathname.startsWith('/api/auth') && !request.nextUrl.pathname.startsWith('/api/debug-account') && !request.nextUrl.pathname.startsWith('/api/force-logout')) {
     const redirectUrl = new URL('/auth/login', request.url)
     redirectUrl.searchParams.set('next', request.nextUrl.pathname)
     return NextResponse.redirect(redirectUrl)
   }
 
-  // If user is authenticated and trying to access auth pages (except setup-account)
-  if (user && isPublicRoute && !request.nextUrl.pathname.includes('setup-account')) {
-    return NextResponse.redirect(new URL('/overview', request.url))
-  }
-
-  // Check if user needs to set up account
-  if (user && !request.nextUrl.pathname.includes('auth/setup-account')) {
-    // Check if user has any accounts
-    const { data: memberships } = await supabase
-      .from('account_members')
-      .select('account_id')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-
-    if (!memberships || memberships.length === 0) {
-      // User has no accounts, redirect to setup
-      if (!request.nextUrl.pathname.startsWith('/auth/setup-account')) {
-        return NextResponse.redirect(new URL('/auth/setup-account', request.url))
+  // Check if user needs to set up account (but not if they're on setup pages or trying to logout)
+  if (user && 
+      !request.nextUrl.pathname.includes('auth/setup-account') && 
+      !request.nextUrl.pathname.includes('/api/force-logout') &&
+      !request.nextUrl.pathname.includes('/debug-account') &&
+      !request.nextUrl.pathname.includes('/api/create-account-direct')) {
+    
+    // Try to check memberships, but handle RLS errors gracefully
+    try {
+      const { data: memberships, error: membershipError } = await supabase
+        .from('account_members')
+        .select('account_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+      
+      if (membershipError) {
+        console.error('Middleware: Error checking memberships:', membershipError)
+        // If there's an RLS error, assume user might have accounts and continue
+        // The actual pages will handle the authorization
+      } else if (!memberships || memberships.length === 0) {
+        // User has no accounts, redirect to setup (unless they're already on an auth page)
+        if (!request.nextUrl.pathname.startsWith('/auth/')) {
+          return NextResponse.redirect(new URL('/auth/setup-account', request.url))
+        }
+      } else {
+        // User has accounts
+        // Check if current_account cookie is set, if not set it to the first account
+        const currentAccountCookie = request.cookies.get('current_account')
+        if (!currentAccountCookie && memberships.length > 0) {
+          response.cookies.set('current_account', memberships[0].account_id, {
+            path: '/',
+            maxAge: 60 * 60 * 24 * 30 // 30 days
+          })
+        }
+        
+        // Don't let them access login/signup pages
+        if (user && isPublicRoute && !request.nextUrl.pathname.includes('setup-account')) {
+          return NextResponse.redirect(new URL('/overview', request.url))
+        }
       }
+    } catch (error) {
+      console.error('Middleware: Unexpected error checking memberships:', error)
+      // Continue without redirecting on error
     }
   }
 

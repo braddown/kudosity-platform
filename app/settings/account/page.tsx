@@ -279,6 +279,10 @@ export default function AccountSettingsPage() {
         },
       ],
     })
+    
+    return () => {
+      setPageHeader(null)
+    }
   }, [setPageHeader, formData, accountInfo, saving, toast])
 
   if (loading) {
@@ -303,7 +307,8 @@ export default function AccountSettingsPage() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="p-6">
+        <div className="space-y-6">
         {/* Basic Account Information Card */}
         <Card>
           <CardContent className="space-y-6 pt-6">
@@ -478,6 +483,7 @@ export default function AccountSettingsPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
       </div>
     </MainLayout>
   )

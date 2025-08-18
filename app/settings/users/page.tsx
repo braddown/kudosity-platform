@@ -68,6 +68,11 @@ export default function UsersSettingsPage() {
         },
       ],
     })
+    
+    // Cleanup function to reset header when component unmounts
+    return () => {
+      setPageHeader(null)
+    }
   }, [setPageHeader, toast])
 
   // Function to fetch activity data

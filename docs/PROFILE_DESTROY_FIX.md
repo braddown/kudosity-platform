@@ -56,3 +56,4 @@ The NO ACTION constraints prevent deletion if related records exist, so we must 
 - Only users with 'owner' or 'admin' role can destroy profiles
 - Requires active account membership
 - Logs all deletion steps for audit trail
+

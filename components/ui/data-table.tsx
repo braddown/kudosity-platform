@@ -25,19 +25,11 @@ export interface DataTableProps<T> {
   onSearch?: (value: string) => void
   selectable?: boolean
   onSelectionChange?: (selectedRows: T[]) => void
-  onSelectAllFiltered?: () => void  // New prop for selecting all filtered results
-  allFilteredData?: T[]  // All filtered results (not just current page)
   filterOptions?: { label: string; value: string }[]
   onFilterChange?: (value: string) => void
   actions?: Array<{
     label: string
-    icon?: React.ReactNode
     onClick: () => void
-  }>
-  bulkActions?: Array<{
-    label: string
-    icon?: React.ReactNode
-    onClick: (selectedRows: T[]) => void
   }>
   pagination?: {
     currentPage: number
@@ -62,12 +54,9 @@ export function DataTable<T extends { id: string | number; status?: string }>({
   onSearch,
   selectable = false,
   onSelectionChange,
-  onSelectAllFiltered,
-  allFilteredData,
   filterOptions,
   onFilterChange,
   actions,
-  bulkActions,
   pagination,
   title = "All Items",
   onRowEdit,
@@ -91,32 +80,21 @@ export function DataTable<T extends { id: string | number; status?: string }>({
   }, [propsSelectedFilter])
 
   // Update the indeterminate state when selectedRows changes
-  // Check if some but not all are selected (indeterminate state) - moved before useEffect
-  const isIndeterminate = allFilteredData
-    ? selectedRows.length > 0 && selectedRows.length < allFilteredData.length
-    : selectedRows.length > 0 && selectedRows.length < data.length
-
   React.useEffect(() => {
     if (checkboxRef.current) {
+      const isIndeterminate = selectedRows.length > 0 && selectedRows.length < data.length
       // Access the DOM element and set the indeterminate property
       const checkboxElement = checkboxRef.current as unknown as HTMLInputElement
       if (checkboxElement) {
         checkboxElement.indeterminate = isIndeterminate
       }
     }
-  }, [isIndeterminate])
+  }, [selectedRows, data])
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      // If allFilteredData is provided, select all filtered results
-      const dataToSelect = allFilteredData || data
-      setSelectedRows(dataToSelect)
-      onSelectionChange?.(dataToSelect)
-      
-      // If we have onSelectAllFiltered and we're selecting all filtered data
-      if (allFilteredData && onSelectAllFiltered) {
-        onSelectAllFiltered()
-      }
+      setSelectedRows(data)
+      onSelectionChange?.(data)
     } else {
       setSelectedRows([])
       onSelectionChange?.([])
@@ -144,10 +122,7 @@ export function DataTable<T extends { id: string | number; status?: string }>({
     onFilterChange?.(value)
   }
 
-  // Check if all items are selected (either current page or all filtered)
-  const isAllSelected = allFilteredData 
-    ? allFilteredData.length > 0 && selectedRows.length === allFilteredData.length
-    : data.length > 0 && selectedRows.length === data.length
+  const isAllSelected = data.length > 0 && selectedRows.length === data.length
 
   return (
     <div className="w-full bg-card rounded-lg shadow-sm border border-border">
@@ -163,59 +138,10 @@ export function DataTable<T extends { id: string | number; status?: string }>({
                   <ChevronDown className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-card border-border w-64">
-                {/* Data Operations at the top */}
-                {actions && actions.length > 0 && (
-                  <>
-                    {actions.map((action, index) => (
-                      <DropdownMenuItem 
-                        key={`action-${index}`} 
-                        onClick={action.onClick} 
-                        className="hover:bg-accent text-foreground"
-                      >
-                        <span className="flex items-center gap-2">
-                          {action.icon}
-                          {action.label}
-                        </span>
-                      </DropdownMenuItem>
-                    ))}
-                    <div className="my-1 h-px bg-border" />
-                  </>
-                )}
-                
-                {/* Search for long lists */}
-                {filterOptions.length > 10 && (
-                  <>
-                    <div className="px-2 py-2">
-                      <Input
-                        placeholder="Search lists & segments..."
-                        className="h-8"
-                        onChange={(e) => {
-                          const searchValue = e.target.value.toLowerCase()
-                          // Filter the dropdown items based on search
-                          const items = document.querySelectorAll('[data-filter-option]')
-                          items.forEach((item) => {
-                            const label = item.getAttribute('data-filter-label')?.toLowerCase() || ''
-                            if (label.includes(searchValue)) {
-                              (item as HTMLElement).style.display = ''
-                            } else {
-                              (item as HTMLElement).style.display = 'none'
-                            }
-                          })
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                    <div className="my-1 h-px bg-border" />
-                  </>
-                )}
-                
-                {/* Filter/List/Segment Options */}
+              <DropdownMenuContent className="bg-card border-border">
                 {filterOptions.map((option) => (
                   <DropdownMenuItem
                     key={option.value}
-                    data-filter-option
-                    data-filter-label={option.label}
                     onClick={() => handleFilterChange(option.value)}
                     className="hover:bg-accent text-foreground"
                   >
@@ -236,31 +162,18 @@ export function DataTable<T extends { id: string | number; status?: string }>({
               className="pl-10 w-[250px] h-10 bg-background border-border"
             />
           </div>
-          
-          {/* Bulk Actions - always visible, disabled when no selection */}
-          {bulkActions && (
+          {actions && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  className="h-10 hover:bg-accent"
-                  disabled={selectedRows.length === 0}
-                >
-                  Actions {selectedRows.length > 0 && `(${selectedRows.length})`}
+                <Button variant="outline" className="h-10 hover:bg-accent">
+                  Actions
                   <ChevronDown className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-card border-border">
-                {bulkActions.map((action, index) => (
-                  <DropdownMenuItem 
-                    key={index} 
-                    onClick={() => action.onClick(selectedRows)} 
-                    className="hover:bg-accent text-foreground"
-                  >
-                    <span className="flex items-center gap-2">
-                      {action.icon}
-                      {action.label}
-                    </span>
+                {actions.map((action, index) => (
+                  <DropdownMenuItem key={index} onClick={action.onClick} className="hover:bg-accent text-foreground">
+                    {action.label}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -276,16 +189,7 @@ export function DataTable<T extends { id: string | number; status?: string }>({
             <TableRow className="border-b border-border hover:bg-muted/50">
               {selectable && (
                 <TableHead className="w-[50px] bg-muted/50">
-                  <div className="flex items-center gap-2">
-                    <Checkbox ref={checkboxRef} checked={isAllSelected} onCheckedChange={handleSelectAll} />
-                    {allFilteredData && selectedRows.length > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        {selectedRows.length === allFilteredData.length 
-                          ? `All ${allFilteredData.length}` 
-                          : `${selectedRows.length} of ${allFilteredData.length}`}
-                      </span>
-                    )}
-                  </div>
+                  <Checkbox ref={checkboxRef} checked={isAllSelected} onCheckedChange={handleSelectAll} />
                 </TableHead>
               )}
               {columns.map((column) => (
@@ -312,7 +216,7 @@ export function DataTable<T extends { id: string | number; status?: string }>({
               </TableRow>
             ) : (
               data.map((row, index) => {
-                const isDeleted = row.status === "deleted"
+                const isDeleted = row.status === "Inactive"
 
                 return (
                   <TableRow
@@ -358,12 +262,11 @@ export function DataTable<T extends { id: string | number; status?: string }>({
                               {onRowDestroy && (
                                 <DropdownMenuItem
                                   onClick={() => {
-                                    const confirmMessage = 
-                                      'first_name' in row && 'last_name' in row
-                                        ? `⚠️ PERMANENT DELETION WARNING ⚠️\n\nAre you sure you want to permanently destroy the profile for ${(row as any).first_name} ${(row as any).last_name}?\n\nThis will:\n• Remove the profile completely from the database\n• Delete all associated activity logs\n• Remove from all lists and segments\n• Delete all related metadata\n\nThis action CANNOT be undone.`
-                                        : "⚠️ PERMANENT DELETION WARNING ⚠️\n\nAre you sure you want to permanently destroy this item?\n\nThis will remove all data from the database and CANNOT be undone."
-                                    
-                                    if (window.confirm(confirmMessage)) {
+                                    if (
+                                      window.confirm(
+                                        "Are you sure you want to permanently destroy this profile? This action cannot be undone and will remove all data from the database.",
+                                      )
+                                    ) {
                                       onRowDestroy(row)
                                     }
                                   }}
@@ -387,12 +290,11 @@ export function DataTable<T extends { id: string | number; status?: string }>({
                               {onRowDelete && (
                                 <DropdownMenuItem
                                   onClick={() => {
-                                    const confirmMessage = 
-                                      'first_name' in row && 'last_name' in row
-                                        ? `Are you sure you want to delete the profile for ${(row as any).first_name} ${(row as any).last_name}?\n\nThis will mark the profile as deleted but preserve the data.`
-                                        : "Are you sure you want to delete this item? This action will mark it as deleted but preserve the data."
-                                    
-                                    if (window.confirm(confirmMessage)) {
+                                    if (
+                                      window.confirm(
+                                        "Are you sure you want to delete this item? This action will mark it as deleted but preserve the data.",
+                                      )
+                                    ) {
                                       onRowDelete(row)
                                     }
                                   }}

@@ -48,3 +48,4 @@ The "select all" checkbox in the table header was only selecting profiles on the
 5. Navigate between pages - selection should persist
 6. Check the count indicator shows correct numbers
 7. Test partial selection to see indeterminate state
+

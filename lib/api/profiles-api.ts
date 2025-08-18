@@ -1,4 +1,7 @@
-import { supabase } from "../supabase"
+import { createClient } from "@/lib/auth/client"
+
+// Create a supabase client for each request
+const supabase = createClient()
 
 // Get all profiles with optional filtering
 export const getProfiles = async (options?: {
@@ -162,16 +165,42 @@ export const softDeleteProfile = async (id: string) => {
   try {
     console.log("Soft deleting profile:", id)
 
-    const { data, error } = await supabase
+    // First, let's just update without selecting to avoid the multiple rows issue
+    const { error: updateError } = await supabase
       .from("cdp_profiles")
-      .update({ lifecycle_stage: "churned", updated_at: new Date().toISOString() })
+      .update({ 
+        status: "deleted", 
+        updated_at: new Date().toISOString(),
+        // Turn off all notification preferences when deleting
+        notification_preferences: {
+          marketing_emails: false,
+          transactional_emails: false,
+          marketing_sms: false,
+          transactional_sms: false,
+          marketing_whatsapp: false,
+          transactional_whatsapp: false,
+          marketing_rcs: false,
+          transactional_rcs: false
+        }
+      })
       .eq("id", id)
+
+    if (updateError) {
+      console.error("Error soft deleting profile:", updateError)
+      return { data: null, error: updateError.message }
+    }
+
+    // Then fetch the updated profile separately
+    const { data, error: selectError } = await supabase
+      .from("cdp_profiles")
       .select()
+      .eq("id", id)
       .single()
 
-    if (error) {
-      console.error("Error soft deleting profile:", error)
-      return { data: null, error: error.message }
+    if (selectError) {
+      console.error("Error fetching updated profile:", selectError)
+      // Even if select fails, the update succeeded
+      return { data: { id, status: "deleted" }, error: null }
     }
 
     console.log("Successfully soft deleted profile:", data)
@@ -189,7 +218,10 @@ export const restoreProfile = async (id: string) => {
 
     const { data, error } = await supabase
       .from("cdp_profiles")
-      .update({ lifecycle_stage: "customer", updated_at: new Date().toISOString() })
+      .update({ 
+        status: "active", 
+        updated_at: new Date().toISOString() 
+      })
       .eq("id", id)
       .select()
       .single()
@@ -454,6 +486,16 @@ export const createCustomField = async (fieldData: any) => {
   try {
     console.log("Creating custom field:", fieldData)
 
+    // Get the current account from cookies
+    const currentAccountId = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('current_account='))
+      ?.split('=')[1];
+
+    if (!currentAccountId) {
+      throw new Error("No account selected. Please select an account first.");
+    }
+
     // Insert the field definition into the custom_field_definitions table
     const { data: insertedField, error: insertError } = await supabase
       .from("custom_field_definitions")
@@ -465,6 +507,7 @@ export const createCustomField = async (fieldData: any) => {
           required: fieldData.required || false,
           default_value: fieldData.defaultValue || null,
           description: fieldData.description || null,
+          account_id: currentAccountId, // Include the account_id
         }
       ])
       .select()
@@ -508,6 +551,16 @@ export const updateCustomField = async (fieldKey: string, fieldData: any) => {
   try {
     console.log("Updating custom field:", fieldKey, fieldData)
 
+    // Get the current account from cookies
+    const currentAccountId = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('current_account='))
+      ?.split('=')[1];
+
+    if (!currentAccountId) {
+      throw new Error("No account selected. Please select an account first.");
+    }
+
     // Update the field definition in the custom_field_definitions table
     const { data: updatedField, error: updateError } = await supabase
       .from("custom_field_definitions")
@@ -521,6 +574,7 @@ export const updateCustomField = async (fieldKey: string, fieldData: any) => {
         updated_at: new Date().toISOString()
       })
       .eq("key", fieldKey)
+      .eq("account_id", currentAccountId) // Ensure we only update for current account
       .select()
       .single()
 

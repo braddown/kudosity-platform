@@ -241,7 +241,7 @@ export default function ProfilePage({
         </div>
       )}
       
-      <div className="pt-6">
+      <div className={!isHeaderless ? "pt-12" : ""}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left column - Profile details */}
           <div className="space-y-6">

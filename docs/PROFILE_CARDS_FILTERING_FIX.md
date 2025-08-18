@@ -63,3 +63,4 @@ This follows a more logical progression:
 4. Click "Unsubscribed" - should show profiles with ALL marketing channels off
 5. Verify counts match the filtered results
 6. Test that Marketing/Unsubscribed cards include profiles from all lifecycle statuses
+

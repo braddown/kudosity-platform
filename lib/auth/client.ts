@@ -157,16 +157,31 @@ export async function getCurrentUser() {
 export async function createAccount(name: string) {
   const supabase = createClient()
   
+  console.log('Creating account with name:', name)
+  
   // Get just the basic user without profile/orgs to avoid recursion
   const { data: { user }, error: userError } = await supabase.auth.getUser()
   
-  if (userError || !user) throw new Error('Not authenticated')
+  console.log('Current user:', user?.id, user?.email)
+  
+  if (userError || !user) {
+    console.error('User error:', userError)
+    throw new Error('Not authenticated')
+  }
 
   // Generate slug from name
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  
+  console.log('Generated slug:', slug)
+  console.log('Calling RPC with params:', {
+    p_name: name,
+    p_slug: slug,
+    p_user_id: user.id,
+    p_user_email: user.email || ''
+  })
 
   // Use the database function to create account and membership atomically
-  // This bypasses RLS and avoids recursion issues
+  // Now using SECURITY DEFINER to bypass RLS issues
   const { data, error } = await supabase
     .rpc('create_account_with_owner', {
       p_name: name,
@@ -175,12 +190,20 @@ export async function createAccount(name: string) {
       p_user_email: user.email || ''
     })
 
+  console.log('RPC response:', { data, error })
+
   if (error) {
-    console.error('Account creation error:', error)
+    console.error('Account creation error details:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    })
     throw new Error(error.message || 'Failed to create account')
   }
 
   if (!data || data.length === 0) {
+    console.error('No data returned from RPC')
     throw new Error('Account creation failed - no data returned')
   }
 
@@ -189,9 +212,16 @@ export async function createAccount(name: string) {
     name: data[0].account_name,
     slug: data[0].account_slug
   }
+  
+  console.log('Account created successfully:', account)
 
   // Set as current account
   document.cookie = `current_account=${account.id}; path=/; max-age=${60 * 60 * 24 * 30}`
+  
+  console.log('Account cookie set, redirecting to overview...')
+  
+  // Force a page reload to ensure the middleware picks up the new account
+  window.location.href = '/overview'
 
   return account
 }

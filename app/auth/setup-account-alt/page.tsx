@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createAccountDirect } from '@/lib/auth/client-direct'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,14 +10,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Building, Loader2, AlertCircle } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 
-export default function SetupAccountPage() {
+export default function SetupAccountAltPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [accountName, setAccountName] = useState('')
-
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,11 +29,26 @@ export default function SetupAccountPage() {
     }
 
     try {
-      const account = await createAccountDirect(accountName)
+      console.log('Submitting account creation for:', accountName)
+      
+      const response = await fetch('/api/create-account-direct', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: accountName }),
+      })
+
+      const data = await response.json()
+      console.log('Response from server:', data)
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create account')
+      }
       
       toast({
         title: 'Account created!',
-        description: `Welcome to ${account.name}`,
+        description: `Welcome to ${data.account.name}`,
       })
 
       // Redirect to overview
@@ -48,35 +60,12 @@ export default function SetupAccountPage() {
     }
   }
 
-  const handleSkip = async () => {
-    // Create a default personal organization
-    setLoading(true)
-    try {
-      // Get the authenticated user's email directly
-      const { createClient } = await import('@/lib/auth/client-direct')
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (user && user.email) {
-        const defaultName = `${user.email.split('@')[0]}'s Workspace`
-        await createAccountDirect(defaultName)
-        router.push('/overview')
-      } else {
-        throw new Error('User not found')
-      }
-    } catch (err: any) {
-      console.error('Skip error:', err)
-      setError('Failed to create default workspace')
-      setLoading(false)
-    }
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            Set up your account
+            Set up your account (Alternative)
           </CardTitle>
           <CardDescription className="text-center">
             Create your first workspace to get started
@@ -130,23 +119,10 @@ export default function SetupAccountPage() {
             </Button>
           </form>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or</span>
-            </div>
+          <div className="text-center text-sm text-muted-foreground">
+            <p>This is using the direct API approach</p>
+            <p>Check the browser console for debug logs</p>
           </div>
-
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={handleSkip}
-            disabled={loading}
-          >
-            Create Personal Workspace
-          </Button>
         </CardContent>
       </Card>
     </div>

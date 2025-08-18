@@ -819,7 +819,9 @@ export default function ProfilesPage() {
         : profile.notification_preferences
       
       // Check if any marketing channel is active (true)
+      // Note: database uses both 'marketing_emails' (plural) and 'marketing_email' (singular)
       return (
+        prefs.marketing_emails === true ||
         prefs.marketing_email === true ||
         prefs.marketing_sms === true ||
         prefs.marketing_whatsapp === true ||
@@ -832,11 +834,11 @@ export default function ProfilesPage() {
     }
   }
 
-  // Helper function to check if all marketing channels are revoked
+  // Helper function to check if all marketing channels are revoked or not consented
   const allMarketingRevoked = (profile: Profile): boolean => {
     if (!profile.notification_preferences) {
-      // No preferences at all - consider this as all channels off
-      return true
+      // No preferences at all - not considered unsubscribed (no consent given)
+      return false
     }
     
     try {
@@ -844,25 +846,36 @@ export default function ProfilesPage() {
         ? JSON.parse(profile.notification_preferences) 
         : profile.notification_preferences
       
-      // Check if ANY marketing channel is enabled (true)
-      // If any channel is explicitly true, they are NOT unsubscribed
-      const hasActiveEmail = prefs.marketing_email === true
-      const hasActiveSms = prefs.marketing_sms === true
-      const hasActiveWhatsapp = prefs.marketing_whatsapp === true
-      const hasActiveRcs = prefs.marketing_rcs === true
-      const hasActivePush = prefs.marketing_push === true
-      const hasActiveInApp = prefs.marketing_in_app === true
+      // Check the actual field names from the database
+      // Note: some use 'marketing_emails' (plural) and some use 'marketing_email' (singular)
+      const emailConsented = prefs.marketing_emails === true || prefs.marketing_email === true
+      const smsConsented = prefs.marketing_sms === true
+      const whatsappConsented = prefs.marketing_whatsapp === true
+      const rcsConsented = prefs.marketing_rcs === true
+      const pushConsented = prefs.marketing_push === true
+      const inAppConsented = prefs.marketing_in_app === true
       
-      // If ANY channel is active, not unsubscribed
-      if (hasActiveEmail || hasActiveSms || hasActiveWhatsapp || 
-          hasActiveRcs || hasActivePush || hasActiveInApp) {
+      // If ANY marketing channel has consent (is true), they are NOT unsubscribed
+      if (emailConsented || smsConsented || whatsappConsented || 
+          rcsConsented || pushConsented || inAppConsented) {
         return false
       }
       
-      // All channels are either false, undefined, or null - considered unsubscribed
-      return true
+      // Check if at least one channel is explicitly set to false (revoked/no consent)
+      // This ensures we're only counting profiles that have made a choice
+      const hasExplicitNoConsent = 
+        prefs.marketing_emails === false || prefs.marketing_email === false ||
+        prefs.marketing_sms === false ||
+        prefs.marketing_whatsapp === false ||
+        prefs.marketing_rcs === false ||
+        prefs.marketing_push === false ||
+        prefs.marketing_in_app === false
+      
+      // Only count as unsubscribed if they have explicitly set at least one channel to false
+      // AND no channels are set to true
+      return hasExplicitNoConsent
     } catch {
-      return true // Error parsing - treat as unsubscribed
+      return false // Error parsing - don't count as unsubscribed
     }
   }
 

@@ -314,6 +314,10 @@ export default function ProfilePage() {
         },
       ],
     })
+    
+    return () => {
+      setPageHeader(null)
+    }
   }, [setPageHeader, formData, profile, saving, toast])
 
 
@@ -365,7 +369,8 @@ export default function ProfilePage() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="p-6">
+        <div className="space-y-6">
         {/* Profile Information Card */}
         <Card>
           <CardHeader>
@@ -516,6 +521,7 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
         </div>
+      </div>
       </div>
     </MainLayout>
   )
