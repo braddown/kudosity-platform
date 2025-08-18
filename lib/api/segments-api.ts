@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/auth/client"
 
 export interface Segment {
   id: string
@@ -28,6 +28,7 @@ export const segmentsApi = {
   // Get all segments
   getSegments: async () => {
     try {
+      const supabase = createClient()
       const { data, error } = await supabase.from("segments").select("*").order("created_at", { ascending: false })
 
       if (error) throw error
@@ -45,6 +46,7 @@ export const segmentsApi = {
   // Get a single segment by ID
   getSegmentById: async (id: string) => {
     try {
+      const supabase = createClient()
       const { data, error } = await supabase.from("segments").select("*").eq("id", id).single()
 
       if (error) throw error
@@ -62,6 +64,7 @@ export const segmentsApi = {
   // Create a new segment
   createSegment: async (segment: Omit<Segment, "id" | "created_at" | "updated_at">) => {
     try {
+      const supabase = createClient()
       // Get the current account from cookies
       const currentAccountId = document.cookie
         .split('; ')
@@ -116,6 +119,7 @@ export const segmentsApi = {
   // Create a segment from uploaded list (tag-based)
   createSegmentFromUpload: async (listName: string, description: string, profileIds: string[], creatorId?: string) => {
     try {
+      const supabase = createClient()
       // Normalize the list name to create a tag
       const tagName = listName.toLowerCase().replace(/[^a-z0-9]/g, "-")
 
@@ -181,6 +185,7 @@ export const segmentsApi = {
   // Tag profiles with a specific tag
   tagProfiles: async (profileIds: string[], tag: string) => {
     try {
+      const supabase = createClient()
       // Get current profiles to update their tags
       const { data: profiles, error: fetchError } = await supabase
         .from("profiles")
@@ -221,6 +226,7 @@ export const segmentsApi = {
   // Update an existing segment
   updateSegment: async (id: string, updates: Partial<Segment>) => {
     try {
+      const supabase = createClient()
       const updateData = {
         name: updates.name,
         description: updates.description,
@@ -259,6 +265,7 @@ export const segmentsApi = {
   // Delete a segment
   deleteSegment: async (id: string) => {
     try {
+      const supabase = createClient()
       const { error } = await supabase.from("segments").delete().eq("id", id)
 
       if (error) throw error
@@ -283,6 +290,7 @@ export const segmentsApi = {
   // Get list members (profiles associated with a list/segment)
   getListMembers: async (listId: string) => {
     try {
+      const supabase = createClient()
       // For now, since we're using segments as lists, we'll get all profiles
       // and filter them based on the segment's filter criteria
       const segmentResult = await segmentsApi.getSegmentById(listId)
