@@ -32,39 +32,39 @@ interface Profile {
   mobile: string | null
   status: string
   created_at: string
-  country: string
-  state?: string
-  timezone?: string
-  source?: string
-  lifetime_value?: number
-  phone?: string | null
-  postcode?: string
-  suburb?: string
-  device?: string
-  os?: string
-  role?: string
-  teams?: string[]
-  is_suppressed?: boolean
-  is_transactional?: boolean
-  is_high_value?: boolean
-  is_subscribed?: boolean
-  is_marketing?: boolean
-  last_purchase_date?: string
-  total_purchases?: number
-  loyalty_points?: number
-  preferred_category?: string
-  total_spent?: number
-  customer_since?: string
-  last_login?: string
   updated_at?: string
-  mobile_number?: string
-  location?: string
-  avatar_url?: string
-  language_preferences?: string
+  last_activity_at?: string
+  
+  // Address fields
+  address_line_1?: string | null
+  address_line_2?: string | null
+  postal_code?: string | null
+  city?: string | null
+  state?: string | null
+  country?: string | null
+  location?: string | null
+  
+  // Profile metadata
+  timezone?: string | null
+  language_preferences?: string | null
+  device?: string | null
+  os?: string | null
+  source?: string | null
+  notes?: string | null
+  
+  // Arrays and JSON fields
   tags?: string[]
-  custom_fields?: { [key: string]: any }
-  notification_preferences?: string
-  performance_metrics?: string
+  custom_fields?: Record<string, any>
+  notification_preferences?: Record<string, boolean>
+  
+  // Duplicate management
+  is_duplicate?: boolean
+  duplicate_of_profile_id?: string | null
+  merge_status?: string | null
+  data_retention_date?: string | null
+  
+  // Account association
+  account_id?: string
 }
 
 interface FilterCondition {
@@ -91,58 +91,38 @@ interface Segment {
 const availableFields = [
   // Core identity fields
   { value: "id", label: "ID" },
-  { value: "custom_id", label: "Custom ID" },
   { value: "first_name", label: "First Name" },
   { value: "last_name", label: "Last Name" },
   { value: "email", label: "Email" },
-  { value: "phone", label: "Phone" },
   { value: "mobile", label: "Mobile" },
-  { value: "mobile_number", label: "Mobile Number" },
 
-  // Location fields
-  { value: "postcode", label: "Postcode" },
-  { value: "suburb", label: "Suburb" },
+  // Address fields
+  { value: "address_line_1", label: "Address Line 1" },
+  { value: "address_line_2", label: "Address Line 2" },
+  { value: "postal_code", label: "Postal Code" },
+  { value: "city", label: "City" },
   { value: "state", label: "State" },
   { value: "country", label: "Country" },
-  { value: "timezone", label: "Timezone" },
   { value: "location", label: "Location" },
 
-  // Device and technical fields
+  // Profile metadata
+  { value: "status", label: "Status" },
+  { value: "source", label: "Source" },
+  { value: "timezone", label: "Timezone" },
+  { value: "language_preferences", label: "Language" },
   { value: "device", label: "Device" },
   { value: "os", label: "Operating System" },
-  { value: "source", label: "Source" },
-  { value: "avatar_url", label: "Avatar URL" },
-
-  // Status and preferences
-  { value: "status", label: "Status" },
-  { value: "role", label: "Role" },
-  { value: "teams", label: "Teams" },
-  { value: "is_suppressed", label: "Is Suppressed" },
-  { value: "is_transactional", label: "Is Transactional" },
-  { value: "is_high_value", label: "Is High Value" },
-  { value: "is_subscribed", label: "Is Subscribed" },
-  { value: "is_marketing", label: "Is Marketing" },
-
-  // Purchase and engagement data
-  { value: "last_purchase_date", label: "Last Purchase Date" },
-  { value: "total_purchases", label: "Total Purchases" },
-  { value: "lifetime_value", label: "Lifetime Value" },
-  { value: "loyalty_points", label: "Loyalty Points" },
-  { value: "preferred_category", label: "Preferred Category" },
-  { value: "total_spent", label: "Total Spent" },
-  { value: "customer_since", label: "Customer Since" },
+  { value: "notes", label: "Notes" },
+  { value: "tags", label: "Tags" },
+  
+  // Duplicate management
+  { value: "is_duplicate", label: "Is Duplicate" },
+  { value: "merge_status", label: "Merge Status" },
 
   // Timestamps
   { value: "created_at", label: "Created At" },
   { value: "updated_at", label: "Updated At" },
-  { value: "last_login", label: "Last Login" },
-
-  // Additional fields
-  { value: "language_preferences", label: "Language Preferences" },
-  { value: "tags", label: "Tags" },
-  { value: "custom_fields", label: "Custom Fields" },
-  { value: "notification_preferences", label: "Notification Preferences" },
-  { value: "performance_metrics", label: "Performance Metrics" },
+  { value: "last_activity_at", label: "Last Activity At" },
 ]
 
 const getCountryFlag = (country?: string) => {
