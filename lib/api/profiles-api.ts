@@ -190,6 +190,46 @@ export const softDeleteProfile = async (id: string) => {
       return { data: null, error: updateError.message }
     }
 
+    // Log the status change and channel disabling to activity
+    try {
+      // Log status change
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/cdp-profiles/${id}/activity`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          activity_type: 'status_change',
+          description: 'Profile status changed to Deleted',
+          metadata: {
+            old_status: 'active',
+            new_status: 'deleted',
+            reason: 'Soft delete'
+          }
+        })
+      })
+
+      // Log notification preferences being disabled
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/cdp-profiles/${id}/activity`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          activity_type: 'consent_update',
+          description: 'All notification channels disabled due to deletion',
+          metadata: {
+            channels_disabled: [
+              'marketing_emails', 'transactional_emails',
+              'marketing_sms', 'transactional_sms',
+              'marketing_whatsapp', 'transactional_whatsapp',
+              'marketing_rcs', 'transactional_rcs'
+            ],
+            reason: 'Profile deleted'
+          }
+        })
+      })
+    } catch (activityError) {
+      console.error("Error logging activity:", activityError)
+      // Don't fail the deletion if activity logging fails
+    }
+
     // Then fetch the updated profile separately
     const { data, error: selectError } = await supabase
       .from("cdp_profiles")
@@ -225,6 +265,29 @@ export const restoreProfile = async (id: string) => {
       .eq("id", id)
       .select()
       .single()
+
+    if (!error && data) {
+      // Log the restore activity
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/cdp-profiles/${id}/activity`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            activity_type: 'status_change',
+            description: 'Profile restored from Deleted status',
+            metadata: {
+              old_status: 'deleted',
+              new_status: 'active',
+              reason: 'Profile restored',
+              note: 'Notification channels remain disabled and must be manually re-enabled'
+            }
+          })
+        })
+      } catch (activityError) {
+        console.error("Error logging restore activity:", activityError)
+        // Don't fail the restore if activity logging fails
+      }
+    }
 
     console.log("Successfully restored profile:", data)
     return { data, error: null }

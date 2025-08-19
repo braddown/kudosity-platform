@@ -207,6 +207,42 @@ export async function DELETE(
       )
     }
 
+    // Log the permanent deletion activity before actually deleting
+    // This ensures we have a record even if the profile is destroyed
+    try {
+      // Get user info for logging
+      const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('first_name, last_name')
+        .eq('user_id', user.id)
+        .single()
+
+      const userName = userProfile 
+        ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() || user.email
+        : user.email
+
+      await supabase
+        .from('profile_activity_log')
+        .insert({
+          profile_id: params.id,
+          activity_type: 'profile_destroyed',
+          description: 'Profile permanently destroyed',
+          metadata: {
+            destroyed_by: user.id,
+            destroyed_by_name: userName,
+            timestamp: new Date().toISOString(),
+            reason: 'Permanent deletion requested'
+          },
+          source: userName,
+          account_id: accountId,
+          performed_by: user.id,
+          created_at: new Date().toISOString()
+        })
+    } catch (logError) {
+      console.error('Error logging destruction activity:', logError)
+      // Continue with deletion even if logging fails
+    }
+
     // Start a transaction to delete all related data
     console.log(`Starting permanent deletion of profile ${params.id}`)
 
