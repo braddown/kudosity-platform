@@ -118,10 +118,12 @@ export default function SegmentList() {
 
   const handleAction = async (action: string, segment: SegmentWithStats) => {
     if (action === "edit") {
+      // Navigate to profiles page with segment loaded and filter conditions open
       const queryParams = new URLSearchParams({
         segmentId: segment.id.toString(),
         segmentName: segment.name,
-        segmentFilter: segment.filter,
+        filterActive: "true",
+        showInlineFilter: "true"
       }).toString()
       router.push(`/profiles?${queryParams}`)
     } else if (action === "delete") {
@@ -330,10 +332,6 @@ export default function SegmentList() {
                           <Edit className="mr-2 h-4 w-4" />
                           <span>Edit Segment Conditions</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleAction("rename", segment)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          <span>Rename</span>
-                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleAction("integration", segment)}>
                           <Zap className="mr-2 h-4 w-4" />
                           <span>Manage Integration</span>
@@ -341,7 +339,7 @@ export default function SegmentList() {
                         {!segment.id.startsWith("system-") && (
                           <DropdownMenuItem onClick={() => handleAction("delete", segment)}>
                             <Trash2 className="mr-2 h-4 w-4" />
-                            <span>Delete</span>
+                            <span>Delete Segment</span>
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>

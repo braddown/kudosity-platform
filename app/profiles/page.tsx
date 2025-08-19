@@ -73,13 +73,19 @@ interface FilterCondition {
   value: string
 }
 
+interface FilterGroup {
+  id: string
+  conditions: FilterCondition[]
+}
+
 interface Segment {
   id: string
   name: string
   description?: string
   estimated_size: number
   filter_criteria?: {
-    conditions: FilterCondition[]
+    conditions?: FilterCondition[]  // Legacy support for old segments
+    filterGroups?: FilterGroup[]     // New grouped filter support
     profileType?: string
     searchTerm?: string
   }
@@ -87,42 +93,91 @@ interface Segment {
   created_at: string
 }
 
-// Expanded list of all available profile fields for filtering
-const availableFields = [
+// Field type definitions
+type FieldType = 'text' | 'select' | 'date' | 'boolean' | 'number' | 'multiselect'
+
+interface FieldDefinition {
+  value: string
+  label: string
+  type: FieldType
+  options?: { value: string; label: string }[]
+}
+
+// Expanded list of all available profile fields for filtering with types
+const availableFields: FieldDefinition[] = [
   // Core identity fields
-  { value: "id", label: "ID" },
-  { value: "first_name", label: "First Name" },
-  { value: "last_name", label: "Last Name" },
-  { value: "email", label: "Email" },
-  { value: "mobile", label: "Mobile" },
+  { value: "id", label: "ID", type: "text" },
+  { value: "first_name", label: "First Name", type: "text" },
+  { value: "last_name", label: "Last Name", type: "text" },
+  { value: "email", label: "Email", type: "text" },
+  { value: "mobile", label: "Mobile", type: "text" },
 
   // Address fields
-  { value: "address_line_1", label: "Address Line 1" },
-  { value: "address_line_2", label: "Address Line 2" },
-  { value: "postal_code", label: "Postal Code" },
-  { value: "city", label: "City" },
-  { value: "state", label: "State" },
-  { value: "country", label: "Country" },
-  { value: "location", label: "Location" },
+  { value: "address_line_1", label: "Address Line 1", type: "text" },
+  { value: "address_line_2", label: "Address Line 2", type: "text" },
+  { value: "postal_code", label: "Postal Code", type: "text" },
+  { value: "city", label: "City", type: "text" },
+  { value: "state", label: "State", type: "text" },
+  { value: "country", label: "Country", type: "select", options: [
+    { value: "Australia", label: "Australia" },
+    { value: "New Zealand", label: "New Zealand" },
+    { value: "United States", label: "United States" },
+    { value: "United Kingdom", label: "United Kingdom" },
+    { value: "Canada", label: "Canada" },
+    { value: "Germany", label: "Germany" },
+    { value: "France", label: "France" },
+    { value: "Japan", label: "Japan" },
+    { value: "China", label: "China" },
+    { value: "India", label: "India" },
+    { value: "Singapore", label: "Singapore" },
+    { value: "Malaysia", label: "Malaysia" },
+    { value: "Indonesia", label: "Indonesia" },
+    { value: "Thailand", label: "Thailand" },
+    { value: "Philippines", label: "Philippines" },
+  ]},
+  { value: "location", label: "Location", type: "text" },
 
   // Profile metadata
-  { value: "status", label: "Status" },
-  { value: "source", label: "Source" },
-  { value: "timezone", label: "Timezone" },
-  { value: "language_preferences", label: "Language" },
-  { value: "device", label: "Device" },
-  { value: "os", label: "Operating System" },
-  { value: "notes", label: "Notes" },
-  { value: "tags", label: "Tags" },
+  { value: "status", label: "Status", type: "select", options: [
+    { value: "active", label: "Active" },
+    { value: "inactive", label: "Inactive" },
+    { value: "deleted", label: "Deleted" },
+    { value: "destroyed", label: "Destroyed" },
+  ]},
+  { value: "source", label: "Source", type: "select", options: [
+    { value: "manual", label: "Manual Entry" },
+    { value: "import", label: "CSV Import" },
+    { value: "api", label: "API" },
+    { value: "form", label: "Form Submission" },
+    { value: "integration", label: "Integration" },
+  ]},
+  { value: "timezone", label: "Timezone", type: "text" },
+  { value: "language_preferences", label: "Language", type: "select", options: [
+    { value: "en", label: "English" },
+    { value: "es", label: "Spanish" },
+    { value: "fr", label: "French" },
+    { value: "de", label: "German" },
+    { value: "zh", label: "Chinese" },
+    { value: "ja", label: "Japanese" },
+  ]},
+  { value: "device", label: "Device", type: "text" },
+  { value: "os", label: "Operating System", type: "text" },
+  { value: "notes", label: "Notes", type: "text" },
+  { value: "tags", label: "Tags", type: "text" },
   
   // Duplicate management
-  { value: "is_duplicate", label: "Is Duplicate" },
-  { value: "merge_status", label: "Merge Status" },
+  { value: "is_duplicate", label: "Is Duplicate", type: "boolean" },
+  { value: "merge_status", label: "Merge Status", type: "select", options: [
+    { value: "active", label: "Active" },
+    { value: "duplicate", label: "Duplicate" },
+    { value: "merged", label: "Merged" },
+    { value: "archived", label: "Archived" },
+  ]},
 
   // Timestamps
-  { value: "created_at", label: "Created At" },
-  { value: "updated_at", label: "Updated At" },
-  { value: "last_activity_at", label: "Last Activity At" },
+  { value: "created_at", label: "Created At", type: "date" },
+  { value: "updated_at", label: "Updated At", type: "date" },
+  { value: "last_activity_at", label: "Last Activity At", type: "date" },
 ]
 
 const getCountryFlag = (country?: string) => {
@@ -147,10 +202,12 @@ export default function ProfilesPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const isDeletionRef = useRef(false)
-  const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([])
+  const [filterGroups, setFilterGroups] = useState<FilterGroup[]>([
+    { id: '1', conditions: [] }
+  ])
   const [showInlineFilter, setShowInlineFilter] = useState(false)
-  const [customFields, setCustomFields] = useState<{ value: string; label: string }[]>([])
-  const [allAvailableFields, setAllAvailableFields] = useState(availableFields)
+  const [customFields, setCustomFields] = useState<FieldDefinition[]>([])
+  const [allAvailableFields, setAllAvailableFields] = useState<FieldDefinition[]>(availableFields)
   const [segments, setSegments] = useState<Segment[]>([])
   const [selectedSegment, setSelectedSegment] = useState<string | null>(null)
   const [segmentName, setSegmentName] = useState("")
@@ -613,13 +670,14 @@ export default function ProfilesPage() {
             }
           })
 
-          // Convert to field options
-          const customFieldOptions = Array.from(customFieldKeys).map((key) => ({
+          // Convert to field options with default text type for custom fields
+          const customFieldOptions: FieldDefinition[] = Array.from(customFieldKeys).map((key) => ({
             value: `custom_fields.${key}`,
             label: `Custom: ${key
               .split("_")
               .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
               .join(" ")}`,
+            type: "text" as FieldType, // Default to text for custom fields
           }))
 
           setCustomFields(customFieldOptions)
@@ -633,8 +691,8 @@ export default function ProfilesPage() {
     fetchCustomFields()
   }, [])
 
-  // Apply filters based on conditions or selected segment
-  const applyFilters = (conditions: FilterCondition[], profileType: string, searchTerm: string) => {
+  // Apply filters based on filter groups or selected segment
+  const applyFilters = (filterGroups: FilterGroup[], profileType: string, searchTerm: string) => {
     let filtered = profiles
 
     // Filter by type (from summary cards)
@@ -671,10 +729,15 @@ export default function ProfilesPage() {
       )
     }
 
-    // Apply filter conditions
-    if (conditions.length > 0) {
+    // Apply filter groups (groups are OR'd together, conditions within a group are AND'd)
+    const hasActiveFilters = filterGroups.some(group => 
+      group.conditions.some(c => c.value && c.value.trim() !== "")
+    )
+    
+    if (hasActiveFilters) {
       filtered = filtered.filter((profile) => {
-        return conditions.every((condition) => {
+        // Evaluate a single condition
+        const evaluateCondition = (condition: FilterCondition): boolean => {
           // Skip empty filter conditions
           if (!condition.value || condition.value.trim() === "") {
             return true
@@ -729,9 +792,23 @@ export default function ProfilesPage() {
               return Number(fieldValue) > Number(condition.value)
             case "less than":
               return Number(fieldValue) < Number(condition.value)
+            case "exists":
+              return fieldValue !== null && fieldValue !== undefined && fieldValue !== ""
+            case "not exists":
+              return fieldValue === null || fieldValue === undefined || fieldValue === ""
             default:
               return true
           }
+        }
+
+        // Evaluate filter groups: OR between groups, AND within each group
+        return filterGroups.some(group => {
+          // Skip empty groups
+          const activeConditions = group.conditions.filter(c => c.value && c.value.trim() !== "")
+          if (activeConditions.length === 0) return false
+          
+          // All conditions within a group must be true (AND)
+          return activeConditions.every(evaluateCondition)
         })
       })
     }
@@ -739,23 +816,80 @@ export default function ProfilesPage() {
     return filtered
   }
 
-  // Filter profiles based on type, search, filter conditions, or selected segment
+  // Handle segmentId from URL parameters (e.g., when coming from segments page)
+  useEffect(() => {
+    const segmentId = searchParams.get("segmentId")
+    const filterActive = searchParams.get("filterActive")
+    const showInlineFilterParam = searchParams.get("showInlineFilter")
+    
+    if (segmentId && segments.length > 0) {
+      // Find and load the segment
+      const segment = segments.find((s) => s.id === segmentId)
+      if (segment) {
+        // Set the segment as selected
+        setSelectedSegment(segmentId)
+        
+        // Load the segment's filter criteria
+        if (segment.filter_criteria) {
+          // Handle both legacy and new filter formats
+          if (segment.filter_criteria.filterGroups) {
+            setFilterGroups(segment.filter_criteria.filterGroups)
+          } else if (segment.filter_criteria.conditions) {
+            // Convert legacy conditions to a single filter group
+            setFilterGroups([{
+              id: '1',
+              conditions: segment.filter_criteria.conditions
+            }])
+          } else {
+            setFilterGroups([{ id: '1', conditions: [] }])
+          }
+          
+          setSelectedType(segment.filter_criteria.profileType || "all")
+          setSearchTerm(segment.filter_criteria.searchTerm || "")
+        }
+        
+        // Show the filter UI if requested
+        if (showInlineFilterParam === "true") {
+          setShowInlineFilter(true)
+        }
+      }
+    }
+  }, [searchParams, segments])
+
+  // Filter profiles based on type, search, filter groups, or selected segment
   useEffect(() => {
     let filtered: Profile[]
 
     if (selectedSegment) {
       const segment = segments.find((s) => s.id === selectedSegment)
       if (segment?.filter_criteria) {
-        filtered = applyFilters(
-          segment.filter_criteria.conditions || [],
-          segment.filter_criteria.profileType || "all",
-          segment.filter_criteria.searchTerm || "",
-        )
+        // Handle legacy segments with simple conditions
+        if (segment.filter_criteria.conditions && !segment.filter_criteria.filterGroups) {
+          // Convert legacy conditions to a single filter group
+          const legacyGroup: FilterGroup = {
+            id: 'legacy',
+            conditions: segment.filter_criteria.conditions
+          }
+          filtered = applyFilters(
+            [legacyGroup],
+            segment.filter_criteria.profileType || "all",
+            segment.filter_criteria.searchTerm || ""
+          )
+        } else if (segment.filter_criteria.filterGroups) {
+          // Use new filter groups
+          filtered = applyFilters(
+            segment.filter_criteria.filterGroups,
+            segment.filter_criteria.profileType || "all",
+            segment.filter_criteria.searchTerm || ""
+          )
+        } else {
+          filtered = profiles
+        }
       } else {
         filtered = profiles
       }
     } else {
-      filtered = applyFilters(filterConditions, selectedType, searchTerm)
+      filtered = applyFilters(filterGroups, selectedType, searchTerm)
     }
 
     setFilteredProfiles(filtered)
@@ -767,7 +901,7 @@ export default function ProfilesPage() {
       // Reset the flag after using it
       isDeletionRef.current = false
     }
-  }, [profiles, selectedType, searchTerm, filterConditions, selectedSegment, segments])
+  }, [profiles, selectedType, searchTerm, filterGroups, selectedSegment, segments])
 
   // Helper function to check if profile has any active channel
   const hasActiveChannel = (profile: Profile): boolean => {
@@ -895,7 +1029,11 @@ export default function ProfilesPage() {
 
   // Save current filter as segment
   const saveAsSegment = async () => {
-    if (!segmentName.trim() || filterConditions.length === 0) {
+    const hasActiveFilters = filterGroups.some(group => 
+      group.conditions.some(c => c.value && c.value.trim() !== "")
+    )
+    
+    if (!segmentName.trim() || !hasActiveFilters) {
       alert("Please enter a segment name and add at least one filter condition.")
       return
     }
@@ -909,7 +1047,7 @@ export default function ProfilesPage() {
         name: segmentName,
         description: `Segment with ${filteredProfiles.length} profiles`,
         filter_criteria: {
-          conditions: filterConditions,
+          filterGroups: filterGroups,
           profileType: selectedType,
           searchTerm: searchTerm,
         },
@@ -947,16 +1085,30 @@ export default function ProfilesPage() {
     const segment = segments.find((s) => s.id === segmentId)
     if (segment?.filter_criteria) {
       setSelectedSegment(segmentId)
-      setFilterConditions(segment.filter_criteria.conditions || [])
+      
+      // Handle both legacy and new filter formats
+      if (segment.filter_criteria.filterGroups) {
+        setFilterGroups(segment.filter_criteria.filterGroups)
+      } else if (segment.filter_criteria.conditions) {
+        // Convert legacy conditions to a single filter group
+        setFilterGroups([{
+          id: '1',
+          conditions: segment.filter_criteria.conditions
+        }])
+      } else {
+        setFilterGroups([{ id: '1', conditions: [] }])
+      }
+      
       setSelectedType(segment.filter_criteria.profileType || "all")
       setSearchTerm(segment.filter_criteria.searchTerm || "")
-      setShowInlineFilter(true)
+      // Don't show filter UI when loading a segment from dropdown
+      setShowInlineFilter(false)
     }
   }
 
   // Clear all filters and segments
   const clearFilters = () => {
-    setFilterConditions([])
+    setFilterGroups([{ id: '1', conditions: [] }])
     setSelectedType("all")
     setSearchTerm("")
     setSelectedSegment(null)
@@ -1300,20 +1452,213 @@ export default function ProfilesPage() {
   const endIndex = startIndex + pageSize
   const currentProfiles = filteredProfiles.slice(startIndex, endIndex)
 
-  const addFilterCondition = () => {
-    setFilterConditions([...filterConditions, { field: "first_name", operator: "contains", value: "" }])
+  // Filter group management functions
+  const addFilterGroup = () => {
+    const newId = (Math.max(...filterGroups.map(g => parseInt(g.id))) + 1).toString()
+    setFilterGroups([...filterGroups, { id: newId, conditions: [{ field: "first_name", operator: "contains", value: "" }] }])
   }
 
-  const updateFilterCondition = (index: number, field: string, value: string) => {
-    const newConditions = [...filterConditions]
-    newConditions[index] = { ...newConditions[index], [field]: value }
-    setFilterConditions(newConditions)
+  const removeFilterGroup = (groupId: string) => {
+    // Don't remove if it's the only group
+    if (filterGroups.length <= 1) {
+      setFilterGroups([{ id: '1', conditions: [] }])
+    } else {
+      setFilterGroups(filterGroups.filter(g => g.id !== groupId))
+    }
   }
 
-  const removeFilterCondition = (index: number) => {
-    const newConditions = [...filterConditions]
-    newConditions.splice(index, 1)
-    setFilterConditions(newConditions)
+  const addConditionToGroup = (groupId: string) => {
+    setFilterGroups(filterGroups.map(group => 
+      group.id === groupId 
+        ? { ...group, conditions: [...group.conditions, { field: "first_name", operator: "contains", value: "" }] }
+        : group
+    ))
+  }
+
+  const updateConditionInGroup = (groupId: string, conditionIndex: number, field: string, value: string) => {
+    setFilterGroups(filterGroups.map(group => 
+      group.id === groupId 
+        ? {
+            ...group,
+            conditions: group.conditions.map((condition, index) => {
+              if (index === conditionIndex) {
+                const updatedCondition = { ...condition, [field]: value }
+                // Auto-set value for exists/not exists operators
+                if (field === 'operator' && (value === 'exists' || value === 'not exists')) {
+                  updatedCondition.value = '1' // Placeholder value for exists operators
+                }
+                return updatedCondition
+              }
+              return condition
+            })
+          }
+        : group
+    ))
+  }
+
+  const removeConditionFromGroup = (groupId: string, conditionIndex: number) => {
+    setFilterGroups(filterGroups.map(group => 
+      group.id === groupId 
+        ? {
+            ...group,
+            conditions: group.conditions.filter((_, index) => index !== conditionIndex)
+          }
+        : group
+    ))
+  }
+
+  // Get appropriate operators based on field type
+  const getOperatorsForField = (fieldName: string): { value: string; label: string }[] => {
+    const field = allAvailableFields.find(f => f.value === fieldName)
+    
+    if (!field) {
+      // Default operators for unknown fields
+      return [
+        { value: "contains", label: "contains" },
+        { value: "equals", label: "equals" },
+        { value: "is", label: "is" },
+        { value: "is not", label: "is not" },
+        { value: "starts with", label: "starts with" },
+        { value: "ends with", label: "ends with" },
+        { value: "exists", label: "exists" },
+        { value: "not exists", label: "not exists" },
+      ]
+    }
+    
+    switch (field.type) {
+      case 'select':
+      case 'boolean':
+        return [
+          { value: "equals", label: "equals" },
+          { value: "is", label: "is" },
+          { value: "is not", label: "is not" },
+          { value: "exists", label: "exists" },
+          { value: "not exists", label: "not exists" },
+        ]
+      
+      case 'date':
+        return [
+          { value: "equals", label: "equals" },
+          { value: "greater than", label: "after" },
+          { value: "less than", label: "before" },
+          { value: "exists", label: "exists" },
+          { value: "not exists", label: "not exists" },
+        ]
+      
+      case 'number':
+        return [
+          { value: "equals", label: "equals" },
+          { value: "greater than", label: "greater than" },
+          { value: "less than", label: "less than" },
+          { value: "exists", label: "exists" },
+          { value: "not exists", label: "not exists" },
+        ]
+      
+      case 'text':
+      default:
+        return [
+          { value: "contains", label: "contains" },
+          { value: "equals", label: "equals" },
+          { value: "is", label: "is" },
+          { value: "is not", label: "is not" },
+          { value: "starts with", label: "starts with" },
+          { value: "ends with", label: "ends with" },
+          { value: "exists", label: "exists" },
+          { value: "not exists", label: "not exists" },
+        ]
+    }
+  }
+
+  // Render appropriate input based on field type
+  const renderFieldValueInput = (condition: FilterCondition, groupId: string, conditionIndex: number) => {
+    const field = allAvailableFields.find(f => f.value === condition.field)
+    
+    // For exists/not exists operators, don't show any value input
+    if (condition.operator === "exists" || condition.operator === "not exists") {
+      return null
+    }
+    
+    // If field not found, default to text input
+    if (!field) {
+      return (
+        <Input
+          value={condition.value}
+          onChange={(e) => updateConditionInGroup(groupId, conditionIndex, "value", e.target.value)}
+          placeholder="Enter value"
+          className="flex-1 h-10 bg-background border-border"
+        />
+      )
+    }
+    
+    // Render based on field type
+    switch (field.type) {
+      case 'select':
+        return (
+          <Select
+            value={condition.value}
+            onValueChange={(value) => updateConditionInGroup(groupId, conditionIndex, "value", value)}
+          >
+            <SelectTrigger className="flex-1 h-10 bg-background border-border">
+              <SelectValue placeholder="Select value" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              {field.options?.map((option) => (
+                <SelectItem key={option.value} value={option.value} className="text-foreground">
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )
+      
+      case 'boolean':
+        return (
+          <Select
+            value={condition.value}
+            onValueChange={(value) => updateConditionInGroup(groupId, conditionIndex, "value", value)}
+          >
+            <SelectTrigger className="flex-1 h-10 bg-background border-border">
+              <SelectValue placeholder="Select value" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="true" className="text-foreground">Yes</SelectItem>
+              <SelectItem value="false" className="text-foreground">No</SelectItem>
+            </SelectContent>
+          </Select>
+        )
+      
+      case 'date':
+        return (
+          <Input
+            type="date"
+            value={condition.value}
+            onChange={(e) => updateConditionInGroup(groupId, conditionIndex, "value", e.target.value)}
+            className="flex-1 h-10 bg-background border-border"
+          />
+        )
+      
+      case 'number':
+        return (
+          <Input
+            type="number"
+            value={condition.value}
+            onChange={(e) => updateConditionInGroup(groupId, conditionIndex, "value", e.target.value)}
+            placeholder="Enter number"
+            className="flex-1 h-10 bg-background border-border"
+          />
+        )
+      
+      case 'text':
+      default:
+        return (
+          <Input
+            value={condition.value}
+            onChange={(e) => updateConditionInGroup(groupId, conditionIndex, "value", e.target.value)}
+            placeholder="Enter value"
+            className="flex-1 h-10 bg-background border-border"
+          />
+        )
+    }
   }
 
   // Update the DataTable title to show list name when filtering by list
@@ -1372,19 +1717,6 @@ export default function ProfilesPage() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-4">
                     <h2 className="text-lg font-semibold text-foreground">{filteredProfiles.length} Profiles</h2>
-                    {filterConditions.length > 0 && (
-                      <Button
-                        onClick={() => {
-                          const defaultName = `Segment ${new Date().toLocaleDateString()}`
-                          setSegmentName(defaultName)
-                        }}
-                        variant="outline"
-                        className="h-10 flex items-center gap-2"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Create New Segment
-                      </Button>
-                    )}
                     {selectedSegment && (
                       <Button
                         onClick={clearFilters}
@@ -1405,7 +1737,7 @@ export default function ProfilesPage() {
                     />
                     <Button
                       onClick={saveAsSegment}
-                      disabled={!segmentName.trim() || filterConditions.length === 0 || isSavingSegment}
+                      disabled={!segmentName.trim() || !filterGroups.some(g => g.conditions.length > 0) || isSavingSegment}
                       className="bg-blue-600 hover:bg-blue-700 text-white h-10"
                     >
                       {isSavingSegment ? "Saving..." : "Save Segment"}
@@ -1421,147 +1753,142 @@ export default function ProfilesPage() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  {filterConditions.map((condition, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <Select
-                        value={condition.field}
-                        onValueChange={(value) => updateFilterCondition(index, "field", value)}
-                      >
-                        <SelectTrigger className="w-[180px] h-10 bg-background border-border">
-                          <SelectValue placeholder="Select field" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[300px] overflow-y-auto bg-card border-border">
-                          {allAvailableFields.map((field) => (
-                            <SelectItem key={field.value} value={field.value} className="text-foreground">
-                              {field.label}
-                            </SelectItem>
+                <div className="space-y-4">
+                  {filterGroups.map((group, groupIndex) => (
+                    <div key={group.id}>
+                      {/* OR separator between groups */}
+                      {groupIndex > 0 && (
+                        <div className="flex items-center justify-center py-2 mb-4">
+                          <div className="flex-1 border-t border-border"></div>
+                          <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-medium rounded mx-3">
+                            OR
+                          </span>
+                          <div className="flex-1 border-t border-border"></div>
+                        </div>
+                      )}
+
+                      {/* Filter Group */}
+                      <div className="bg-accent/30 rounded-lg p-3 border border-border/50">
+                        <div className="flex items-center justify-between mb-2 pb-2 border-b border-border/50">
+                          <span className="text-sm font-medium text-foreground">
+                            Group {groupIndex + 1} {group.conditions.length > 1 && "(All conditions must match)"}
+                          </span>
+                          {filterGroups.length > 1 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeFilterGroup(group.id)}
+                              className="h-7 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
+                            >
+                              <X className="h-3 w-3 mr-1" />
+                              Remove Group
+                            </Button>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          {/* Show Add AND button if group has no conditions */}
+                          {group.conditions.length === 0 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addConditionToGroup(group.id)}
+                              className="flex items-center gap-1 h-10 px-3 hover:bg-accent"
+                            >
+                              <Plus className="h-3 w-3" />
+                              Add Condition
+                            </Button>
+                          )}
+                          
+                          {group.conditions.map((condition, conditionIndex) => (
+                            <div key={conditionIndex}>
+                              {/* AND separator within group */}
+                              {conditionIndex > 0 && (
+                                <div className="flex items-center justify-center py-1">
+                                  <span className="px-2 py-0.5 bg-muted text-muted-foreground text-xs font-medium rounded">
+                                    AND
+                                  </span>
+                                </div>
+                              )}
+
+                              <div className="flex items-center gap-2">
+                                <Select
+                                  value={condition.field}
+                                  onValueChange={(value) => updateConditionInGroup(group.id, conditionIndex, "field", value)}
+                                >
+                                  <SelectTrigger className="w-[180px] h-10 bg-background border-border">
+                                    <SelectValue placeholder="Select field" />
+                                  </SelectTrigger>
+                                  <SelectContent className="max-h-[300px] overflow-y-auto bg-card border-border">
+                                    {allAvailableFields.map((field) => (
+                                      <SelectItem key={field.value} value={field.value} className="text-foreground">
+                                        {field.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+
+                                <Select
+                                  value={condition.operator}
+                                  onValueChange={(value) => updateConditionInGroup(group.id, conditionIndex, "operator", value)}
+                                >
+                                  <SelectTrigger className="w-[140px] h-10 bg-background border-border">
+                                    <SelectValue placeholder="Select operator" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-card border-border">
+                                    {getOperatorsForField(condition.field).map((op) => (
+                                      <SelectItem key={op.value} value={op.value} className="text-foreground">
+                                        {op.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+
+                                {/* Render appropriate value input based on field type */}
+                                {renderFieldValueInput(condition, group.id, conditionIndex)}
+
+                                {/* Trash can right after the filter fields */}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => removeConditionFromGroup(group.id, conditionIndex)}
+                                  className="text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 h-10 w-10"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+
+                                {/* Add AND button right next to trash can for the last condition */}
+                                {conditionIndex === group.conditions.length - 1 && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => addConditionToGroup(group.id)}
+                                    className="flex items-center gap-1 h-10 px-3 hover:bg-accent"
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                    AND
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
                           ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Select
-                        value={condition.operator}
-                        onValueChange={(value) => updateFilterCondition(index, "operator", value)}
-                      >
-                        <SelectTrigger className="w-[120px] h-10 bg-background border-border">
-                          <SelectValue placeholder="contains" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-card border-border">
-                          <SelectItem value="contains" className="text-foreground">
-                            contains
-                          </SelectItem>
-                          <SelectItem value="equals" className="text-foreground">
-                            equals
-                          </SelectItem>
-                          <SelectItem value="is" className="text-foreground">
-                            is
-                          </SelectItem>
-                          <SelectItem value="is not" className="text-foreground">
-                            is not
-                          </SelectItem>
-                          <SelectItem value="starts with" className="text-foreground">
-                            starts with
-                          </SelectItem>
-                          <SelectItem value="ends with" className="text-foreground">
-                            ends with
-                          </SelectItem>
-                          <SelectItem value="greater than" className="text-foreground">
-                            greater than
-                          </SelectItem>
-                          <SelectItem value="less than" className="text-foreground">
-                            less than
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-
-                      <Input
-                        value={condition.value}
-                        onChange={(e) => updateFilterCondition(index, "value", e.target.value)}
-                        placeholder="Enter value"
-                        className="flex-1 h-10 bg-background border-border"
-                      />
-
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeFilterCondition(index)}
-                        className="text-muted-foreground hover:text-red-500 hover:bg-accent h-10 w-10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                        </div>
+                      </div>
                     </div>
                   ))}
 
-                  {filterConditions.length === 0 && (
-                    <div className="flex items-center gap-2">
-                      <Select
-                        onValueChange={(value) =>
-                          setFilterConditions([{ field: value, operator: "contains", value: "" }])
-                        }
-                      >
-                        <SelectTrigger className="w-[180px] h-10 bg-background border-border">
-                          <SelectValue placeholder="firstName" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[300px] overflow-y-auto bg-card border-border">
-                          {allAvailableFields.map((field) => (
-                            <SelectItem key={field.value} value={field.value} className="text-foreground">
-                              {field.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Select defaultValue="contains">
-                        <SelectTrigger className="w-[120px] h-10 bg-background border-border">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-card border-border">
-                          <SelectItem value="contains" className="text-foreground">
-                            contains
-                          </SelectItem>
-                          <SelectItem value="equals" className="text-foreground">
-                            equals
-                          </SelectItem>
-                          <SelectItem value="is" className="text-foreground">
-                            is
-                          </SelectItem>
-                          <SelectItem value="is not" className="text-foreground">
-                            is not
-                          </SelectItem>
-                          <SelectItem value="starts with" className="text-foreground">
-                            starts with
-                          </SelectItem>
-                          <SelectItem value="ends with" className="text-foreground">
-                            ends with
-                          </SelectItem>
-                          <SelectItem value="greater than" className="text-foreground">
-                            greater than
-                          </SelectItem>
-                          <SelectItem value="less than" className="text-foreground">
-                            less than
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-
-                      <Input placeholder="Enter value" className="flex-1 h-10 bg-background border-border" />
-                      <Button variant="ghost" size="icon" className="text-muted-foreground h-10 w-10 hover:bg-accent">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2 mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={addFilterCondition}
-                    className="flex items-center gap-2 h-10 hover:bg-accent"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Condition
-                  </Button>
+                  {/* Add new group button - centered */}
+                  <div className="flex justify-center pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={addFilterGroup}
+                      className="flex items-center gap-1 h-10 px-4 hover:bg-accent"
+                    >
+                      <Plus className="h-4 w-4" />
+                      OR
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1581,9 +1908,9 @@ export default function ProfilesPage() {
               onFilterChange={(value) => {
                 if (value === "filter_profiles") {
                   setShowInlineFilter(!showInlineFilter)
-                  // Add an initial filter condition if none exist
-                  if (!showInlineFilter && filterConditions.length === 0) {
-                    setFilterConditions([{ field: "first_name", operator: "contains", value: "" }])
+                  // Add an initial filter group with one condition if none exist
+                  if (!showInlineFilter && filterGroups[0].conditions.length === 0) {
+                    setFilterGroups([{ id: '1', conditions: [{ field: "first_name", operator: "contains", value: "" }] }])
                   }
                 } else if (value === "import_csv") {
                   setShowImportDialog(true)
@@ -1593,11 +1920,12 @@ export default function ProfilesPage() {
                 } else if (value.startsWith("segment_")) {
                   const segmentId = value.replace("segment_", "")
                   loadSegment(segmentId)
+                  setShowInlineFilter(false)  // Hide filter UI when selecting a segment
                 } else {
-                  // Clear segment and filter conditions when switching to a standard filter
+                  // Clear segment and filter groups when switching to a standard filter
                   setSelectedType(value)
                   setSelectedSegment(null)
-                  setFilterConditions([])
+                  setFilterGroups([{ id: '1', conditions: [] }])
                   setSearchTerm("")
                 }
               }}
