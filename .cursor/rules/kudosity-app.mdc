@@ -1,5 +1,17 @@
 ---
 alwaysApply: true
 ---
-Supabse project is hgfsmeudhvsvwmzxexmv
-Always use Supabase MCP server when dealing with the database
+
+## CRITICAL: Version Control Rules
+
+- **NEVER push to GitHub without explicit user instruction**
+  - ❌ DO NOT run `git push` unless the user explicitly says "push to GitHub" or similar
+  - ❌ DO NOT commit code unless the user explicitly requests it
+  - ✅ ONLY make code changes and wait for testing confirmation
+  - ✅ WAIT for user to say when to commit and when to push
+  - The user will test all changes before any commits to ensure code quality
+
+## Database Configuration
+
+- Supabase project is hgfsmeudhvsvwmzxexmv
+- Always use Supabase MCP server when dealing with the database

@@ -74,6 +74,21 @@ export class ListsRepository extends BaseRepository<List, ListInsert, ListUpdate
   // Business logic methods specific to lists
 
   /**
+   * Override findMany to filter out test lists only
+   */
+  async findMany(filters?: Partial<List>, options?: QueryOptions): Promise<RepositoryResponse<List[]>> {
+    const result = await super.findMany(filters, options)
+    
+    if (result.success && result.data) {
+      // Only filter out test lists - keep system lists for automation
+      const excludedNames = ['test lists', 'test list']
+      result.data = result.data.filter(list => !excludedNames.includes(list.name.toLowerCase()))
+    }
+    
+    return result
+  }
+
+  /**
    * Find lists by type
    */
   async findByType(type: List['type']): Promise<RepositoryResponse<List[]>> {
@@ -105,7 +120,11 @@ export class ListsRepository extends BaseRepository<List, ListInsert, ListUpdate
         return this.createResponse(null, this.handleSupabaseError(error, 'search'))
       }
 
-      return this.createResponse(data as List[] || [])
+      // Only filter out test lists - keep system lists for automation
+      const excludedNames = ['test lists', 'test list']
+      const filteredData = (data || []).filter(list => !excludedNames.includes(list.name.toLowerCase()))
+
+      return this.createResponse(filteredData as List[])
     } catch (error) {
       return this.createResponse(null, this.handleSupabaseError(error, 'search'))
     }

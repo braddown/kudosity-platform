@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/components/ui/use-toast"
 import { InlineLoadingSpinner } from "@/components/ui/loading-spinner"
 import { useApiState, useMutationState } from "@/hooks/use-async-state"
+import { profilesApi } from "@/lib/api/profiles-api"
 import {
   ChevronDown,
   ChevronUp,
@@ -39,9 +41,21 @@ interface List {
   creator_id?: string
 }
 
+interface Profile {
+  id: string
+  lifecycle_stage?: string
+  status?: string
+  email_consent?: boolean
+  sms_consent?: boolean
+  push_consent?: boolean
+  suppressed?: boolean
+  [key: string]: any
+}
+
 // Remove the custom useLists hook - we'll use useApiState instead
 
 export default function ListsComponent() {
+  const router = useRouter()
   const { toast } = useToast()
   
   // Temporary simple fetch for debugging
@@ -49,30 +63,123 @@ export default function ListsComponent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchLists = () => {
+  const fetchLists = async () => {
     setLoading(true)
     setError(null)
-    fetch('/api/lists')
-      .then(response => {
-        console.log('🌐 Fetch response:', response.status, response.statusText)
-        return response.json()
-      })
-      .then(data => {
-        console.log('📦 Fetched data:', data, 'Type:', typeof data, 'Length:', data?.length)
-        setLists(data)
-        setLoading(false)
-      })
-      .catch(err => {
-        console.error('❌ Fetch error:', err)
-        setError(err.message)
-        setLoading(false)
-      })
+    
+    try {
+      // Fetch lists
+      const listsResponse = await fetch('/api/lists')
+      if (!listsResponse.ok) throw new Error('Failed to fetch lists')
+      const listsData = await listsResponse.json()
+      
+      // Fetch profiles to calculate system list counts
+      const profilesResult = await profilesApi.getProfiles()
+      const profiles = profilesResult.data || []
+      
+      // Calculate counts for system lists and fetch counts for user lists
+      const listsWithCounts = await Promise.all(listsData.map(async (list: List) => {
+        if (list.type === 'System') {
+          const listName = list.name.toLowerCase()
+          let count = 0
+          
+          switch(listName) {
+            case 'active':
+              count = profiles.filter(p => 
+                (p.lifecycle_stage || p.status || '').toLowerCase() === 'active'
+              ).length
+              break
+            case 'inactive':
+              count = profiles.filter(p => 
+                (p.lifecycle_stage || p.status || '').toLowerCase() === 'inactive'
+              ).length
+              break
+            case 'deleted':
+              count = profiles.filter(p => 
+                (p.lifecycle_stage || p.status || '').toLowerCase() === 'deleted'
+              ).length
+              break
+            case 'marketing enabled':
+              count = profiles.filter(p => {
+                const stage = (p.lifecycle_stage || p.status || '').toLowerCase()
+                return stage !== 'deleted' && (
+                  p.email_consent === true || 
+                  p.sms_consent === true || 
+                  p.push_consent === true
+                )
+              }).length
+              break
+            case 'unsubscribed':
+              count = profiles.filter(p => {
+                const stage = (p.lifecycle_stage || p.status || '').toLowerCase()
+                return stage !== 'deleted' && (
+                  p.email_consent === false && 
+                  p.sms_consent === false && 
+                  p.push_consent === false
+                )
+              }).length
+              break
+            case 'suppressed':
+              // Suppressed profiles might have a specific field or status
+              count = profiles.filter(p => 
+                p.suppressed === true || 
+                (p.lifecycle_stage || p.status || '').toLowerCase() === 'suppressed'
+              ).length
+              break
+            default:
+              // For other system lists like Operators, Wrong Number, use stored count
+              count = list.member_count || 0
+          }
+          
+          return { ...list, member_count: count }
+        }
+        
+        // For user lists, fetch actual member count from database
+        if (list.type === 'Manual') {
+          try {
+            const membersResponse = await fetch(`/api/lists/${list.id}/members`)
+            if (membersResponse.ok) {
+              const membersData = await membersResponse.json()
+              const memberCount = membersData.members?.length || 0
+              return { ...list, member_count: memberCount }
+            }
+          } catch (error) {
+            console.error(`Error fetching members for list ${list.name}:`, error)
+          }
+        }
+        
+        // Default: keep stored count
+        return list
+      }))
+      
+      setLists(listsWithCounts)
+      setLoading(false)
+    } catch (err: any) {
+      console.error('❌ Fetch error:', err)
+      setError(err.message)
+      setLoading(false)
+    }
   }
 
   const refetch = fetchLists
 
   useEffect(() => {
     fetchLists()
+  }, [])
+
+  // Expose createNewList function to window for external access
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).createNewList = () => {
+        setCreateDialogOpen(true)
+      }
+    }
+    
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete (window as any).createNewList
+      }
+    }
   }, [])
 
   // Debug logging
@@ -245,10 +352,25 @@ export default function ListsComponent() {
     }
   }, [handleCreateNewList])
 
-  const filteredLists = (lists || []).filter((list) => 
-    list.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (list.description && list.description.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
+  // Only filter out test lists - keep system lists for automation
+  const excludedNames = ['test lists', 'test list']
+  
+  // Sort lists: user-generated (Manual) first, then system lists
+  const sortedLists = (lists || [])
+    .filter((list) => !excludedNames.includes(list.name.toLowerCase()))
+    .sort((a, b) => {
+      // Put User-generated lists first
+      if (a.type === 'Manual' && b.type !== 'Manual') return -1
+      if (a.type !== 'Manual' && b.type === 'Manual') return 1
+      // Within same type, sort by name
+      return a.name.localeCompare(b.name)
+    })
+  
+  const filteredLists = sortedLists
+    .filter((list) => 
+      list.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (list.description && list.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
 
   if (loading) {
     return (
@@ -323,7 +445,12 @@ export default function ListsComponent() {
                           <ChevronDown className="h-4 w-4" />
                         )}
                       </Button>
-                      {list.name}
+                      <button
+                        className="text-left hover:underline cursor-pointer"
+                        onClick={() => router.push(`/profiles?listId=${list.id}&listName=${encodeURIComponent(list.name)}`)}
+                      >
+                        {list.name}
+                      </button>
                       {list.type === 'System' && (
                         <Badge variant="translucent-blue" className="ml-2 text-xs">
                           System
@@ -337,7 +464,7 @@ export default function ListsComponent() {
                       {(list.member_count || 0).toLocaleString()}
                     </div>
                   </TableCell>
-                  <TableCell className="text-foreground">{list.type || 'Manual'}</TableCell>
+                  <TableCell className="text-foreground">{list.type === 'Manual' ? 'User' : (list.type || 'User')}</TableCell>
                   <TableCell className="text-foreground">
                     {new Date(list.created_at).toLocaleDateString()}
                   </TableCell>

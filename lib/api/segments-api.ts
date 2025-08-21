@@ -6,10 +6,18 @@ export interface Segment {
   description?: string
   creator_id?: string
   filter_criteria?: {
-    conditions: Array<{
+    conditions?: Array<{
       field: string
       operator: string
       value: string
+    }>
+    filterGroups?: Array<{
+      id: string
+      conditions: Array<{
+        field: string
+        operator: string
+        value: string
+      }>
     }>
     profileType?: string
     searchTerm?: string

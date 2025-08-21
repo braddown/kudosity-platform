@@ -72,11 +72,32 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith(route)
   )
 
+  // API routes that should be accessible with authentication but not redirect to login
+  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
+  
   // If user is not authenticated and trying to access protected route
-  if (!user && !isPublicRoute && !request.nextUrl.pathname.startsWith('/api/auth') && !request.nextUrl.pathname.startsWith('/api/debug-account') && !request.nextUrl.pathname.startsWith('/api/force-logout')) {
+  if (!user && !isPublicRoute && !isApiRoute) {
     const redirectUrl = new URL('/auth/login', request.url)
     redirectUrl.searchParams.set('next', request.nextUrl.pathname)
     return NextResponse.redirect(redirectUrl)
+  }
+  
+  // For API routes without authentication, return 401 instead of redirecting
+  // Allow certain API endpoints that handle their own authentication
+  const allowedApiRoutes = [
+    '/api/auth',
+    '/api/debug-account',
+    '/api/force-logout',
+    '/api/test-db',
+    '/api/lists',  // Lists API handles its own auth
+  ]
+  
+  const isAllowedApiRoute = allowedApiRoutes.some(route => 
+    request.nextUrl.pathname.startsWith(route)
+  )
+  
+  if (!user && isApiRoute && !isAllowedApiRoute) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   // Check if user needs to set up account (but not if they're on setup pages or trying to logout)

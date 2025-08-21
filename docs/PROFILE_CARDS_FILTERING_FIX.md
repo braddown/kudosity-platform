@@ -64,3 +64,4 @@ This follows a more logical progression:
 5. Verify counts match the filtered results
 6. Test that Marketing/Unsubscribed cards include profiles from all lifecycle statuses
 
+

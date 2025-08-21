@@ -13,8 +13,8 @@ const buttonVariants = cva(
         destructive: "bg-destructive text-destructive-foreground dark:text-white hover:bg-destructive/90",
         outline:
           "perplexity-button backdrop-blur-md " +
-          "border border-border/30 bg-background/60 dark:bg-white/[0.03] dark:border-white/[0.08] " +
-          "hover:bg-background/80 dark:hover:bg-white/[0.06] hover:border-border/50 " +
+          "border border-border bg-background/60 dark:bg-white/[0.03] dark:border-white/[0.08] " +
+          "hover:bg-background/80 dark:hover:bg-white/[0.06] hover:border-border " +
           "hover:transform hover:-translate-y-0.5 " +
           "text-foreground dark:text-white",
         secondary:

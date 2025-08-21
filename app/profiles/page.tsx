@@ -23,6 +23,8 @@ import PageLayout from "@/components/layouts/PageLayout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ListSelectionDialog } from "@/components/features/lists/ListSelectionDialog"
+import { SegmentListDropdown } from "@/components/features/profiles/SegmentListDropdown"
 
 interface Profile {
   id: string
@@ -31,6 +33,7 @@ interface Profile {
   email: string | null
   mobile: string | null
   status: string
+  lifecycle_stage?: string  // Database field name
   created_at: string
   updated_at?: string
   last_activity_at?: string
@@ -83,6 +86,7 @@ interface Segment {
   name: string
   description?: string
   estimated_size: number
+  profile_count?: number
   filter_criteria?: {
     conditions?: FilterCondition[]  // Legacy support for old segments
     filterGroups?: FilterGroup[]     // New grouped filter support
@@ -111,6 +115,11 @@ const availableFields: FieldDefinition[] = [
   { value: "last_name", label: "Last Name", type: "text" },
   { value: "email", label: "Email", type: "text" },
   { value: "mobile", label: "Mobile", type: "text" },
+  { value: "status", label: "Status", type: "select", options: [
+    { value: "Active", label: "Active" },
+    { value: "Inactive", label: "Inactive" },
+    { value: "Deleted", label: "Deleted" }
+  ]},
 
   // Address fields
   { value: "address_line_1", label: "Address Line 1", type: "text" },
@@ -138,12 +147,7 @@ const availableFields: FieldDefinition[] = [
   { value: "location", label: "Location", type: "text" },
 
   // Profile metadata
-  { value: "status", label: "Status", type: "select", options: [
-    { value: "active", label: "Active" },
-    { value: "inactive", label: "Inactive" },
-    { value: "deleted", label: "Deleted" },
-    { value: "destroyed", label: "Destroyed" },
-  ]},
+  // Status field is already defined above with proper capitalization
   { value: "source", label: "Source", type: "select", options: [
     { value: "manual", label: "Manual Entry" },
     { value: "import", label: "CSV Import" },
@@ -209,7 +213,10 @@ export default function ProfilesPage() {
   const [customFields, setCustomFields] = useState<FieldDefinition[]>([])
   const [allAvailableFields, setAllAvailableFields] = useState<FieldDefinition[]>(availableFields)
   const [segments, setSegments] = useState<Segment[]>([])
+  const [lists, setLists] = useState<any[]>([])
   const [selectedSegment, setSelectedSegment] = useState<string | null>(null)
+  const [selectedList, setSelectedList] = useState<string | null>(null)
+  const [selectedFilterType, setSelectedFilterType] = useState<'segment' | 'list' | null>(null)
   const [segmentName, setSegmentName] = useState("")
   const [isSavingSegment, setIsSavingSegment] = useState(false)
   const [selectedProfiles, setSelectedProfiles] = useState<Profile[]>([])
@@ -237,6 +244,7 @@ export default function ProfilesPage() {
 
   const [createSegmentFromImport, setCreateSegmentFromImport] = useState(true)
   const [segmentNameFromImport, setSegmentNameFromImport] = useState("")
+  const [showListDialog, setShowListDialog] = useState(false)
 
   // CSV Export function
   const exportToCSV = () => {
@@ -636,21 +644,50 @@ export default function ProfilesPage() {
     fetchProfiles()
   }, [])
 
-  // Fetch segments
+  // Fetch segments and lists with profile counts
   useEffect(() => {
     async function fetchSegments() {
       try {
         const result = await segmentsApi.getSegments()
         if (result.data) {
-          setSegments(result.data)
+          // Calculate profile counts for each segment
+          const segmentsWithCounts = result.data.map(segment => {
+            let count = 0
+            
+            // Calculate count based on segment filter criteria
+            if (segment.filter_criteria) {
+              const filtered = applySegmentFilter(profiles, segment.filter_criteria)
+              count = filtered.length
+            }
+            
+            return {
+              ...segment,
+              profile_count: count
+            }
+          })
+          
+          setSegments(segmentsWithCounts)
         }
       } catch (error) {
         console.error("Error fetching segments:", error)
       }
     }
 
+    async function fetchLists() {
+      try {
+        const response = await fetch('/api/lists')
+        if (response.ok) {
+          const data = await response.json()
+          setLists(data)
+        }
+      } catch (error) {
+        console.error('Error fetching lists:', error)
+      }
+    }
+
     fetchSegments()
-  }, [])
+    fetchLists()
+  }, [profiles])
 
   useEffect(() => {
     async function fetchCustomFields() {
@@ -671,13 +708,19 @@ export default function ProfilesPage() {
           })
 
           // Convert to field options with default text type for custom fields
-          const customFieldOptions: FieldDefinition[] = Array.from(customFieldKeys).map((key) => ({
+          const customFieldOptions: FieldDefinition[] = Array.from(customFieldKeys)
+            .filter(key => {
+              // Skip custom fields that duplicate built-in fields
+              const normalizedKey = key.toLowerCase()
+              return !availableFields.some(f => f.value.toLowerCase() === normalizedKey)
+            })
+            .map((key) => ({
             value: `custom_fields.${key}`,
-            label: `Custom: ${key
+              label: key
               .split("_")
               .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-              .join(" ")}`,
-            type: "text" as FieldType, // Default to text for custom fields
+                .join(" ") + " (Custom)",
+              type: "text" as FieldType, // Default to text for custom fields
           }))
 
           setCustomFields(customFieldOptions)
@@ -691,23 +734,159 @@ export default function ProfilesPage() {
     fetchCustomFields()
   }, [])
 
+  // Helper function to get nested value from an object
+  const getNestedValue = (obj: any, path: string): any => {
+    const keys = path.split('.')
+    let value = obj
+    for (const key of keys) {
+      value = value?.[key]
+      if (value === undefined) break
+    }
+    return value
+  }
+
+  // Helper function to evaluate a single condition
+  const evaluateCondition = (fieldValue: any, operator: string, conditionValue: string): boolean => {
+    // Skip empty filter conditions
+    if (!conditionValue || conditionValue.trim() === "") {
+      return true
+    }
+
+    const fieldStr = String(fieldValue || "").toLowerCase()
+    const searchStr = conditionValue.toLowerCase()
+
+    switch (operator) {
+      case "equals":
+        return fieldStr === searchStr
+      case "not_equals":
+        return fieldStr !== searchStr
+      case "contains":
+        return fieldStr.includes(searchStr)
+      case "not_contains":
+        return !fieldStr.includes(searchStr)
+      case "starts_with":
+        return fieldStr.startsWith(searchStr)
+      case "ends_with":
+        return fieldStr.endsWith(searchStr)
+      case "is_empty":
+        return !fieldValue || fieldStr === ""
+      case "is_not_empty":
+        return !!fieldValue && fieldStr !== ""
+      case "exists":
+        return fieldValue !== undefined && fieldValue !== null && fieldValue !== ""
+      case "not_exists":
+        return fieldValue === undefined || fieldValue === null || fieldValue === ""
+      case "greater_than":
+        return parseFloat(fieldStr) > parseFloat(searchStr)
+      case "less_than":
+        return parseFloat(fieldStr) < parseFloat(searchStr)
+      case "greater_than_or_equal":
+        return parseFloat(fieldStr) >= parseFloat(searchStr)
+      case "less_than_or_equal":
+        return parseFloat(fieldStr) <= parseFloat(searchStr)
+      default:
+        return true
+    }
+  }
+
+  // Helper function to apply segment filter criteria to profiles
+  const applySegmentFilter = (profiles: Profile[], filterCriteria: any): Profile[] => {
+    // Check if there's an explicit status filter for deleted items
+    const hasDeletedFilter = () => {
+      if (filterCriteria?.filterGroups) {
+        return filterCriteria.filterGroups.some((group: any) =>
+          group.conditions.some((c: any) => 
+            c.field === 'status' && (c.value === 'Deleted' || c.value === 'deleted')
+          )
+        )
+      }
+      if (filterCriteria?.conditions) {
+        return filterCriteria.conditions.some((c: any) => 
+          c.field === 'status' && (c.value === 'Deleted' || c.value === 'deleted')
+        )
+      }
+      return false
+    }
+    
+    // By default, exclude deleted profiles unless explicitly filtered for
+    let filtered = hasDeletedFilter() 
+      ? profiles // Include all profiles if filtering for deleted
+      : profiles.filter(p => {
+          const stage = (p.lifecycle_stage || p.status || '').toLowerCase()
+          return stage !== 'deleted'
+        }) // Exclude deleted by default
+    
+    if (!filterCriteria) {
+      // No filter criteria means show all non-deleted profiles
+      return filtered
+    }
+    
+    // Handle new filterGroups format
+    if (filterCriteria.filterGroups && filterCriteria.filterGroups.length > 0) {
+      const groupResults = filterCriteria.filterGroups.map((group: any) => {
+        return filtered.filter(profile => {
+          // All conditions in a group must be true (AND)
+          return group.conditions.every((condition: any) => {
+            const profileValue = getNestedValue(profile, condition.field)
+            return evaluateCondition(profileValue, condition.operator, condition.value)
+          })
+        })
+      })
+      
+      // Combine group results with OR logic
+      const profileIdSet = new Set<string>()
+      groupResults.forEach((groupProfiles: Profile[]) => {
+        groupProfiles.forEach(profile => profileIdSet.add(profile.id))
+      })
+      
+      filtered = filtered.filter(profile => profileIdSet.has(profile.id))
+    } 
+    // Handle legacy conditions format
+    else if (filterCriteria.conditions && filterCriteria.conditions.length > 0) {
+      filtered = filtered.filter(profile => {
+        return filterCriteria.conditions.every((condition: any) => {
+          const profileValue = getNestedValue(profile, condition.field)
+          return evaluateCondition(profileValue, condition.operator, condition.value)
+        })
+      })
+    }
+    
+    return filtered
+  }
+
   // Apply filters based on filter groups or selected segment
   const applyFilters = (filterGroups: FilterGroup[], profileType: string, searchTerm: string) => {
-    let filtered = profiles
+    // Check if there's an explicit status filter for deleted items
+    const hasDeletedFilter = filterGroups.some(group =>
+      group.conditions.some(c => 
+        c.field === 'status' && (c.value === 'Deleted' || c.value === 'deleted')
+      )
+    )
+    
+    // Start with profiles, but exclude deleted unless explicitly filtered for
+    let filtered = hasDeletedFilter || profileType === 'deleted'
+      ? profiles // Include all profiles if filtering for deleted
+      : profiles.filter(p => {
+          const stage = (p.lifecycle_stage || p.status || '').toLowerCase()
+          return stage !== 'deleted'
+        }) // Exclude deleted by default
 
     // Filter by type (from summary cards)
-    if (profileType !== "all") {
+    if (profileType && profileType !== "all" && profileType !== "") {
       filtered = filtered.filter((profile) => {
         switch (profileType) {
           case "active":
-            // Active lifecycle status
-            return profile.status === 'active'
+            // Active lifecycle status - check both fields for compatibility (case-insensitive)
+            const activeStage = profile.lifecycle_stage?.toLowerCase() || profile.status?.toLowerCase()
+            return activeStage === 'active'
           case "archived":
-            // Inactive lifecycle status
-            return profile.status === 'inactive'
+            // Inactive lifecycle status - check both fields for compatibility (case-insensitive)
+            const archivedStage = profile.lifecycle_stage?.toLowerCase() || profile.status?.toLowerCase()
+            return archivedStage === 'inactive'
           case "deleted":
-            // Soft deleted profiles
-            return profile.status === 'deleted'
+            // Soft deleted profiles - check both fields for compatibility (case-insensitive)
+            const deletedStage = profile.lifecycle_stage?.toLowerCase() || profile.status?.toLowerCase()
+            return deletedStage === 'deleted'
           case "marketing":
             // Profiles with ANY marketing channel enabled (regardless of status)
             return profile.status !== 'destroyed' && hasMarketingChannel(profile)
@@ -755,7 +934,22 @@ export default function ProfilesPage() {
             fieldValue = profile[condition.field as keyof Profile]
           }
 
-          if (fieldValue === undefined || fieldValue === null) return false
+          // Handle null/undefined values based on operator
+          if (fieldValue === undefined || fieldValue === null) {
+            switch (condition.operator) {
+              case "exists":
+              case "is_not_empty":
+                return false
+              case "not_exists":
+              case "is_empty":
+                return true
+              case "equals":
+              case "is":
+                return condition.value === "" || condition.value.toLowerCase() === "null"
+              default:
+                return false
+            }
+          }
 
           // Handle array fields like tags
           if (Array.isArray(fieldValue)) {
@@ -816,13 +1010,36 @@ export default function ProfilesPage() {
     return filtered
   }
 
-  // Handle segmentId from URL parameters (e.g., when coming from segments page)
+  // Handle segmentId or listId from URL parameters
   useEffect(() => {
     const segmentId = searchParams.get("segmentId")
+    const listId = searchParams.get("listId")
+    const listNameParam = searchParams.get("listName")
     const filterActive = searchParams.get("filterActive")
     const showInlineFilterParam = searchParams.get("showInlineFilter")
+    const newSegment = searchParams.get("newSegment")
+    const createSegment = searchParams.get("createSegment")
     
-    if (segmentId && segments.length > 0) {
+    if (newSegment === "true" || createSegment === "true") {
+      // Initialize for new segment creation with Status = Active
+      setFilterGroups([{ id: '1', conditions: [{ field: "status", operator: "equals", value: "Active" }] }])
+      setShowInlineFilter(true)
+      setSelectedSegment(null)
+      setSelectedList(null)
+      setSelectedType("") // Clear card selection when creating new segment
+    } else if (listId) {
+      // Load the list
+      setSelectedList(listId)
+      setSelectedSegment(null)
+      setSelectedFilterType('list')
+      setFilterGroups([{ id: '1', conditions: [] }])
+      setShowInlineFilter(false)
+      setSelectedType("") // Clear card selection when list is selected
+      // Set the list name if provided
+      if (listNameParam) {
+        setListName(listNameParam)
+      }
+    } else if (segmentId && segments.length > 0) {
       // Find and load the segment
       const segment = segments.find((s) => s.id === segmentId)
       if (segment) {
@@ -844,49 +1061,146 @@ export default function ProfilesPage() {
             setFilterGroups([{ id: '1', conditions: [] }])
           }
           
-          setSelectedType(segment.filter_criteria.profileType || "all")
-          setSearchTerm(segment.filter_criteria.searchTerm || "")
+                  // Clear selectedType when loading a segment from URL - keep cards unselected
+        setSelectedType("")
+        setSearchTerm(segment.filter_criteria.searchTerm || "")
         }
         
         // Show the filter UI if requested
         if (showInlineFilterParam === "true") {
           setShowInlineFilter(true)
+          // Set the segment name for editing
+          setSegmentName(segment.name)
         }
       }
     }
-  }, [searchParams, segments])
+  }, [searchParams, segments, lists])
 
-  // Filter profiles based on type, search, filter groups, or selected segment
+  // Filter profiles based on type, search, filter groups, selected segment, or selected list
   useEffect(() => {
+    // Don't filter if still loading or profiles haven't loaded yet
+    if (loading || !profiles) {
+      return
+    }
+    
+    // If profiles is empty array, that's valid - just set empty filtered profiles
+    if (profiles.length === 0) {
+      setFilteredProfiles([])
+      return
+    }
+    
     let filtered: Profile[]
 
-    if (selectedSegment) {
-      const segment = segments.find((s) => s.id === selectedSegment)
-      if (segment?.filter_criteria) {
-        // Handle legacy segments with simple conditions
-        if (segment.filter_criteria.conditions && !segment.filter_criteria.filterGroups) {
-          // Convert legacy conditions to a single filter group
-          const legacyGroup: FilterGroup = {
-            id: 'legacy',
-            conditions: segment.filter_criteria.conditions
+    if (selectedList) {
+      // Check if this is a system list that needs special handling
+      const selectedListObj = lists.find(l => l.id === selectedList)
+      const listName = selectedListObj?.name?.toLowerCase() || ''
+      
+      // Handle system lists with dynamic filtering
+      if (listName === 'active' || listName === 'inactive' || listName === 'deleted' || 
+          listName === 'marketing enabled' || listName === 'unsubscribed') {
+        // System lists use dynamic filtering based on profile properties
+        filtered = profiles.filter(p => {
+          const stage = (p.lifecycle_stage || p.status || '').toLowerCase()
+          
+          switch(listName) {
+            case 'active':
+              return stage === 'active'
+            case 'inactive':
+              return stage === 'inactive'
+            case 'deleted':
+              return stage === 'deleted'
+            case 'marketing enabled':
+              return stage !== 'deleted' && hasMarketingChannel(p)
+            case 'unsubscribed':
+              return stage !== 'deleted' && allMarketingRevoked(p)
+            default:
+              return true
           }
-          filtered = applyFilters(
-            [legacyGroup],
-            segment.filter_criteria.profileType || "all",
-            segment.filter_criteria.searchTerm || ""
-          )
-        } else if (segment.filter_criteria.filterGroups) {
-          // Use new filter groups
-          filtered = applyFilters(
-            segment.filter_criteria.filterGroups,
-            segment.filter_criteria.profileType || "all",
-            segment.filter_criteria.searchTerm || ""
-          )
-        } else {
-          filtered = profiles
-        }
+        })
+        setFilteredProfiles(filtered)
       } else {
-        filtered = profiles
+        // Regular lists - fetch members from database
+        const fetchListMembers = async () => {
+          try {
+            const response = await fetch(`/api/lists/${selectedList}/members`)
+            if (response.ok) {
+              const data = await response.json()
+              const memberProfileIds = data.members?.map((m: any) => m.profile?.id || m.profile_id) || []
+              // Lists NEVER show deleted profiles (except for the Deleted list itself)
+              let listFiltered = profiles.filter(p => {
+                if (listName === 'deleted') {
+                  const stage = (p.lifecycle_stage || p.status || '').toLowerCase()
+                  return memberProfileIds.includes(p.id) && stage === 'deleted'
+                } else {
+                  const stage = (p.lifecycle_stage || p.status || '').toLowerCase()
+                  return memberProfileIds.includes(p.id) && stage !== 'deleted'
+                }
+              })
+            
+            // Apply additional filters if needed
+            if (searchTerm) {
+              listFiltered = listFiltered.filter((profile) => {
+                const searchLower = searchTerm.toLowerCase()
+                return (
+                  profile.first_name?.toLowerCase().includes(searchLower) ||
+                  profile.last_name?.toLowerCase().includes(searchLower) ||
+                  profile.email?.toLowerCase().includes(searchLower) ||
+                  profile.mobile?.toLowerCase().includes(searchLower)
+                )
+              })
+            }
+            
+            setFilteredProfiles(listFiltered)
+          } else {
+            console.error('Failed to fetch list members:', response.status)
+            setFilteredProfiles([])
+          }
+        } catch (error) {
+          console.error('Error fetching list members:', error)
+          setFilteredProfiles([])
+        }
+      }
+      
+        fetchListMembers()
+      }
+    } else if (selectedSegment) {
+      // When a segment is selected, check if the user has modified the filters
+      const hasActiveFilterGroups = filterGroups.some(group => 
+        group.conditions.some(c => c.value && c.value.trim() !== "")
+      )
+      
+      if (hasActiveFilterGroups) {
+        // User has modified the filters, use the current filterGroups
+        filtered = applyFilters(filterGroups, selectedType, searchTerm)
+      } else {
+        // Use the segment's original filter criteria
+      const segment = segments.find((s) => s.id === selectedSegment)
+        
+      if (segment?.filter_criteria) {
+          // Use the applySegmentFilter function which excludes deleted profiles
+          filtered = applySegmentFilter(profiles, segment.filter_criteria)
+          
+          // Apply search term if needed
+          if (searchTerm) {
+            filtered = filtered.filter((profile) => {
+              const searchLower = searchTerm.toLowerCase()
+              return (
+                profile.first_name?.toLowerCase().includes(searchLower) ||
+                profile.last_name?.toLowerCase().includes(searchLower) ||
+                profile.email?.toLowerCase().includes(searchLower) ||
+                profile.mobile?.toLowerCase().includes(searchLower)
+              )
+            })
+          }
+      } else {
+          // No filter criteria, exclude deleted profiles by default
+          // This handles segments that exist but don't have filter criteria defined
+          filtered = profiles.filter(p => {
+            const stage = (p.lifecycle_stage || p.status || '').toLowerCase()
+            return stage !== 'deleted'
+          })
+        }
       }
     } else {
       filtered = applyFilters(filterGroups, selectedType, searchTerm)
@@ -901,7 +1215,7 @@ export default function ProfilesPage() {
       // Reset the flag after using it
       isDeletionRef.current = false
     }
-  }, [profiles, selectedType, searchTerm, filterGroups, selectedSegment, segments])
+  }, [profiles, selectedType, searchTerm, filterGroups, selectedSegment, selectedList, segments, loading, lists])
 
   // Helper function to check if profile has any active channel
   const hasActiveChannel = (profile: Profile): boolean => {
@@ -1027,7 +1341,7 @@ export default function ProfilesPage() {
     router.push(`/profiles/edit/${profile.id}`)
   }
 
-  // Save current filter as segment
+  // Save current filter as segment (create new or update existing)
   const saveAsSegment = async () => {
     const hasActiveFilters = filterGroups.some(group => 
       group.conditions.some(c => c.value && c.value.trim() !== "")
@@ -1040,16 +1354,34 @@ export default function ProfilesPage() {
 
     setIsSavingSegment(true)
     try {
-      // creator_id is optional and can be null
-      // We don't need to set it since it's not critical for segment functionality
-
-      const result = await segmentsApi.createSegment({
+      // Check if we're updating an existing segment (same name as selected segment)
+      const selectedSegmentData = selectedSegment ? segments.find(s => s.id === selectedSegment) : null
+      const isUpdatingExisting = selectedSegmentData && selectedSegmentData.name === segmentName
+      
+      let result
+      
+      if (isUpdatingExisting && selectedSegment) {
+        // Update existing segment
+        result = await segmentsApi.updateSegment(selectedSegment, {
         name: segmentName,
         description: `Segment with ${filteredProfiles.length} profiles`,
         filter_criteria: {
-          filterGroups: filterGroups,
+            filterGroups: filterGroups,
           profileType: selectedType,
           searchTerm: searchTerm,
+          },
+          estimated_size: filteredProfiles.length,
+          auto_update: true,
+        })
+      } else {
+        // Create new segment (either no segment selected or name changed)
+        result = await segmentsApi.createSegment({
+          name: segmentName,
+          description: `Segment with ${filteredProfiles.length} profiles`,
+          filter_criteria: {
+            filterGroups: filterGroups,
+            profileType: selectedType,
+            searchTerm: searchTerm,
         },
         estimated_size: filteredProfiles.length,
         auto_update: true,
@@ -1057,21 +1389,56 @@ export default function ProfilesPage() {
         shared: false,
         tags: [],
       })
+      }
 
       if (result.error) {
         alert(`Error saving segment: ${result.error}`)
         return
       }
 
+      // Get the segment ID (either newly created or updated)
+      const segmentId = isUpdatingExisting ? selectedSegment : result.data?.id
+
       // Refresh segments list
       const segmentsResult = await segmentsApi.getSegments()
       if (segmentsResult.data) {
-        setSegments(segmentsResult.data)
-      }
-
-      // Clear form
+        // Calculate profile counts for each segment
+        const segmentsWithCounts = segmentsResult.data.map(seg => ({
+          ...seg,
+          profile_count: seg.filter_criteria ? applySegmentFilter(profiles, seg.filter_criteria).length : 0
+        }))
+        setSegments(segmentsWithCounts)
+        
+        // Select the segment (whether updated or newly created)
+        if (segmentId) {
+          setSelectedSegment(segmentId)
+          setSelectedList(null)
+          setSelectedFilterType('segment')
+          
+          // Find the segment to load its data
+          const segment = segmentsWithCounts.find(s => s.id === segmentId)
+          if (segment) {
+            // Keep the segment name if updating, clear if creating new
+            if (!isUpdatingExisting) {
+              setSegmentName("")
+            }
+            
+            // Show success toast
+            toast({
+              title: isUpdatingExisting ? "Segment Updated" : "Segment Created",
+              description: isUpdatingExisting 
+                ? `"${segment.name}" has been updated.`
+                : `"${segment.name}" has been created and selected.`,
+            })
+          }
+        }
+      } else {
+        // Fallback if segments couldn't be refreshed
+        if (!isUpdatingExisting) {
       setSegmentName("")
-      alert(`Segment "${segmentName}" saved successfully!`)
+        }
+        alert(`Segment "${segmentName}" ${isUpdatingExisting ? 'updated' : 'saved'} successfully!`)
+      }
     } catch (error) {
       console.error("Error saving segment:", error)
       alert("Failed to save segment. Please try again.")
@@ -1099,7 +1466,7 @@ export default function ProfilesPage() {
         setFilterGroups([{ id: '1', conditions: [] }])
       }
       
-      setSelectedType(segment.filter_criteria.profileType || "all")
+      // Don't set selectedType when loading a segment - keep cards unselected
       setSearchTerm(segment.filter_criteria.searchTerm || "")
       // Don't show filter UI when loading a segment from dropdown
       setShowInlineFilter(false)
@@ -1261,13 +1628,7 @@ export default function ProfilesPage() {
   const filterOptions = [
     { label: "Filter Profiles", value: "filter_profiles" },
     { label: "Import CSV", value: "import_csv" },
-    { label: "---", value: "divider1" },
-    { label: "All", value: "all" },
-    { label: "Active", value: "active" },
-    { label: "Marketing", value: "marketing" },
-    { label: "Suppressed", value: "suppressed" },
-    { label: "Unsubscribed", value: "unsubscribed" },
-    { label: "Deleted", value: "deleted" },
+    // Remove the built-in filters that are already shown as cards
     // Add custom segments to filter options (exclude predefined ones)
     ...(segments.length > 0 ? [
       { label: "---", value: "divider2" },
@@ -1361,15 +1722,7 @@ export default function ProfilesPage() {
       disabled: selectedProfiles.length === 0,
       onClick: () => {
         if (selectedProfiles.length === 0) return;
-        // TODO: Implement list selection dialog
-        const listName = prompt(`Enter list name to add ${selectedProfiles.length} profiles to:`)
-        if (listName) {
-          console.log(`Adding ${selectedProfiles.length} profiles to list "${listName}"`)
-          toast({
-            title: "Added to list",
-            description: `Added ${selectedProfiles.length} profiles to "${listName}"`,
-          })
-        }
+        setShowListDialog(true);
       }
     },
   ]
@@ -1447,15 +1800,15 @@ export default function ProfilesPage() {
     },
   ]
 
-  const totalPages = Math.ceil(filteredProfiles.length / pageSize)
+  const totalPages = Math.ceil((filteredProfiles?.length || 0) / pageSize)
   const startIndex = (currentPage - 1) * pageSize
   const endIndex = startIndex + pageSize
-  const currentProfiles = filteredProfiles.slice(startIndex, endIndex)
+  const currentProfiles = filteredProfiles?.slice(startIndex, endIndex) || []
 
   // Filter group management functions
   const addFilterGroup = () => {
     const newId = (Math.max(...filterGroups.map(g => parseInt(g.id))) + 1).toString()
-    setFilterGroups([...filterGroups, { id: newId, conditions: [{ field: "first_name", operator: "contains", value: "" }] }])
+    setFilterGroups([...filterGroups, { id: newId, conditions: [{ field: "status", operator: "equals", value: "Active" }] }])
   }
 
   const removeFilterGroup = (groupId: string) => {
@@ -1570,6 +1923,60 @@ export default function ProfilesPage() {
   }
 
   // Render appropriate input based on field type
+  const handleAddToList = async (listId: string, listName: string, isNewList: boolean) => {
+    try {
+      // Add profiles to the list
+      const profileIds = selectedProfiles.map(p => p.id);
+      
+      const response = await fetch(`/api/lists/${listId}/members`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Ensure cookies are sent
+        body: JSON.stringify({
+          profile_ids: profileIds,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add profiles to list');
+      }
+
+      const result = await response.json();
+      
+      // Handle partial success
+      if (result.skipped_invalid && result.skipped_invalid > 0) {
+        toast({
+          title: isNewList ? "List created with partial success" : "Partially added to list",
+          description: `Added ${result.added_count} profiles to "${listName}". ${result.skipped_invalid} profiles were invalid and skipped.`,
+          variant: "default",
+        });
+      } else if (result.added_count === 0 && result.already_existed > 0) {
+        toast({
+          title: "Profiles already in list",
+          description: `All selected profiles are already in "${listName}"`,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: isNewList ? "List created and profiles added" : "Added to list",
+          description: `Successfully added ${result.added_count} profiles to "${listName}"`,
+        });
+      }
+      
+      // Clear selection
+      setSelectedProfiles([]);
+    } catch (error) {
+      console.error('Error adding profiles to list:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add profiles to list",
+        variant: "destructive",
+      });
+    }
+  };
+
   const renderFieldValueInput = (condition: FilterCondition, groupId: string, conditionIndex: number) => {
     const field = allAvailableFields.find(f => f.value === condition.field)
     
@@ -1708,7 +2115,19 @@ export default function ProfilesPage() {
       <PageLayout title="Recipient Profiles" actions={pageActions} fullWidth>
         <div className="space-y-6">
           {/* Summary Cards */}
-          <ProfileCounts counts={counts} selectedType={selectedType} onTypeClick={setSelectedType} />
+          <ProfileCounts 
+            counts={counts} 
+            selectedType={selectedType} 
+            onTypeClick={(type) => {
+              setSelectedType(type)
+              // Clear segment/list selection when clicking a card
+              setSelectedSegment(null)
+              setSelectedList(null)
+              setSelectedFilterType(null)
+              setFilterGroups([{ id: '1', conditions: [] }])
+              setShowInlineFilter(false)
+            }} 
+          />
 
           {/* Inline Filter UI */}
           {showInlineFilter && (
@@ -1740,7 +2159,13 @@ export default function ProfilesPage() {
                       disabled={!segmentName.trim() || !filterGroups.some(g => g.conditions.length > 0) || isSavingSegment}
                       className="bg-blue-600 hover:bg-blue-700 text-white h-10"
                     >
-                      {isSavingSegment ? "Saving..." : "Save Segment"}
+                      {(() => {
+                        const selectedSegmentData = selectedSegment ? segments.find(s => s.id === selectedSegment) : null
+                        const isUpdating = selectedSegmentData && selectedSegmentData.name === segmentName
+                        if (isSavingSegment) return "Saving..."
+                        if (isUpdating) return "Update Segment"
+                        return "Save Segment"
+                      })()}
                     </Button>
                     <Button
                       variant="ghost"
@@ -1774,88 +2199,92 @@ export default function ProfilesPage() {
                             Group {groupIndex + 1} {group.conditions.length > 1 && "(All conditions must match)"}
                           </span>
                           {filterGroups.length > 1 && (
-                            <Button
+                      <Button
                               variant="ghost"
-                              size="sm"
+                        size="sm"
                               onClick={() => removeFilterGroup(group.id)}
                               className="h-7 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
-                            >
+                      >
                               <X className="h-3 w-3 mr-1" />
                               Remove Group
-                            </Button>
+                      </Button>
                           )}
                         </div>
 
                         <div className="space-y-2">
                           {/* Show Add AND button if group has no conditions */}
                           {group.conditions.length === 0 && (
-                            <Button
+                      <Button
                               variant="outline"
-                              size="sm"
+                        size="sm"
                               onClick={() => addConditionToGroup(group.id)}
                               className="flex items-center gap-1 h-10 px-3 hover:bg-accent"
-                            >
+                      >
                               <Plus className="h-3 w-3" />
                               Add Condition
-                            </Button>
+                      </Button>
                           )}
                           
                           {group.conditions.map((condition, conditionIndex) => (
                             <div key={conditionIndex}>
                               {/* AND separator within group */}
                               {conditionIndex > 0 && (
-                                <div className="flex items-center justify-center py-1">
+                        <div className="flex items-center justify-center py-1">
                                   <span className="px-2 py-0.5 bg-muted text-muted-foreground text-xs font-medium rounded">
                                     AND
-                                  </span>
-                                </div>
-                              )}
+                          </span>
+                        </div>
+                      )}
 
                               <div className="flex items-center gap-2">
-                                <Select
-                                  value={condition.field}
+                      <Select
+                        value={condition.field}
                                   onValueChange={(value) => updateConditionInGroup(group.id, conditionIndex, "field", value)}
-                                >
-                                  <SelectTrigger className="w-[180px] h-10 bg-background border-border">
-                                    <SelectValue placeholder="Select field" />
-                                  </SelectTrigger>
-                                  <SelectContent className="max-h-[300px] overflow-y-auto bg-card border-border">
-                                    {allAvailableFields.map((field) => (
-                                      <SelectItem key={field.value} value={field.value} className="text-foreground">
-                                        {field.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                      >
+                        <SelectTrigger className="w-[180px] h-10 bg-background border-border">
+                          <SelectValue placeholder="Select field" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px] overflow-y-auto bg-card border-border">
+                          {allAvailableFields.map((field) => (
+                            <SelectItem 
+                              key={field.value} 
+                              value={field.value} 
+                              className="text-foreground text-left"
+                            >
+                              <span className="block text-left w-full">{field.label}</span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
-                                <Select
-                                  value={condition.operator}
+                      <Select
+                        value={condition.operator}
                                   onValueChange={(value) => updateConditionInGroup(group.id, conditionIndex, "operator", value)}
-                                >
+                      >
                                   <SelectTrigger className="w-[140px] h-10 bg-background border-border">
                                     <SelectValue placeholder="Select operator" />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-card border-border">
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-border">
                                     {getOperatorsForField(condition.field).map((op) => (
                                       <SelectItem key={op.value} value={op.value} className="text-foreground">
                                         {op.label}
-                                      </SelectItem>
+                          </SelectItem>
                                     ))}
-                                  </SelectContent>
-                                </Select>
+                        </SelectContent>
+                      </Select>
 
                                 {/* Render appropriate value input based on field type */}
                                 {renderFieldValueInput(condition, group.id, conditionIndex)}
 
                                 {/* Trash can right after the filter fields */}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
+                      <Button
+                        variant="ghost"
+                        size="icon"
                                   onClick={() => removeConditionFromGroup(group.id, conditionIndex)}
                                   className="text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 h-10 w-10"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
 
                                 {/* Add AND button right next to trash can for the last condition */}
                                 {conditionIndex === group.conditions.length - 1 && (
@@ -1867,9 +2296,9 @@ export default function ProfilesPage() {
                                   >
                                     <Plus className="h-3 w-3" />
                                     AND
-                                  </Button>
-                                )}
-                              </div>
+                      </Button>
+                  )}
+                </div>
                             </div>
                           ))}
                         </div>
@@ -1879,15 +2308,15 @@ export default function ProfilesPage() {
 
                   {/* Add new group button - centered */}
                   <div className="flex justify-center pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
+                  <Button
+                    variant="outline"
+                    size="sm"
                       onClick={addFilterGroup}
                       className="flex items-center gap-1 h-10 px-4 hover:bg-accent"
-                    >
-                      <Plus className="h-4 w-4" />
+                  >
+                    <Plus className="h-4 w-4" />
                       OR
-                    </Button>
+                  </Button>
                   </div>
                 </div>
               </div>
@@ -1904,6 +2333,61 @@ export default function ProfilesPage() {
               searchPlaceholder="Search profiles..."
               onSearch={setSearchTerm}
               selectable
+              customFilterComponent={
+                <div className="flex items-center gap-2">
+                  <SegmentListDropdown
+                    segments={segments}
+                    lists={lists}
+                    selectedId={selectedSegment || selectedList}
+                    onSelect={(type, id, name) => {
+                      if (type === 'segment') {
+                        loadSegment(id)
+                        setSelectedList(null)
+                        setSelectedFilterType('segment')
+                        setSelectedType("") // Clear card selection when segment is selected
+                      } else {
+                        // Load list
+                        setSelectedList(id)
+                        setSelectedSegment(null)
+                        setSelectedFilterType('list')
+                        setFilterGroups([{ id: '1', conditions: [] }])
+                        setShowInlineFilter(false)
+                        setSelectedType("") // Clear card selection when list is selected
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowInlineFilter(!showInlineFilter)
+                      if (!showInlineFilter) {
+                        // If a segment is selected, populate the segment name for editing
+                        if (selectedSegment) {
+                          const segment = segments.find(s => s.id === selectedSegment)
+                          if (segment) {
+                            setSegmentName(segment.name)
+                          }
+                        } else if (filterGroups[0].conditions.length === 0) {
+                          // Only set default filter if no conditions exist and no segment selected
+                          setFilterGroups([{ id: '1', conditions: [{ field: "status", operator: "equals", value: "Active" }] }])
+                        }
+                      }
+                    }}
+                  >
+                    <Filter className="h-4 w-4 mr-2" />
+                    Filter
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowImportDialog(true)}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import CSV
+                  </Button>
+                </div>
+              }
               filterOptions={filterOptions}
               onFilterChange={(value) => {
                 if (value === "filter_profiles") {
@@ -1921,13 +2405,8 @@ export default function ProfilesPage() {
                   const segmentId = value.replace("segment_", "")
                   loadSegment(segmentId)
                   setShowInlineFilter(false)  // Hide filter UI when selecting a segment
-                } else {
-                  // Clear segment and filter groups when switching to a standard filter
-                  setSelectedType(value)
-                  setSelectedSegment(null)
-                  setFilterGroups([{ id: '1', conditions: [] }])
-                  setSearchTerm("")
                 }
+                // Removed the else clause that was handling the now-removed filter options
               }}
               selectedFilter={selectedSegment ? `segment_${selectedSegment}` : selectedType}
               actions={dataOperations}
@@ -2097,7 +2576,7 @@ export default function ProfilesPage() {
                 currentPage,
                 totalPages,
                 pageSize,
-                totalItems: filteredProfiles.length,
+                totalItems: filteredProfiles?.length || 0,
                 onPageChange: setCurrentPage,
                 onPageSizeChange: (newSize) => {
                   setPageSize(newSize)
@@ -2295,6 +2774,14 @@ export default function ProfilesPage() {
           </div>
         )}
       </PageLayout>
+      
+      {/* List Selection Dialog */}
+      <ListSelectionDialog
+        open={showListDialog}
+        onClose={() => setShowListDialog(false)}
+        onConfirm={handleAddToList}
+        profileCount={selectedProfiles.length}
+      />
     </MainLayout>
   )
 }

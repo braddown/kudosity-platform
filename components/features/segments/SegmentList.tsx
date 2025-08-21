@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { segmentsApi, type Segment } from "@/api/segments-api"
+import { profilesApi } from "@/lib/api/profiles-api"
 import { useToast } from "@/components/ui/use-toast"
 
 interface SegmentWithStats extends Segment {
@@ -32,6 +33,107 @@ interface SegmentWithStats extends Segment {
   integrations: string[]
 }
 
+// Helper function to get nested values from an object
+const getNestedValue = (obj: any, path: string): any => {
+  return path.split('.').reduce((current, key) => current?.[key], obj)
+}
+
+// Helper function to evaluate a single condition
+const evaluateCondition = (profile: any, condition: any): boolean => {
+  const { field, operator, value } = condition
+  const fieldValue = getNestedValue(profile, field)
+  
+  // Handle null/undefined values
+  if (fieldValue === null || fieldValue === undefined) {
+    if (operator === 'is_empty' || operator === 'not_exists') return true
+    if (operator === 'exists') return false
+    if (operator === 'equals' && (value === '' || value === null)) return true
+    return false
+  }
+
+  switch (operator) {
+    case 'equals':
+      return String(fieldValue).toLowerCase() === String(value).toLowerCase()
+    case 'not_equals':
+      return String(fieldValue).toLowerCase() !== String(value).toLowerCase()
+    case 'contains':
+      return String(fieldValue).toLowerCase().includes(String(value).toLowerCase())
+    case 'not_contains':
+      return !String(fieldValue).toLowerCase().includes(String(value).toLowerCase())
+    case 'starts_with':
+      return String(fieldValue).toLowerCase().startsWith(String(value).toLowerCase())
+    case 'ends_with':
+      return String(fieldValue).toLowerCase().endsWith(String(value).toLowerCase())
+    case 'greater_than':
+      return Number(fieldValue) > Number(value)
+    case 'less_than':
+      return Number(fieldValue) < Number(value)
+    case 'exists':
+      return true
+    case 'not_exists':
+    case 'is_empty':
+      return false
+    default:
+      return false
+  }
+}
+
+// Apply segment filter to profiles
+const applySegmentFilter = (profiles: any[], filterCriteria: any): any[] => {
+  if (!filterCriteria) return profiles
+  
+  // Check if there's an explicit status = 'Deleted' filter
+  let hasDeletedFilter = false
+  
+  if (filterCriteria.filterGroups) {
+    filterCriteria.filterGroups.forEach((group: any) => {
+      group.conditions?.forEach((condition: any) => {
+        if (condition.field === 'status' && 
+            condition.operator === 'equals' && 
+            condition.value?.toLowerCase() === 'deleted') {
+          hasDeletedFilter = true
+        }
+      })
+    })
+  } else if (filterCriteria.conditions) {
+    filterCriteria.conditions.forEach((condition: any) => {
+      if (condition.field === 'status' && 
+          condition.operator === 'equals' && 
+          condition.value?.toLowerCase() === 'deleted') {
+        hasDeletedFilter = true
+      }
+    })
+  }
+  
+  // Start with profiles, excluding deleted unless explicitly filtered for
+  let filtered = hasDeletedFilter 
+    ? profiles 
+    : profiles.filter(p => {
+        const stage = (p.lifecycle_stage || p.status || '').toLowerCase()
+        return stage !== 'deleted'
+      })
+  
+  // Apply filter groups or conditions
+  if (filterCriteria.filterGroups && filterCriteria.filterGroups.length > 0) {
+    filtered = filtered.filter(profile => {
+      return filterCriteria.filterGroups.some((group: any) => {
+        if (!group.conditions || group.conditions.length === 0) return true
+        return group.conditions.every((condition: any) => 
+          evaluateCondition(profile, condition)
+        )
+      })
+    })
+  } else if (filterCriteria.conditions && filterCriteria.conditions.length > 0) {
+    filtered = filtered.filter(profile => {
+      return filterCriteria.conditions.every((condition: any) => 
+        evaluateCondition(profile, condition)
+      )
+    })
+  }
+  
+  return filtered
+}
+
 const useSegments = () => {
   const [segments, setSegments] = useState<SegmentWithStats[]>([])
   const [loading, setLoading] = useState(true)
@@ -41,6 +143,10 @@ const useSegments = () => {
     try {
       setLoading(true)
       setError(null)
+
+      // First fetch all profiles to calculate accurate counts
+      const profilesResult = await profilesApi.getProfiles()
+      const profiles = profilesResult.data || []
 
       // Get custom segments from database
       const { data: customSegments, error: customError } = await segmentsApi.getSegments()
@@ -58,7 +164,7 @@ const useSegments = () => {
 
       const transformedSegments: SegmentWithStats[] = allSegments.map((segment) => ({
         ...segment,
-        profileCount: segment.estimated_size || 0,
+        profileCount: segment.filter_criteria ? applySegmentFilter(profiles, segment.filter_criteria).length : 0,
         messagesSent: 0, // This would come from actual message tracking
         revenue: 0, // This would come from actual revenue tracking
         filter: segment.filter_criteria ? JSON.stringify(segment.filter_criteria, null, 2) : "No filter criteria",
@@ -281,7 +387,12 @@ export default function SegmentList() {
                           <ChevronDown className="h-4 w-4" />
                         )}
                       </Button>
-                      {segment.name}
+                      <button
+                        className="text-left hover:underline cursor-pointer"
+                        onClick={() => router.push(`/profiles?segmentId=${segment.id}&segmentName=${encodeURIComponent(segment.name)}`)}
+                      >
+                        {segment.name}
+                      </button>
                       {segment.id.startsWith("system-") && (
                         <Badge variant="translucent-blue" className="ml-2 text-xs">
                           System

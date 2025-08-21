@@ -28,6 +28,7 @@ export interface DataTableProps<T> {
   onSelectionChange?: (selectedRows: T[]) => void
   filterOptions?: { label: string; value: string }[]
   onFilterChange?: (value: string) => void
+  customFilterComponent?: React.ReactNode
   actions?: Array<{
     label: string
     icon?: React.ReactNode
@@ -65,6 +66,7 @@ export function DataTable<T extends { id: string | number; status?: string }>({
   onSelectionChange,
   filterOptions,
   onFilterChange,
+  customFilterComponent,
   actions,
   bulkActions,
   pagination,
@@ -165,7 +167,9 @@ export function DataTable<T extends { id: string | number; status?: string }>({
                 </span>
               )}
             </h3>
-            {filterOptions && (
+            {customFilterComponent ? (
+              customFilterComponent
+            ) : filterOptions ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="h-10 hover:bg-accent">
@@ -190,7 +194,7 @@ export function DataTable<T extends { id: string | number; status?: string }>({
                 })}
               </DropdownMenuContent>
               </DropdownMenu>
-            )}
+            ) : null}
 
           </div>
           <div className="flex items-center space-x-2">
