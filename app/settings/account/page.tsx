@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { usePageHeader } from "@/components/PageHeaderContext"
 import { createClient } from "@/lib/auth/client"
 import { useToast } from "@/components/ui/use-toast"
-import { LoadingSpinnerWithText } from "@/components/ui/loading-spinner"
+import { LoadingSection } from "@/components/ui/loading"
 import { Building2, Globe, Clock, MapPin, Hash } from "lucide-react"
 
 interface AccountInfo {
@@ -288,9 +288,7 @@ export default function AccountSettingsPage() {
   if (loading) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center h-64">
-          <LoadingSpinnerWithText text="Loading account settings..." />
-        </div>
+        <LoadingSection message="Loading account settings..." />
       </MainLayout>
     )
   }

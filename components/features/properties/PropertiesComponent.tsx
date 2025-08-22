@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import type { KudosityTableColumn } from "@/components/KudosityTable"
 import { Lock, MoreHorizontal, Search, Plus } from "lucide-react"
 import { profilesApi } from "@/lib/api/profiles-api"
-import { LoadingSpinnerWithText } from "@/components/ui/loading-spinner"
+import { LoadingSection } from "@/components/ui/loading"
 import { useToast } from "@/components/ui/use-toast"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
@@ -793,7 +793,7 @@ export const PropertiesComponent = forwardRef<PropertiesComponentRef>((props, re
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <LoadingSpinnerWithText size="lg" text="Loading properties from profiles table..." />
+        <LoadingSection message="Loading properties from profiles table..." />
       </div>
     )
   }

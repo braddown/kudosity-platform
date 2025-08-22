@@ -12,7 +12,7 @@ import { MoreHorizontal, Edit, Trash2, Plus, Shield, User, Activity, UserPlus, S
 import { usePageHeader } from "@/components/PageHeaderContext"
 import { createClient } from "@/lib/auth/client"
 import { useToast } from "@/components/ui/use-toast"
-import { LoadingSpinnerWithText } from "@/components/ui/loading-spinner"
+import { LoadingSection } from "@/components/ui/loading"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { getGravatarUrlSimple, getInitials } from "@/lib/utils/gravatar"
 
@@ -418,9 +418,7 @@ export default function UsersSettingsPage() {
   if (loading) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center h-64">
-          <LoadingSpinnerWithText text="Loading users..." />
-        </div>
+        <LoadingSection message="Loading users..." />
       </MainLayout>
     )
   }

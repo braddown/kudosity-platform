@@ -45,4 +45,4 @@ export * from "./form-layout"
 export { DataTable } from "./data-table"
 
 // Loading components
-export { LoadingSpinner, LoadingSpinnerWithText, InlineLoadingSpinner } from "./loading-spinner"
+export { LoadingSpinner, LoadingPage, LoadingSection, LoadingCard, LoadingInline, LoadingButton, LoadingTable, LoadingOverlay } from "./loading"

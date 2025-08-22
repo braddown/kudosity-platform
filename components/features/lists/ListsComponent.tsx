@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/components/ui/use-toast"
-import { InlineLoadingSpinner } from "@/components/ui/loading-spinner"
+import { LoadingInline } from "@/components/ui/loading"
 import { useApiState, useMutationState } from "@/hooks/use-async-state"
 import { profilesApi } from "@/lib/api/profiles-api"
 import {
@@ -628,7 +628,7 @@ export default function ListsComponent() {
                 onClick={createList}
                 disabled={creating || !newListName.trim()}
               >
-                {creating && <InlineLoadingSpinner size="sm" />}
+                {creating && <LoadingInline />}
                 Create List
               </Button>
             </div>

@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ListSelectionDialog } from "@/components/features/lists/ListSelectionDialog"
 import { SegmentListDropdown } from "@/components/features/profiles/SegmentListDropdown"
+import { LoadingSection } from "@/components/ui/loading"
 
 interface Profile {
   id: string
@@ -2095,17 +2096,12 @@ export default function ProfilesPage() {
     }
   }
 
+
+
   if (loading) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center justify-center">
-              <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-            </div>
-            <p className="text-muted-foreground text-sm">Loading profiles...</p>
-          </div>
-        </div>
+        <LoadingSection message="Loading profiles..." />
       </MainLayout>
     )
   }
