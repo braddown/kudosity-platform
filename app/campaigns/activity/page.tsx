@@ -4,6 +4,8 @@ import MainLayout from "@/components/MainLayout"
 import { useState, useEffect } from "react"
 import PageLayout from "@/components/layouts/PageLayout"
 import { CampaignActivityTable } from "@/features/campaigns"
+import { MessageHistory } from "@/components/features/campaigns/MessageHistory"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -119,11 +121,31 @@ export default function CampaignActivityPage() {
         description="Monitor and manage all your broadcasts and customer journeys"
         actions={actions}
       >
-        <CampaignActivityTable 
-          campaigns={filteredCampaigns} 
-          loading={false}
-          onRefresh={fetchCampaigns} 
-        />
+        <Tabs defaultValue="messages" className="w-full">
+          <TabsList>
+            <TabsTrigger value="messages">Message History</TabsTrigger>
+            <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="messages" className="mt-6">
+            <MessageHistory />
+          </TabsContent>
+          
+          <TabsContent value="campaigns" className="mt-6">
+            <CampaignActivityTable 
+              campaigns={filteredCampaigns} 
+              loading={false}
+              onRefresh={fetchCampaigns} 
+            />
+          </TabsContent>
+          
+          <TabsContent value="analytics" className="mt-6">
+            <div className="text-center text-muted-foreground py-8">
+              Analytics dashboard coming soon...
+            </div>
+          </TabsContent>
+        </Tabs>
       </PageLayout>
     </MainLayout>
   )

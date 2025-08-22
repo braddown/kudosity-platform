@@ -517,5 +517,13 @@
       "updated": "2025-08-05T02:40:23.044Z",
       "description": "Code restructuring and architecture modernization tasks"
     }
+  },
+  "messaging-integration": {
+    "tasks": [],
+    "metadata": {
+      "created": "2025-08-22T05:45:54.322Z",
+      "updated": "2025-08-22T05:45:54.322Z",
+      "description": "Integrate Kudosity API for real SMS messaging, tracking, and reporting"
+    }
   }
 }

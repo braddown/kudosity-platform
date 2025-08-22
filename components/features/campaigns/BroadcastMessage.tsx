@@ -270,9 +270,59 @@ Opt-out reply STOP`
     setIsConfirmationModalOpen(true)
   }
 
-  const handleSend = () => {
-    console.log("Sending message...")
+  const handleSend = async () => {
     setIsConfirmationModalOpen(false)
+    
+    // Import the Kudosity API
+    const { kudosityAPI } = await import('@/lib/api/kudosity-api')
+    
+    // Get all selected profiles
+    const selectedProfiles = audiences
+      .filter((audience) => selectedAudiences.includes(audience.name))
+      .flatMap(audience => audience.profiles || [])
+    
+    // Show loading state
+    const { toast } = await import('@/components/ui/use-toast').then(m => ({ toast: m.useToast() }))
+    
+    const toastId = toast({
+      title: "Sending messages...",
+      description: `Sending to ${selectedProfiles.length} recipients`,
+    })
+    
+    try {
+      // Send messages
+      const result = await kudosityAPI.sendBulkSMS({
+        recipients: selectedProfiles.map(p => p.mobile).filter(Boolean),
+        message,
+        sender: senderID,
+        trackLinks,
+      })
+      
+      // Show results
+      toast({
+        title: "Messages sent!",
+        description: `Successfully sent: ${result.sent}, Failed: ${result.failed}`,
+        variant: result.failed > 0 ? "destructive" : "default",
+      })
+      
+      // Log to console for debugging
+      console.log("Broadcast results:", result)
+      
+      // Optionally navigate to message history
+      if (result.success) {
+        setTimeout(() => {
+          window.location.href = '/campaigns/activity'
+        }, 2000)
+      }
+      
+    } catch (error) {
+      console.error("Failed to send messages:", error)
+      toast({
+        title: "Failed to send messages",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleAddMessage = () => {
