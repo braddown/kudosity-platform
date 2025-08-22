@@ -11,7 +11,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 import { Mail, Lock, AlertCircle } from 'lucide-react'
-import { LoadingButton, LoadingMessages } from '@/components/ui/loading'
+import { LoadingButton } from '@/components/ui/loading'
+import { LoadingMessages } from '@/lib/constants/loading-messages'
 import { useToast } from '@/components/ui/use-toast'
 import { Logo } from '@/components/Logo'
 
