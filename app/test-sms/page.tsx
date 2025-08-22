@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import MainLayout from "@/components/MainLayout"
 import PageLayout from "@/components/layouts/PageLayout"
 import { Button } from "@/components/ui/button"
@@ -8,29 +8,156 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
-import { LoadingButton } from "@/components/ui/loading"
+import { LoadingButton, LoadingSection } from "@/components/ui/loading"
+import { createClient } from "@/lib/auth/client"
+import { 
+  formatPhoneNumber, 
+  validatePhoneNumber, 
+  getPhonePlaceholder,
+  COUNTRY_FORMATS 
+} from "@/lib/utils/phone-formatter"
+import { Phone, Globe } from "lucide-react"
 
 export default function TestSMSPage() {
-  const [recipient, setRecipient] = useState("+447123456789")
+  const [recipient, setRecipient] = useState("")
   const [message, setMessage] = useState("Test message from Kudosity Platform. This is a test of the SMS integration.")
-  const [sender, setSender] = useState("KUDOSITY")
+  const [selectedSender, setSelectedSender] = useState("")
+  const [senders, setSenders] = useState<Array<{ id: string; name: string; type: string }>>([])
+  const [defaultSender, setDefaultSender] = useState("KUDOSITY")
   const [sending, setSending] = useState(false)
+  const [loadingSenders, setLoadingSenders] = useState(true)
+  const [countryCode, setCountryCode] = useState("US")
+  const [phoneError, setPhoneError] = useState("")
   const { toast } = useToast()
 
+  useEffect(() => {
+    loadAccountSettings()
+    loadSenders()
+  }, [])
+
+  const loadAccountSettings = async () => {
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        const { data: account } = await supabase
+          .from('accounts')
+          .select('location')
+          .eq('id', user.user_metadata?.account_id)
+          .single()
+        
+        // Set country code based on account location
+        if (account?.location) {
+          // Parse location to get country code (assuming format like "Sydney, AU" or "US")
+          const locationParts = account.location.split(',')
+          const country = locationParts[locationParts.length - 1].trim().toUpperCase()
+          
+          // Check if it's a valid country code
+          if (COUNTRY_FORMATS[country]) {
+            setCountryCode(country)
+          } else {
+            // Try to detect country from location string
+            const locationLower = account.location.toLowerCase()
+            if (locationLower.includes('australia')) setCountryCode('AU')
+            else if (locationLower.includes('united kingdom') || locationLower.includes('uk')) setCountryCode('GB')
+            else if (locationLower.includes('united states') || locationLower.includes('usa')) setCountryCode('US')
+            else if (locationLower.includes('canada')) setCountryCode('CA')
+            else if (locationLower.includes('new zealand')) setCountryCode('NZ')
+            else if (locationLower.includes('singapore')) setCountryCode('SG')
+            else if (locationLower.includes('india')) setCountryCode('IN')
+            else if (locationLower.includes('south africa')) setCountryCode('ZA')
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load account settings:', error)
+    }
+  }
+
+  const loadSenders = async () => {
+    try {
+      setLoadingSenders(true)
+      const response = await fetch('/api/kudosity/senders')
+      
+      if (response.ok) {
+        const data = await response.json()
+        setSenders(data.senders || [])
+        setDefaultSender(data.defaultSender || 'KUDOSITY')
+        setSelectedSender(data.defaultSender || 'KUDOSITY')
+      }
+    } catch (error) {
+      console.error('Failed to load senders:', error)
+      // Use default senders as fallback
+      setSenders([
+        { id: 'KUDOSITY', name: 'KUDOSITY', type: 'alphanumeric' },
+        { id: 'INFO', name: 'INFO', type: 'alphanumeric' },
+      ])
+    } finally {
+      setLoadingSenders(false)
+    }
+  }
+
+  const handlePhoneChange = (value: string) => {
+    setRecipient(value)
+    
+    // Validate phone number
+    if (value) {
+      const validation = validatePhoneNumber(value, countryCode)
+      if (!validation.isValid) {
+        setPhoneError(validation.error || 'Invalid phone number')
+      } else {
+        setPhoneError('')
+        // Auto-format the number
+        setRecipient(validation.formatted)
+      }
+    } else {
+      setPhoneError('')
+    }
+  }
+
+  const handleCountryChange = (value: string) => {
+    setCountryCode(value)
+    // Re-validate phone with new country
+    if (recipient) {
+      const validation = validatePhoneNumber(recipient, value)
+      if (validation.isValid) {
+        setRecipient(validation.formatted)
+        setPhoneError('')
+      } else {
+        setPhoneError(validation.error || 'Invalid phone number for selected country')
+      }
+    }
+  }
+
   const handleSendTest = async () => {
+    // Validate phone first
+    if (phoneError) {
+      toast({
+        title: "Invalid Phone Number",
+        description: phoneError,
+        variant: "destructive",
+      })
+      return
+    }
+
     setSending(true)
     
     try {
+      // Format phone to E.164 for sending
+      const validation = validatePhoneNumber(recipient, countryCode)
+      
       const response = await fetch('/api/kudosity/send-sms', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          recipient,
+          recipient: validation.formatted,
           message,
-          sender,
+          sender: selectedSender,
           trackLinks: true,
         }),
       })
@@ -82,34 +209,85 @@ export default function TestSMSPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Country Selection */}
               <div className="space-y-2">
-                <Label htmlFor="recipient">Recipient Phone Number</Label>
-                <Input
-                  id="recipient"
-                  type="tel"
-                  placeholder="+447123456789"
-                  value={recipient}
-                  onChange={(e) => setRecipient(e.target.value)}
-                  disabled={sending}
-                />
+                <Label htmlFor="country">Country</Label>
+                <Select value={countryCode} onValueChange={handleCountryChange} disabled={sending}>
+                  <SelectTrigger id="country">
+                    <SelectValue>
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4" />
+                        {COUNTRY_FORMATS[countryCode]?.country || countryCode}
+                      </div>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(COUNTRY_FORMATS).map(([code, format]) => (
+                      <SelectItem key={code} value={code}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs">{format.phoneCode}</span>
+                          <span>{format.country}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <p className="text-sm text-muted-foreground">
-                  Include country code (e.g., +44 for UK, +61 for Australia, +1 for US)
+                  Phone numbers will be formatted according to the selected country
                 </p>
               </div>
 
+              {/* Phone Number Input */}
+              <div className="space-y-2">
+                <Label htmlFor="recipient">Recipient Phone Number</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="recipient"
+                    type="tel"
+                    placeholder={getPhonePlaceholder(countryCode)}
+                    value={recipient}
+                    onChange={(e) => handlePhoneChange(e.target.value)}
+                    disabled={sending}
+                    className={`pl-10 ${phoneError ? 'border-red-500' : ''}`}
+                  />
+                </div>
+                {phoneError && (
+                  <p className="text-sm text-red-500">{phoneError}</p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Enter number with or without country code - it will be auto-formatted
+                </p>
+              </div>
+
+              {/* Sender ID Selection */}
               <div className="space-y-2">
                 <Label htmlFor="sender">Sender ID</Label>
-                <Input
-                  id="sender"
-                  type="text"
-                  placeholder="KUDOSITY"
-                  value={sender}
-                  onChange={(e) => setSender(e.target.value)}
-                  disabled={sending}
-                  maxLength={11}
-                />
+                {loadingSenders ? (
+                  <div className="h-10 flex items-center">
+                    <span className="text-sm text-muted-foreground">Loading senders...</span>
+                  </div>
+                ) : (
+                  <Select value={selectedSender} onValueChange={setSelectedSender} disabled={sending}>
+                    <SelectTrigger id="sender">
+                      <SelectValue placeholder="Select a sender ID" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {senders.map((sender) => (
+                        <SelectItem key={sender.id} value={sender.id}>
+                          <div className="flex items-center justify-between w-full">
+                            <span>{sender.name}</span>
+                            {sender.id === defaultSender && (
+                              <span className="text-xs text-muted-foreground ml-2">(default)</span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 <p className="text-sm text-muted-foreground">
-                  Alphanumeric sender ID (max 11 characters) or phone number
+                  Sender ID that will appear as the message sender
                 </p>
               </div>
 
