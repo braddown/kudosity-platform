@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useRef } from "react"
-import { Skeleton } from "@/components/ui/skeleton"
+import { LoadingSection } from "@/components/ui/loading"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Select,
@@ -145,7 +145,7 @@ export default function ProfilePage({
 
   // Show loading state while data is being fetched
   if (loading || loadingSchema) {
-    return <ProfilePageSkeleton isHeaderless={isHeaderless} />
+    return <LoadingSection message="Loading profile..." />
   }
 
   // Show error state if profile couldn't be loaded
@@ -279,42 +279,7 @@ export default function ProfilePage({
   )
 }
 
-/**
- * ProfilePageSkeleton - Loading skeleton for the profile page
- */
-function ProfilePageSkeleton({ isHeaderless }: { isHeaderless: boolean }) {
-  return (
-    <div className="space-y-6">
-      {!isHeaderless && (
-        <div className="flex items-center justify-between">
-          <div>
-            <Skeleton className="h-4 w-32 mb-2" />
-            <Skeleton className="h-8 w-48" />
-          </div>
-          <Skeleton className="h-10 w-32" />
-        </div>
-      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <Skeleton className="h-64 w-full" />
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-64 w-full" />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <Skeleton className="h-48 w-full" />
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-48 w-full" />
-        </div>
-      </div>
-    </div>
-  )
-}
 
 /**
  * ProfilePageError - Error state for the profile page

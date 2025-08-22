@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
-import { Mail, Lock, AlertCircle, Loader2 } from 'lucide-react'
+import { Mail, Lock, AlertCircle } from 'lucide-react'
+import { LoadingButton, LoadingMessages } from '@/components/ui/loading'
 import { useToast } from '@/components/ui/use-toast'
 import { Logo } from '@/components/Logo'
 
@@ -138,10 +139,7 @@ export default function LoginPage() {
               tabIndex={3}
             >
               {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
-                </>
+                <LoadingButton message={LoadingMessages.LOGIN} />
               ) : (
                 'Sign in'
               )}

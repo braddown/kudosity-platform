@@ -1,5 +1,5 @@
-import EnhancedLoading from "@/components/EnhancedLoading"
+import { LoadingPage } from "@/components/ui/loading"
 
 export default function Loading() {
-  return <EnhancedLoading fullScreen message="Loading performance data..." />
+  return <LoadingPage message="Loading performance data..." />
 }

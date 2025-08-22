@@ -663,7 +663,7 @@ export function useProfileForm({
                 const changes = []
                 
                 const allKeys = new Set([...Object.keys(oldFields), ...Object.keys(newFields)])
-                for (const key of allKeys) {
+                for (const key of Array.from(allKeys)) {
                   const oldVal = oldFields[key]
                   const newVal = newFields[key]
                   if (oldVal !== newVal) {

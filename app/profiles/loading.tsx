@@ -1,5 +1,5 @@
-import EnhancedLoading from "@/components/EnhancedLoading"
+import { LoadingPage, LoadingMessages } from "@/components/ui/loading"
 
 export default function Loading() {
-  return <EnhancedLoading fullScreen message="Loading profiles..." />
+  return <LoadingPage message={LoadingMessages.PROFILES} />
 }

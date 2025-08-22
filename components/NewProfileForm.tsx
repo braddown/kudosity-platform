@@ -17,7 +17,7 @@ import { CustomFieldsSection } from "./features/profiles/CustomFieldsSection"
 import { NotificationPreferences } from "./features/profiles/NotificationPreferences"
 import { ProfileActivityTimeline } from "./features/profiles/ProfileActivityTimeline"
 import { profilesApi } from "@/lib/api/profiles-api"
-import type { CDPProfile } from "@/lib/types/cdp-types"
+import type { Profile } from "@/lib/types/cdp-types"
 
 interface NewProfileFormProps {
   onSubmit?: (data: any) => void
@@ -35,7 +35,7 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
   const [loadingSchema, setLoadingSchema] = useState(true)
   
   // Initialize with a new empty profile
-  const [editedProfile, setEditedProfile] = useState<Partial<CDPProfile>>({
+  const [editedProfile, setEditedProfile] = useState<Partial<Profile>>({
     first_name: "",
     last_name: "",
     email: "",
@@ -46,14 +46,15 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
     state: "",
     postal_code: "",
     country: "",
-    location: "",
-    device: "",
-    notes: "",
-    status: "pending",
-    source: "Manual Entry",
+    lifecycle_stage: "lead" as const,
+    lead_score: 0,
+    lifetime_value: 0,
+    data_quality_score: 100,
+    custom_fields: {},
+    tags: [],
     notification_preferences: {
-      marketing_emails: false,
-      transactional_emails: false,
+      marketing_email: false,
+      transactional_email: false,
       marketing_sms: false,
       transactional_sms: false,
       marketing_whatsapp: false,
@@ -61,7 +62,6 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
       marketing_rcs: false,
       transactional_rcs: false,
     },
-    custom_fields: {},
   })
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -140,31 +140,7 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
     fetchCustomFieldsSchema()
   }, [])
 
-  const handleStatusChange = useCallback((newStatus: string) => {
-    setEditedProfile(prev => {
-      const updated = {
-        ...prev,
-        status: newStatus
-      }
 
-      // If status is changed to deleted, ensure all notification preferences are turned off
-      if (newStatus === 'deleted') {
-        updated.notification_preferences = {
-          marketing_emails: false,
-          transactional_emails: false,
-          marketing_sms: false,
-          transactional_sms: false,
-          marketing_whatsapp: false,
-          transactional_whatsapp: false,
-          marketing_rcs: false,
-          transactional_rcs: false,
-        }
-      }
-
-      return updated
-    })
-    setHasChanges(true)
-  }, [])
 
   const handleSave = async () => {
     setSaving(true)
@@ -285,43 +261,6 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold">New Profile: {profileName}</h1>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Status:</span>
-              <Select
-                value={editedProfile.status || 'active'}
-                onValueChange={handleStatusChange}
-              >
-                <SelectTrigger className="w-[140px] h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-green-500" />
-                      <span>Active</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="inactive">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-gray-500" />
-                      <span>Inactive</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="pending">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                      <span>Pending</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="deleted">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-red-500" />
-                      <span>Deleted</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <Button
               onClick={handleSave}
               disabled={saving || !hasChanges}
@@ -347,13 +286,13 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
           {/* Left column - Profile details */}
           <div className="space-y-6">
             <ContactPropertiesForm
-              profile={editedProfile as CDPProfile}
+              profile={editedProfile as Profile}
               onInputChange={handleInputChange}
               onSelectChange={handleSelectChange}
             />
             
             <NotificationPreferences
-              profile={editedProfile as CDPProfile}
+              profile={editedProfile as Profile}
               onToggleChange={handleToggleChange}
             />
           </div>
@@ -361,7 +300,7 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
           {/* Right column - Custom fields and Activity timeline */}
           <div className="space-y-6">
             <CustomFieldsSection
-              profile={editedProfile as CDPProfile}
+              profile={editedProfile as Profile}
               customFieldsSchema={customFieldsSchema}
               onCustomFieldChange={handleCustomFieldChange}
             />

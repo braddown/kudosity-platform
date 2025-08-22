@@ -1,3 +1,5 @@
+import { LoadingPage } from "@/components/ui/loading"
+
 export default function Loading() {
-  return null
+  return <LoadingPage message="Loading domains..." />
 }

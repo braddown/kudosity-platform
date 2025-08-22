@@ -11,7 +11,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Mail, Lock, User, AlertCircle, Loader2 } from 'lucide-react'
+import { Mail, Lock, User, AlertCircle } from 'lucide-react'
+import { LoadingButton, LoadingMessages } from '@/components/ui/loading'
 import { useToast } from '@/components/ui/use-toast'
 import { authConfig } from '@/lib/auth/config'
 import { Logo } from '@/components/Logo'
@@ -256,10 +257,7 @@ export default function SignupPage() {
               disabled={loading || !formData.agreeToTerms}
             >
               {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating account...
-                </>
+                <LoadingButton message={LoadingMessages.SIGNUP} />
               ) : (
                 'Create account'
               )}

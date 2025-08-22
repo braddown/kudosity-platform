@@ -108,7 +108,7 @@ export function SegmentListDropdown({
     if (segment) return { type: 'segment', ...segment }
     
     const list = lists.find(l => l.id === selectedId)
-    if (list) return { ...list, type: 'list', listType: list.type }
+    if (list) return { ...list, type: 'list' as const, listType: (list as any).type }
     
     return null
   }, [selectedId, segments, lists])
@@ -150,8 +150,8 @@ export function SegmentListDropdown({
               )}
               <span>{selectedItem.name}</span>
               <Badge variant="outline" className="ml-auto text-xs">
-                {selectedItem.type === 'list' && selectedItem.listType === 'Manual' ? 'User' : 
-                 selectedItem.type === 'list' ? selectedItem.listType : 
+                {selectedItem.type === 'list' && (selectedItem as any).listType === 'Manual' ? 'User' : 
+                 selectedItem.type === 'list' ? (selectedItem as any).listType : 
                  selectedItem.type}
               </Badge>
             </div>
