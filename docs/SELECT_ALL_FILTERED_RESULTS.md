@@ -50,3 +50,4 @@ The "select all" checkbox in the table header was only selecting profiles on the
 7. Test partial selection to see indeterminate state
 
 
+
