@@ -97,6 +97,8 @@ export function MessageHistory() {
       console.error('Failed to load messages:', error)
     } finally {
       setLoading(false)
+      // Ensure loading state is cleared even if component unmounts
+      setTimeout(() => setLoading(false), 100)
     }
   }
 
