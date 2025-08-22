@@ -23,6 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { segmentsApi, type Segment } from "@/api/segments-api"
 import { profilesApi } from "@/lib/api/profiles-api"
 import { useToast } from "@/components/ui/use-toast"
+import { LoadingSection } from "@/components/ui/loading"
 
 interface SegmentWithStats extends Segment {
   profileCount: number
@@ -312,13 +313,7 @@ export default function SegmentList() {
   }, [])
 
   if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-md p-8 text-center">
-          <div className="text-muted-foreground">Loading segments...</div>
-        </div>
-      </div>
-    )
+    return <LoadingSection message="Loading segments..." />
   }
 
   if (error) {

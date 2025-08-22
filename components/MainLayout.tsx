@@ -6,7 +6,6 @@ import {
   ChevronUp,
   Sun,
   Moon,
-  Loader2,
   PhoneCall,
   CreditCard,
   Tag,
@@ -33,6 +32,7 @@ import { Logo } from "@/components/Logo"
 import { useTheme } from "next-themes"
 import { useSimpleNavigation } from "@/lib/navigation/useNavigation"
 import { getGravatarUrlSimple, getInitials as getInitialsUtil } from "@/lib/utils/gravatar"
+import { LoadingSpinner } from "@/components/ui/loading"
 
 interface MainLayoutProps {
   children: ReactNode
@@ -497,8 +497,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
           >
             <Suspense
               fallback={
-                <div className="p-6">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto" />
+                <div className="flex items-center justify-center p-6">
+                  <LoadingSpinner size="xl" />
                 </div>
               }
             >

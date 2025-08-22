@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowDownIcon, ArrowUpIcon, CalendarIcon, MessageSquare, Loader2 } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, CalendarIcon, MessageSquare } from "lucide-react"
+import { LoadingInline, LoadingSpinner } from "@/components/ui/loading"
 import { format, subDays, parseISO, isWithinInterval } from "date-fns"
 import { cn } from "@/lib/utils"
 import type { DateRange } from "react-day-picker"
@@ -106,10 +107,7 @@ function MetricCard({ title, value, change, suffix = "", isLoading = false }: Me
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="flex items-center space-x-2">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            <span className="text-muted-foreground">Loading...</span>
-          </div>
+          <LoadingInline message="Loading..." />
         ) : (
           <>
             <div className="text-2xl md:text-3xl font-light text-foreground">
@@ -406,8 +404,7 @@ export default function Overview({ data }: { data: DashboardData }) {
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-4">
                           <div className="flex justify-center items-center">
-                            <Loader2 className="h-6 w-6 animate-spin mr-2 text-muted-foreground" />
-                            <span className="text-muted-foreground">Loading campaign data...</span>
+                            <LoadingInline message="Loading campaign data..." />
                           </div>
                         </TableCell>
                       </TableRow>
@@ -555,8 +552,7 @@ export default function Overview({ data }: { data: DashboardData }) {
                 <div className="w-full h-[300px]">
                   {isLoading ? (
                     <div className="flex justify-center items-center h-full">
-                      <Loader2 className="h-8 w-8 animate-spin mr-2 text-muted-foreground" />
-                      <span className="text-muted-foreground">Loading chart data...</span>
+                      <LoadingInline message="Loading chart data..." />
                     </div>
                   ) : chartData.length > 0 ? (
                     <SimpleBarChart data={chartData} />

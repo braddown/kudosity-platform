@@ -22,6 +22,7 @@ import {
   Eye,
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
+import { LoadingSection } from "@/components/ui/loading"
 
 interface Campaign {
   id: string
@@ -119,9 +120,7 @@ export function CampaignActivityTable({ campaigns, loading, onRefresh }: Campaig
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="flex items-center justify-center h-32">
-            <div className="text-muted-foreground">Loading campaign activity...</div>
-          </div>
+          <LoadingSection message="Loading campaign activity..." />
         </CardContent>
       </Card>
     )

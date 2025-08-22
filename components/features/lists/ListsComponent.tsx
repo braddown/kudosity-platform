@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/components/ui/use-toast"
-import { LoadingInline } from "@/components/ui/loading"
+import { LoadingInline, LoadingSection } from "@/components/ui/loading"
 import { useApiState, useMutationState } from "@/hooks/use-async-state"
 import { profilesApi } from "@/lib/api/profiles-api"
 import {
@@ -373,13 +373,7 @@ export default function ListsComponent() {
     )
 
   if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="bg-background/80 backdrop-blur-sm border border-border/50 rounded-md p-8 text-center">
-          <div className="text-muted-foreground">Loading lists...</div>
-        </div>
-      </div>
-    )
+    return <LoadingSection message="Loading lists..." />
   }
 
   if (error) {
