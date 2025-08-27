@@ -26,7 +26,7 @@ import {
   Link,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-import { profilesApi } from "@/api/profiles-api"
+import { profilesApi } from "@/lib/api/profiles-api"
 
 interface CustomField {
   key: string

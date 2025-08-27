@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { X, Plus } from "lucide-react"
 import type { FilterCondition, FilterGroup } from "./Contacts"
-import { profilesApi } from "@/api/profiles-api"
+import { profilesApi } from "@/lib/api/profiles-api"
 
 interface ProfileFilterBuilderProps {
   onFilterChange: (filters: FilterGroup[]) => void
@@ -88,7 +88,7 @@ const operators = {
 }
 
 // Determine field type based on field name
-const getFieldType = (field: string): "string" | "number" | "date" | "boolean" | "array" | "json" => {
+const getFieldType = (field: string, customFieldTypes?: Record<string, string>): "string" | "number" | "date" | "boolean" | "array" | "json" => {
   // Number fields
   if (["total_purchases", "lifetime_value", "loyalty_points", "total_spent"].includes(field)) {
     return "number"
@@ -114,38 +114,36 @@ const getFieldType = (field: string): "string" | "number" | "date" | "boolean" |
     return "json"
   }
 
-  // Custom fields - try to infer type from field name or default to string
-  if (field.startsWith("custom_fields.")) {
-    const fieldName = field.split(".")[1].toLowerCase()
-
-    // Try to infer type from field name patterns
-    if (
-      fieldName.includes("date") ||
-      fieldName.includes("time") ||
-      fieldName.includes("created") ||
-      fieldName.includes("updated")
-    ) {
-      return "date"
+  // Custom fields - use the actual type from the database
+  if (field.startsWith("custom_fields.") && customFieldTypes) {
+    const fieldType = customFieldTypes[field]
+    
+    // Map database types to our filter types (handle case variations)
+    const normalizedType = fieldType?.toLowerCase()
+    switch (normalizedType) {
+      case 'boolean':
+      case 'checkbox':
+      case 'bool':
+        return "boolean"
+      case 'number':
+      case 'integer':
+      case 'int':
+      case 'float':
+      case 'decimal':
+        return "number"
+      case 'date':
+      case 'datetime':
+      case 'timestamp':
+        return "date"
+      case 'text':
+      case 'string':
+      case 'email':
+      case 'url':
+      case 'phone':
+      case 'varchar':
+      default:
+        return "string"
     }
-    if (
-      fieldName.includes("count") ||
-      fieldName.includes("number") ||
-      fieldName.includes("amount") ||
-      fieldName.includes("price") ||
-      fieldName.includes("value")
-    ) {
-      return "number"
-    }
-    if (
-      fieldName.includes("is_") ||
-      fieldName.includes("has_") ||
-      fieldName.includes("active") ||
-      fieldName.includes("enabled")
-    ) {
-      return "boolean"
-    }
-
-    return "string" // Default for custom fields
   }
 
   // Default to string
@@ -203,6 +201,8 @@ export function ProfileFilterBuilder({ onFilterChange, initialFilters = [] }: Pr
     initialFilters.length > 0 ? initialFilters : [{ conditions: [{ field: "", operator: "", value: "" }] }],
   )
   const [customFields, setCustomFields] = useState<string[]>([])
+  const [customFieldTypes, setCustomFieldTypes] = useState<Record<string, string>>({})
+  const customFieldTypesRef = useRef<Record<string, string>>({})
   const [isLoadingCustomFields, setIsLoadingCustomFields] = useState(true)
 
   // Fetch custom fields from the database
@@ -211,15 +211,30 @@ export function ProfileFilterBuilder({ onFilterChange, initialFilters = [] }: Pr
       try {
         setIsLoadingCustomFields(true)
         const result = await profilesApi.getCustomFieldsSchema()
+        console.log('Custom fields schema result:', result)
 
         if (result.data) {
           // getCustomFieldsSchema returns an object with field definitions
-          const customFieldKeys = Object.keys(result.data).map((key) => `custom_fields.${key}`)
+          const fieldTypes: Record<string, string> = {}
+          const customFieldKeys = Object.keys(result.data).map((key) => {
+            const fieldKey = `custom_fields.${key}`
+            // Store the type for each custom field
+            fieldTypes[fieldKey] = result.data[key].type || 'text'
+            console.log(`Setting type for ${fieldKey}: ${result.data[key].type}`)
+            return fieldKey
+          })
+          console.log('Custom field types being set:', fieldTypes)
           setCustomFields(customFieldKeys.sort())
+          setCustomFieldTypes(fieldTypes)
+          customFieldTypesRef.current = fieldTypes  // Also store in ref
+          console.log('State update triggered with:', fieldTypes)
+        } else {
+          console.log('No custom field data returned')
         }
       } catch (error) {
         console.error("Error fetching custom fields:", error)
         setCustomFields([])
+        setCustomFieldTypes({})
       } finally {
         setIsLoadingCustomFields(false)
       }
@@ -230,6 +245,11 @@ export function ProfileFilterBuilder({ onFilterChange, initialFilters = [] }: Pr
 
   // Combine base fields with custom fields
   const allAvailableFields = [...baseProfileFields, ...customFields]
+  
+  // Debug: Watch customFieldTypes changes
+  useEffect(() => {
+    console.log('customFieldTypes state updated:', customFieldTypes)
+  }, [customFieldTypes])
 
   useEffect(() => {
     onFilterChange(
@@ -286,18 +306,74 @@ export function ProfileFilterBuilder({ onFilterChange, initialFilters = [] }: Pr
   }
 
   const getAvailableOperators = (field: string) => {
-    const fieldType = getFieldType(field)
+    const fieldType = getFieldType(field, customFieldTypes)
     return operators[fieldType] || operators.string
   }
 
   const renderValueInput = (condition: FilterCondition, groupIndex: number, conditionIndex: number) => {
-    const fieldType = getFieldType(condition.field)
+    let fieldType: string
+    
+    // Check if this is a custom field that should be boolean based on naming
+    if (condition.field.startsWith("custom_fields.")) {
+      const fieldName = condition.field.split('.')[1]
+      
+      // Force boolean for fields starting with is_ or has_
+      if (fieldName && (fieldName.startsWith('is_') || fieldName.startsWith('has_'))) {
+        fieldType = "boolean"
+        console.log(`Field ${condition.field} detected as boolean based on naming convention`)
+      } else {
+        // Check both state and ref for custom field types
+        const types = Object.keys(customFieldTypes).length > 0 ? customFieldTypes : customFieldTypesRef.current
+        
+        if (types[condition.field]) {
+          const dbType = types[condition.field]
+          const normalizedType = dbType?.toLowerCase()
+          
+          if (normalizedType === 'boolean' || normalizedType === 'checkbox' || normalizedType === 'bool') {
+            fieldType = "boolean"
+          } else if (normalizedType === 'number' || normalizedType === 'integer' || normalizedType === 'float') {
+            fieldType = "number"
+          } else if (normalizedType === 'date' || normalizedType === 'datetime') {
+            fieldType = "date"
+          } else {
+            fieldType = "string"
+          }
+        } else {
+          // Default to string for other custom fields
+          fieldType = "string"
+        }
+      }
+    } else {
+      // Use regular getFieldType for non-custom fields
+      fieldType = getFieldType(condition.field, customFieldTypes)
+    }
 
     // Don't show value input for "is empty" and "is not empty" operators
     if (["is empty", "is not empty"].includes(condition.operator)) {
       return null
     }
 
+    // Special handling for is_vip or any is_* custom field
+    if (condition.field === 'custom_fields.is_vip' || 
+        (condition.field.startsWith('custom_fields.is_') || 
+         condition.field.startsWith('custom_fields.has_'))) {
+      console.log(`FORCING BOOLEAN DROPDOWN for ${condition.field}`)
+      return (
+        <Select
+          value={condition.value}
+          onValueChange={(value) => updateCondition(groupIndex, conditionIndex, { value })}
+        >
+          <SelectTrigger className="w-32">
+            <SelectValue placeholder="Select..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="true">True</SelectItem>
+            <SelectItem value="false">False</SelectItem>
+          </SelectContent>
+        </Select>
+      )
+    }
+    
     switch (fieldType) {
       case "boolean":
         return (
@@ -457,7 +533,15 @@ export function ProfileFilterBuilder({ onFilterChange, initialFilters = [] }: Pr
                 </Select>
 
                 {/* Value Input */}
-                {renderValueInput(condition, groupIndex, conditionIndex)}
+                {console.log(`Value input check - field: "${condition.field}", operator: "${condition.operator}"`)}
+                {condition.field && condition.operator ? (
+                  <>
+                    {console.log(`RENDERING value input for field: ${condition.field}, operator: ${condition.operator}`)}
+                    {renderValueInput(condition, groupIndex, conditionIndex)}
+                  </>
+                ) : (
+                  console.log('NOT rendering value input - missing field or operator')
+                )}
 
                 {/* Remove Condition Button */}
                 <Button

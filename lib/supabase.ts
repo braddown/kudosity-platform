@@ -8,7 +8,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export const validateSupabaseConnection = async () => {
   try {
-    const { data, error } = await supabase.from("profiles").select("count").limit(1)
+    const { data, error } = await supabase.from("cdp_profiles").select("count").limit(1)
     return { success: !error, error }
   } catch (error) {
     return { success: false, error }
@@ -77,7 +77,7 @@ export const logsApi = {
 export const contactsApi = {
   getContacts: async (filters?: any) => {
     try {
-      const { data, error } = await supabase.from("profiles").select("*")
+      const { data, error } = await supabase.from("cdp_profiles").select("*")
       return { data: data || [] }
     } catch (error) {
       return handleSupabaseError(error)
@@ -86,7 +86,7 @@ export const contactsApi = {
 
   getContactCount: async () => {
     try {
-      const { count, error } = await supabase.from("profiles").select("*", { count: "exact", head: true })
+      const { count, error } = await supabase.from("cdp_profiles").select("*", { count: "exact", head: true })
       return { count: count || 0 }
     } catch (error) {
       return { count: 0, error: error?.message }

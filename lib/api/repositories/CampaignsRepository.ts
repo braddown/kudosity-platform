@@ -241,6 +241,24 @@ export class CampaignsRepository extends BaseRepository<Campaign> {
       ascending: options?.ascending ?? false
     })
   }
+
+  public async getCampaignsCount(): Promise<{ count: number | null }> {
+    try {
+      const { count, error } = await supabase
+        .from('campaigns')
+        .select('*', { count: 'exact', head: true })
+      
+      if (error) {
+        console.error('Error getting campaigns count:', error)
+        return { count: null }
+      }
+      
+      return { count: count || 0 }
+    } catch (error) {
+      console.error('Error in getCampaignsCount:', error)
+      return { count: null }
+    }
+  }
 }
 
 // Export singleton instance for easy access

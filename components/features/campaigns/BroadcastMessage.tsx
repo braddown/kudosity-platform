@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
-import { segmentsApi, type Segment } from "@/api/segments-api"
+import { segmentsApi, type Segment } from "@/lib/api/segments-api"
+import { profilesApi } from "@/lib/api/profiles-api"
 import PhonePreview from "../../PhonePreview"
 import { Card, CardContent } from "@/components/ui/card"
 import { Calendar } from "@/components/ui/calendar"
@@ -141,22 +142,188 @@ interface SplitMessage {
   delay: number
 }
 
+// Helper function to get nested values from an object
+const getNestedValue = (obj: any, path: string): any => {
+  return path.split('.').reduce((current, key) => current?.[key], obj)
+}
+
+// Helper function to evaluate a single condition
+const evaluateCondition = (profile: any, condition: any): boolean => {
+  const { field, operator, value } = condition
+  const fieldValue = getNestedValue(profile, field)
+  
+  // Handle null/undefined values
+  if (fieldValue === null || fieldValue === undefined) {
+    if (operator === 'is_empty' || operator === 'not_exists') return true
+    if (operator === 'exists') return false
+    if (operator === 'equals' && (value === '' || value === null)) return true
+    return false
+  }
+
+  // Special handling for boolean fields
+  if (typeof fieldValue === 'boolean') {
+    // Convert the filter value to boolean for comparison
+    let compareValue = value
+    if (value === 'Yes' || value === 'yes' || value === 'true' || value === true || value === '1') {
+      compareValue = true
+    } else if (value === 'No' || value === 'no' || value === 'false' || value === false || value === '0') {
+      compareValue = false
+    }
+    
+    switch (operator) {
+      case 'equals':
+      case 'is':
+        return fieldValue === compareValue
+      case 'not_equals':
+      case 'is not':
+        return fieldValue !== compareValue
+      default:
+        return fieldValue === compareValue
+    }
+  }
+  
+  // Also handle when the field value is a string "true"/"false" but should be treated as boolean
+  if (field.includes('is_') || field.includes('has_')) {
+    const fieldStr = String(fieldValue).toLowerCase()
+    const valueStr = String(value).toLowerCase()
+    
+    // Normalize boolean strings
+    const normalizedField = (fieldStr === 'true' || fieldStr === 'yes' || fieldStr === '1') ? 'true' : 
+                           (fieldStr === 'false' || fieldStr === 'no' || fieldStr === '0') ? 'false' : fieldStr
+    const normalizedValue = (valueStr === 'true' || valueStr === 'yes' || valueStr === '1') ? 'true' : 
+                           (valueStr === 'false' || valueStr === 'no' || valueStr === '0') ? 'false' : valueStr
+    
+    if (operator === 'equals' || operator === 'is') {
+      return normalizedField === normalizedValue
+    } else if (operator === 'not_equals' || operator === 'is not') {
+      return normalizedField !== normalizedValue
+    }
+  }
+
+  // Special handling for status field - always compare lowercase
+  if (field === 'status') {
+    const normalizedFieldValue = String(fieldValue).toLowerCase()
+    const normalizedValue = String(value).toLowerCase()
+    
+    switch (operator) {
+      case 'equals':
+      case 'is':
+        return normalizedFieldValue === normalizedValue
+      case 'not_equals':
+      case 'is not':
+        return normalizedFieldValue !== normalizedValue
+      case 'contains':
+        return normalizedFieldValue.includes(normalizedValue)
+      case 'not_contains':
+        return !normalizedFieldValue.includes(normalizedValue)
+      case 'starts_with':
+        return normalizedFieldValue.startsWith(normalizedValue)
+      case 'ends_with':
+        return normalizedFieldValue.endsWith(normalizedValue)
+      default:
+        return false
+    }
+  }
+
+  switch (operator) {
+    case 'equals':
+    case 'is':
+      return String(fieldValue).toLowerCase() === String(value).toLowerCase()
+    case 'not_equals':
+    case 'is not':
+      return String(fieldValue).toLowerCase() !== String(value).toLowerCase()
+    case 'contains':
+      return String(fieldValue).toLowerCase().includes(String(value).toLowerCase())
+    case 'not_contains':
+      return !String(fieldValue).toLowerCase().includes(String(value).toLowerCase())
+    case 'starts_with':
+      return String(fieldValue).toLowerCase().startsWith(String(value).toLowerCase())
+    case 'ends_with':
+      return String(fieldValue).toLowerCase().endsWith(String(value).toLowerCase())
+    case 'greater_than':
+      return Number(fieldValue) > Number(value)
+    case 'less_than':
+      return Number(fieldValue) < Number(value)
+    case 'exists':
+      return true
+    case 'not_exists':
+    case 'is_empty':
+      return false
+    default:
+      return false
+  }
+}
+
+// Apply segment filter to profiles
+const applySegmentFilter = (profiles: any[], filterCriteria: any): any[] => {
+  if (!filterCriteria) return profiles
+  
+  // Check if there's an explicit status = 'Deleted' filter
+  let hasDeletedFilter = false
+  
+  if (filterCriteria.filterGroups) {
+    filterCriteria.filterGroups.forEach((group: any) => {
+      group.conditions?.forEach((condition: any) => {
+        if (condition.field === 'status' && 
+            condition.operator === 'equals' && 
+            condition.value?.toLowerCase() === 'deleted') {
+          hasDeletedFilter = true
+        }
+      })
+    })
+  } else if (filterCriteria.conditions) {
+    filterCriteria.conditions.forEach((condition: any) => {
+      if (condition.field === 'status' && 
+          condition.operator === 'equals' && 
+          condition.value?.toLowerCase() === 'deleted') {
+        hasDeletedFilter = true
+      }
+    })
+  }
+  
+  // Start with profiles, excluding deleted unless explicitly filtered for
+  // CDP profiles use status field
+  let filtered = hasDeletedFilter 
+    ? profiles 
+    : profiles.filter(p => {
+        const stage = (p.status || '').toLowerCase()
+        return stage !== 'deleted'
+      })
+  
+  // Apply filter groups or conditions
+  if (filterCriteria.filterGroups && filterCriteria.filterGroups.length > 0) {
+    filtered = filtered.filter(profile => {
+      return filterCriteria.filterGroups.some((group: any) => {
+        if (!group.conditions || group.conditions.length === 0) return true
+        return group.conditions.every((condition: any) => 
+          evaluateCondition(profile, condition)
+        )
+      })
+    })
+  } else if (filterCriteria.conditions && filterCriteria.conditions.length > 0) {
+    filtered = filtered.filter(profile => {
+      return filterCriteria.conditions.every((condition: any) => 
+        evaluateCondition(profile, condition)
+      )
+    })
+  }
+  
+  return filtered
+}
+
 const BroadcastMessage = forwardRef<{ save: () => Promise<void> }>((props, ref) => {
   const [message, setMessage] = useState(`Type your message here...
 
 Opt-out reply STOP`)
-  const [senderID, setSenderID] = useState("447312263456")
+  const [senderID, setSenderID] = useState("")
   const [trackLinks, setTrackLinks] = useState(false)
   const [selectedAudiences, setSelectedAudiences] = useState<string[]>([])
   const [templates, setTemplates] = useState(initialTemplates)
   const [isContentChanged, setIsContentChanged] = useState(false)
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState("")
-  const [senderIDs] = useState([
-    { id: "447312263456", label: "447312263456" },
-    { id: "447312263457", label: "447312263457" },
-    { id: "ALPHANUMERIC", label: "ALPHANUMERIC" },
-  ])
+  const [senderIDs, setSenderIDs] = useState<Array<{ id: string; label: string; type: string }>>([])
+  const [isLoadingSenders, setIsLoadingSenders] = useState(true)
   const [splitMessages, setSplitMessages] = useState<SplitMessage[]>([
     { id: 1, content: "Type your message here...", delay: 0 },
   ])
@@ -165,32 +332,97 @@ Opt-out reply STOP`)
 
   const [audiences, setAudiences] = useState<Segment[]>([])
   const [isLoadingAudiences, setIsLoadingAudiences] = useState(true)
+  const [audienceCounts, setAudienceCounts] = useState<Record<string, number>>({})
 
   const [scheduleType, setScheduleType] = useState<"immediate" | "scheduled">("immediate")
   const [scheduledDate, setScheduledDate] = useState<Date>()
   const [scheduledTime, setScheduledTime] = useState("09:00")
+  
+  const [isSending, setIsSending] = useState(false)
+  const [sendProgress, setSendProgress] = useState(0)
+  const [campaignId, setCampaignId] = useState<string | null>(null)
 
   useEffect(() => {
-    const loadSegments = async () => {
+    const loadData = async () => {
+      // Load segments
       setIsLoadingAudiences(true)
       try {
         const { data, error } = await segmentsApi.getSegments()
         if (error) {
           console.error("Error loading segments:", error)
-          setAudiences(segmentsApi.getSystemSegments())
+          setAudiences([])
         } else {
-          const allSegments = [...data, ...segmentsApi.getSystemSegments()]
-          setAudiences(allSegments)
+          // Only use custom segments, no system segments (they return empty array now)
+          setAudiences(data || [])
+          
+          // Calculate actual counts for each segment
+          const counts: Record<string, number> = {}
+          
+          // Get all profiles once for filtering
+          console.log('BroadcastMessage: Fetching all profiles for audience counts...')
+          const { data: allProfiles } = await profilesApi.getProfiles()
+          console.log(`BroadcastMessage: Received ${allProfiles?.length || 0} profiles from API`)
+          
+          for (const segment of data || []) {
+            if (segment.filter_criteria && allProfiles) {
+              // Apply the segment filter to get actual count
+              const filteredProfiles = applySegmentFilter(allProfiles, segment.filter_criteria)
+              // Only count profiles with mobile numbers
+              const withMobile = filteredProfiles.filter(p => p.mobile || p.phone)
+              counts[segment.name] = withMobile.length
+              console.log(`Segment "${segment.name}": ${withMobile.length} profiles with mobile numbers`)
+            } else {
+              counts[segment.name] = 0
+            }
+          }
+          setAudienceCounts(counts)
         }
       } catch (error) {
         console.error("Error loading segments:", error)
-        setAudiences(segmentsApi.getSystemSegments())
+        setAudiences([])
       } finally {
         setIsLoadingAudiences(false)
       }
+
+      // Load sender IDs from Kudosity
+      setIsLoadingSenders(true)
+      try {
+        const response = await fetch('/api/kudosity/senders', {
+          credentials: 'include'
+        })
+        const data = await response.json()
+        
+        if (response.ok && data.senders && data.senders.length > 0) {
+          const formattedSenders = data.senders.map((sender: any) => ({
+            id: sender.number,
+            label: `${sender.number}${sender.type === 'ALPHANUMERIC' ? ' (Alphanumeric)' : ''}`,
+            type: sender.type,
+          }))
+          setSenderIDs(formattedSenders)
+          // Set default sender if available
+          if (formattedSenders.length > 0) {
+            setSenderID(formattedSenders[0].id)
+          }
+        } else if (data.error) {
+          console.error("Sender ID error:", data.error)
+          // Show the error to the user
+          const { toast } = await import('@/components/ui/use-toast')
+          toast({
+            title: "Sender ID Configuration Error",
+            description: data.error,
+            variant: "destructive",
+          })
+        } else {
+          console.error("Failed to fetch sender IDs:", response.status)
+        }
+      } catch (error) {
+        console.error("Error loading sender IDs:", error)
+      } finally {
+        setIsLoadingSenders(false)
+      }
     }
 
-    loadSegments()
+    loadData()
   }, [])
 
   useImperativeHandle(ref, () => ({
@@ -273,55 +505,156 @@ Opt-out reply STOP`
   const handleSend = async () => {
     setIsConfirmationModalOpen(false)
     
-    // Import the Kudosity API
-    const { kudosityAPI } = await import('@/lib/api/kudosity-api')
+    // Get recipients based on selected audiences from the database
+    const recipients: string[] = []
     
-    // Get all selected profiles
-    const selectedProfiles = audiences
-      .filter((audience) => selectedAudiences.includes(audience.name))
-      .flatMap(audience => audience.profiles || [])
+    // Get all profiles once for filtering
+    const { data: allProfiles } = await profilesApi.getProfiles()
     
-    // Show loading state
-    const { toast } = await import('@/components/ui/use-toast').then(m => ({ toast: m.useToast() }))
+    // Fetch contacts for each selected audience
+    for (const audienceName of selectedAudiences) {
+      // Find the segment by name
+      const segment = audiences.find(s => s.name === audienceName)
+      
+      if (segment && segment.filter_criteria && allProfiles) {
+        // Apply the segment filter to get the actual profiles
+        const filteredProfiles = applySegmentFilter(allProfiles, segment.filter_criteria)
+        console.log(`Filtered ${filteredProfiles.length} contacts for audience "${audienceName}"`)
+        
+        if (filteredProfiles.length > 0) {
+          const mobileNumbers = filteredProfiles
+            .map(profile => profile.mobile || profile.phone)
+            .filter(Boolean)
+          recipients.push(...mobileNumbers)
+          console.log(`Found ${mobileNumbers.length} mobile numbers for audience "${audienceName}"`)
+        }
+      }
+    }
     
-    const toastId = toast({
+    // Remove duplicates
+    const uniqueRecipients = [...new Set(recipients)]
+    
+    if (uniqueRecipients.length === 0) {
+      const { toast } = await import('@/components/ui/use-toast')
+      toast({
+        title: "No recipients",
+        description: "No valid mobile numbers found in the selected audience",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    // Clean up the message - remove placeholder text if it's still there
+    const actualMessage = message === `Type your message here...
+
+Opt-out reply STOP` ? 'Test message from Kudosity platform' : message
+    
+    // Show loading toast
+    const { toast } = await import('@/components/ui/use-toast')
+    
+    toast({
       title: "Sending messages...",
-      description: `Sending to ${selectedProfiles.length} recipients`,
+      description: `Sending to ${uniqueRecipients.length} recipient(s)`,
     })
     
+    console.log('Sending broadcast:', {
+      recipients: uniqueRecipients,
+      recipientCount: uniqueRecipients.length,
+      message: actualMessage,
+      sender: senderID,
+      trackLinks,
+      audiences: selectedAudiences
+    })
+    
+    setIsSending(true)
+    setSendProgress(0)
+    
     try {
-      // Send messages
-      const result = await kudosityAPI.sendBulkSMS({
-        recipients: selectedProfiles.map(p => p.mobile).filter(Boolean),
-        message,
-        sender: senderID,
-        trackLinks,
+      // Use the new broadcast endpoint with retry logic and progress tracking
+      const response = await fetch('/api/kudosity/broadcast', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          campaignName: `Broadcast to ${selectedAudiences.join(', ')}`,
+          recipients: uniqueRecipients,
+          message: actualMessage,
+          sender: senderID,
+          trackLinks,
+          audiences: selectedAudiences,
+        }),
       })
       
-      // Show results
-      toast({
-        title: "Messages sent!",
-        description: `Successfully sent: ${result.sent}, Failed: ${result.failed}`,
-        variant: result.failed > 0 ? "destructive" : "default",
-      })
-      
-      // Log to console for debugging
-      console.log("Broadcast results:", result)
-      
-      // Optionally navigate to message history
-      if (result.success) {
+      if (response.ok) {
+        const result = await response.json()
+        setCampaignId(result.campaignId)
+        
+        toast({
+          title: "Broadcast started",
+          description: `Sending ${uniqueRecipients.length} messages...`,
+        })
+        
+        // Start polling for progress
+        const pollProgress = setInterval(async () => {
+          const progressResponse = await fetch(`/api/kudosity/broadcast?campaignId=${result.campaignId}`, {
+            credentials: 'include',
+          })
+          
+          if (progressResponse.ok) {
+            const { campaign } = await progressResponse.json()
+            setSendProgress(campaign.progress || 0)
+            
+            if (campaign.status === 'completed' || campaign.status === 'failed') {
+              clearInterval(pollProgress)
+              setIsSending(false)
+              
+              if (campaign.status === 'completed') {
+                toast({
+                  title: "Broadcast completed",
+                  description: `Successfully sent ${campaign.sent_count} messages${campaign.failed_count > 0 ? `, ${campaign.failed_count} failed` : ''}. Duration: ${(campaign.duration_ms / 1000).toFixed(1)}s`,
+                })
+                
+                // Navigate to campaign activity after success
+                setTimeout(() => {
+                  window.location.href = '/campaigns/activity'
+                }, 2000)
+              } else {
+                toast({
+                  title: "Broadcast had issues",
+                  description: `Sent ${campaign.sent_count} messages, ${campaign.failed_count} failed`,
+                  variant: "destructive",
+                })
+              }
+            }
+          }
+        }, 2000) // Poll every 2 seconds
+        
+        // Clean up after 5 minutes max
         setTimeout(() => {
-          window.location.href = '/campaigns/activity'
-        }, 2000)
+          clearInterval(pollProgress)
+          setIsSending(false)
+        }, 300000)
+        
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Broadcast failed",
+          description: error.error || "Failed to send messages",
+          variant: "destructive",
+        })
+        setIsSending(false)
       }
       
     } catch (error) {
-      console.error("Failed to send messages:", error)
+      console.error("Failed to send broadcast:", error)
       toast({
-        title: "Failed to send messages",
+        title: "Failed to send broadcast",
         description: error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive",
       })
+      setIsSending(false)
     }
   }
 
@@ -348,9 +681,10 @@ Opt-out reply STOP`
     setSplitMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, content: newContent } : msg)))
   }
 
-  const totalContacts = audiences
-    .filter((audience) => selectedAudiences.includes(audience.name))
-    .reduce((sum, audience) => sum + (audience.estimated_size || 0), 0)
+  // Calculate total contacts from selected audiences
+  const totalContacts = selectedAudiences.reduce((sum, audienceName) => {
+    return sum + (audienceCounts[audienceName] || 0)
+  }, 0)
 
   return (
     <div className="flex flex-col w-full min-h-screen overflow-x-auto">
@@ -385,7 +719,7 @@ Opt-out reply STOP`
                         <SelectLabel>Segments</SelectLabel>
                         {audiences.map((audience) => (
                           <SelectItem key={audience.id} value={audience.name}>
-                            {audience.name} ({(audience.estimated_size || 0).toLocaleString()})
+                            {audience.name} ({((audience as any).profile_count || audienceCounts[audience.name] || 0).toLocaleString()})
                           </SelectItem>
                         ))}
                       </SelectGroup>
@@ -401,16 +735,22 @@ Opt-out reply STOP`
                 fullWidth
               >
                 <FormField label="Sender ID" required description="Choose your sender identification">
-                  <Select value={senderID} onValueChange={setSenderID}>
+                  <Select value={senderID} onValueChange={setSenderID} disabled={isLoadingSenders}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select sender ID" />
+                      <SelectValue placeholder={isLoadingSenders ? "Loading senders..." : "Select sender ID"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {senderIDs.map((sender) => (
-                        <SelectItem key={sender.id} value={sender.id}>
-                          {sender.label}
+                      {senderIDs.length === 0 ? (
+                        <SelectItem value="no-senders" disabled>
+                          No sender IDs available
                         </SelectItem>
-                      ))}
+                      ) : (
+                        senderIDs.map((sender) => (
+                          <SelectItem key={sender.id} value={sender.id}>
+                            {sender.label}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </FormField>
@@ -684,11 +1024,27 @@ Opt-out reply STOP`
                   <Button
                     variant="default"
                     onClick={handleNext}
-                    disabled={selectedAudiences.length === 0}
+                    disabled={selectedAudiences.length === 0 || isSending}
                   >
-                    Send Message
+                    {isSending ? "Sending..." : "Send Message"}
                   </Button>
                 </div>
+                
+                {/* Progress bar for sending */}
+                {isSending && (
+                  <div className="mt-4 space-y-2">
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Sending messages...</span>
+                      <span>{sendProgress}%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-primary h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${sendProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </FormSection>
             </FormLayout>
           </div>

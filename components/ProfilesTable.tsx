@@ -5,7 +5,7 @@ import { KudosityTable, type KudosityTableColumn } from "@/components/KudosityTa
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Download, UserPlus, Trash2, ArrowUpIcon, ArrowDownIcon } from "lucide-react"
-import { profilesApi } from "@/api/profiles-api"
+import { profilesApi } from "@/lib/api/profiles-api"
 
 interface ProfileTableData {
   id: string

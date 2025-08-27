@@ -11,72 +11,97 @@ export const getProfiles = async (options?: {
   offset?: number
 }) => {
   try {
-    console.log("Fetching profiles from API with options:", options)
+    console.log("Fetching profiles from CDP with options:", options)
 
-    // Build query parameters
-    const params = new URLSearchParams()
-    if (options?.search) params.append('search', options.search)
-    if (options?.status) params.append('status', options.status)
-    if (options?.limit) params.append('limit', options.limit.toString())
-    if (options?.offset) params.append('offset', options.offset.toString())
+    // Use the CDP profiles table as the source of truth
+    let query = supabase
+      .from('cdp_profiles')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
 
-    // Use the authenticated API route
-    const response = await fetch(`/api/cdp-profiles?${params.toString()}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include', // Include cookies for authentication
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      console.error("Error fetching profiles:", errorData)
-      return { data: [], error: errorData.error || 'Failed to fetch profiles' }
+    // Apply filters
+    if (options?.search) {
+      query = query.or(
+        `first_name.ilike.%${options.search}%,last_name.ilike.%${options.search}%,email.ilike.%${options.search}%,mobile.ilike.%${options.search}%`
+      )
     }
 
-    const result = await response.json()
-    console.log(`Successfully fetched ${result.data?.length || 0} profiles`)
-    
-    // If we're fetching with pagination, return as is
-    if (options?.limit || options?.offset) {
-      return { data: result.data || [], error: null }
+    if (options?.status) {
+      // CDP profiles use status field
+      query = query.eq('status', options.status)
     }
 
-    // If fetching all profiles, we need to handle batching
-    if (result.count > 50) {
-      console.log(`Total profiles: ${result.count}, fetching in batches...`)
+    // Apply pagination if specified
+    if (options?.limit !== undefined && options?.offset !== undefined) {
+      query = query.range(options.offset, options.offset + options.limit - 1)
+      const { data, error, count } = await query
       
-      const batchSize = 1000
-      const batches = Math.ceil(result.count / batchSize)
-      let allProfiles = result.data || []
-      
-      for (let i = 1; i < batches; i++) {
-        const batchParams = new URLSearchParams()
-        if (options?.search) batchParams.append('search', options.search)
-        if (options?.status) batchParams.append('status', options.status)
-        batchParams.append('limit', batchSize.toString())
-        batchParams.append('offset', (i * batchSize).toString())
-        
-        const batchResponse = await fetch(`/api/cdp-profiles?${batchParams.toString()}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-        })
-        
-        if (batchResponse.ok) {
-          const batchResult = await batchResponse.json()
-          allProfiles = [...allProfiles, ...(batchResult.data || [])]
-          console.log(`Batch ${i + 1}/${batches} fetched: ${batchResult.data?.length} records. Total: ${allProfiles.length}`)
-        }
+      if (error) {
+        console.error("Error fetching CDP profiles:", error)
+        return { data: [], error: error.message }
       }
       
-      return { data: allProfiles, error: null }
+      console.log(`Successfully fetched ${data?.length || 0} CDP profiles (paginated)`)
+      return { data: data || [], error: null, count }
+    }
+
+    // If no pagination, fetch all profiles in batches
+    const batchSize = 1000
+    
+    // First get the total count
+    const { count: totalCount, error: countError } = await supabase
+      .from('cdp_profiles')
+      .select('*', { count: 'exact', head: true })
+    
+    if (countError) {
+      console.error("Error getting CDP profiles count:", countError)
+      return { data: [], error: countError.message }
     }
     
-    return { data: result.data || [], error: null }
+    console.log(`Total CDP profiles count: ${totalCount}`)
+    
+    if (!totalCount) {
+      return { data: [], error: null, count: 0 }
+    }
+    
+    const batches = Math.ceil(totalCount / batchSize)
+    let allProfiles: any[] = []
+    
+    for (let i = 0; i < batches; i++) {
+      const offset = i * batchSize
+      let batchQuery = supabase
+        .from('cdp_profiles')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + batchSize - 1)
+      
+      // Apply filters to each batch
+      if (options?.search) {
+        batchQuery = batchQuery.or(
+          `first_name.ilike.%${options.search}%,last_name.ilike.%${options.search}%,email.ilike.%${options.search}%,mobile.ilike.%${options.search}%`
+        )
+      }
+      
+      if (options?.status) {
+        batchQuery = batchQuery.eq('status', options.status)
+      }
+      
+      const { data: batchData, error: batchError } = await batchQuery
+      
+      if (batchError) {
+        console.error(`Error fetching CDP batch ${i}:`, batchError)
+        continue
+      }
+      
+      if (batchData) {
+        allProfiles = [...allProfiles, ...batchData]
+        console.log(`CDP Batch ${i + 1}/${batches} fetched: ${batchData.length} records. Total: ${allProfiles.length}`)
+      }
+    }
+    
+    console.log(`Total CDP profiles fetched: ${allProfiles.length}`)
+    console.log(`Sample profile status values:`, allProfiles.slice(0, 5).map(p => ({ id: p.id, status: p.status, mobile: p.mobile })))
+    return { data: allProfiles, error: null, count: totalCount }
   } catch (error: any) {
     console.error("Profiles API error:", error)
     return { data: [], error: error.message || "Failed to fetch profiles" }
@@ -514,7 +539,9 @@ export const getCustomFieldsSchema = async () => {
     // Transform the data into the expected format
     const schema: Record<string, any> = {}
     
+    console.log(`Found ${fieldDefinitions?.length || 0} field definitions`)
     fieldDefinitions?.forEach((field) => {
+      console.log(`Processing field: key="${field.key}", type="${field.type}", label="${field.label}"`)
       schema[field.key] = {
         key: field.key,
         label: field.label,

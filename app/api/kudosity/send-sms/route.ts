@@ -3,29 +3,41 @@ import { createClient } from '@/lib/auth/server'
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('SMS API: Starting request processing')
+    
     // Verify authentication
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
+    console.log('SMS API: Auth check:', { userId: user?.id, authError })
+    
     if (authError || !user) {
+      console.error('SMS API: Auth failed:', authError)
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized', details: authError?.message },
         { status: 401 }
       )
     }
 
     const body = await request.json()
     const { recipient, message, sender, messageRef, trackLinks } = body
+    
+    console.log('SMS API: Request body:', { recipient, sender, messageLength: message?.length, trackLinks })
 
     // Validate required fields
     if (!recipient || !message) {
+      console.error('SMS API: Missing required fields')
       return NextResponse.json(
         { error: 'Recipient and message are required' },
         { status: 400 }
       )
     }
 
+    // Generate message reference if not provided
+    const finalMessageRef = messageRef || `sms_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
     // Log the message to database first
+    console.log('SMS API: Inserting message to database')
     const { data: messageRecord, error: dbError } = await supabase
       .from('message_history')
       .insert({
@@ -34,6 +46,7 @@ export async function POST(request: NextRequest) {
         message,
         sender: sender || 'KUDOSITY',
         status: 'pending',
+        message_ref: finalMessageRef,
         segments: Math.ceil(message.length / 160),
         track_links: trackLinks !== false,
         created_at: new Date().toISOString(),
@@ -42,12 +55,31 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (dbError) {
-      console.error('Failed to log message:', dbError)
+      console.error('SMS API: Failed to log message to database:', dbError)
+      // Return error response if database insert fails
+      return NextResponse.json(
+        { 
+          error: 'Failed to log message', 
+          details: dbError.message,
+          code: dbError.code 
+        },
+        { status: 500 }
+      )
     }
+    
+    console.log('SMS API: Message logged to database:', { id: messageRecord?.id })
 
     try {
       // Use the v2 API as shown in the MCP server
-      const apiKey = process.env.KUDOSITY_API_KEY || '53ec769b09dd4331797240f0c7be430f'
+      const apiKey = process.env.KUDOSITY_API_KEY
+      
+      if (!apiKey) {
+        console.error('SMS API: Kudosity API key not configured')
+        return NextResponse.json(
+          { error: 'Kudosity API key not configured in environment' },
+          { status: 500 }
+        )
+      }
       
       console.log('Sending SMS via Kudosity v2 API:', { 
         recipient, 
@@ -63,7 +95,7 @@ export async function POST(request: NextRequest) {
         recipient: cleanRecipient,
         message: message,
         sender: String(sender || 'KUDOSITY'), // Ensure sender is always a string
-        message_ref: messageRef || `sms_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        message_ref: finalMessageRef,
         track_links: trackLinks !== false
       }
       
@@ -107,6 +139,7 @@ export async function POST(request: NextRequest) {
             .update({ 
               status: 'sent',
               message_id: messageId,
+              external_id: messageId,
               sent_at: new Date().toISOString(),
               cost: sendResult.cost || Math.ceil(message.length / 160) * 0.05
             })

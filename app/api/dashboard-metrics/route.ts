@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase"
 export async function GET() {
   try {
     // Get total profiles count
-    const { count: profilesCount } = await supabase.from("profiles").select("*", { count: "exact", head: true })
+    const { count: profilesCount } = await supabase.from("cdp_profiles").select("*", { count: "exact", head: true })
 
     // Get total campaigns count
     const { count: campaignsCount } = await supabase.from("campaigns").select("*", { count: "exact", head: true })

@@ -20,7 +20,7 @@ import {
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { segmentsApi, type Segment } from "@/api/segments-api"
+import { segmentsApi, type Segment } from "@/lib/api/segments-api"
 import { profilesApi } from "@/lib/api/profiles-api"
 import { useToast } from "@/components/ui/use-toast"
 import { LoadingSection } from "@/components/ui/loading"
@@ -52,10 +52,77 @@ const evaluateCondition = (profile: any, condition: any): boolean => {
     return false
   }
 
+  // Special handling for boolean fields
+  if (typeof fieldValue === 'boolean') {
+    // Convert the filter value to boolean for comparison
+    let compareValue = value
+    if (value === 'Yes' || value === 'yes' || value === 'true' || value === true || value === '1') {
+      compareValue = true
+    } else if (value === 'No' || value === 'no' || value === 'false' || value === false || value === '0') {
+      compareValue = false
+    }
+    
+    switch (operator) {
+      case 'equals':
+      case 'is':
+        return fieldValue === compareValue
+      case 'not_equals':
+      case 'is not':
+        return fieldValue !== compareValue
+      default:
+        return fieldValue === compareValue
+    }
+  }
+  
+  // Also handle when the field value is a string "true"/"false" but should be treated as boolean
+  if (field.includes('is_') || field.includes('has_')) {
+    const fieldStr = String(fieldValue).toLowerCase()
+    const valueStr = String(value).toLowerCase()
+    
+    // Normalize boolean strings
+    const normalizedField = (fieldStr === 'true' || fieldStr === 'yes' || fieldStr === '1') ? 'true' : 
+                           (fieldStr === 'false' || fieldStr === 'no' || fieldStr === '0') ? 'false' : fieldStr
+    const normalizedValue = (valueStr === 'true' || valueStr === 'yes' || valueStr === '1') ? 'true' : 
+                           (valueStr === 'false' || valueStr === 'no' || valueStr === '0') ? 'false' : valueStr
+    
+    if (operator === 'equals' || operator === 'is') {
+      return normalizedField === normalizedValue
+    } else if (operator === 'not_equals' || operator === 'is not') {
+      return normalizedField !== normalizedValue
+    }
+  }
+
+  // Special handling for status field - always compare lowercase
+  if (field === 'status') {
+    const normalizedFieldValue = String(fieldValue).toLowerCase()
+    const normalizedValue = String(value).toLowerCase()
+    
+    switch (operator) {
+      case 'equals':
+      case 'is':
+        return normalizedFieldValue === normalizedValue
+      case 'not_equals':
+      case 'is not':
+        return normalizedFieldValue !== normalizedValue
+      case 'contains':
+        return normalizedFieldValue.includes(normalizedValue)
+      case 'not_contains':
+        return !normalizedFieldValue.includes(normalizedValue)
+      case 'starts_with':
+        return normalizedFieldValue.startsWith(normalizedValue)
+      case 'ends_with':
+        return normalizedFieldValue.endsWith(normalizedValue)
+      default:
+        return false
+    }
+  }
+
   switch (operator) {
     case 'equals':
+    case 'is':
       return String(fieldValue).toLowerCase() === String(value).toLowerCase()
     case 'not_equals':
+    case 'is not':
       return String(fieldValue).toLowerCase() !== String(value).toLowerCase()
     case 'contains':
       return String(fieldValue).toLowerCase().includes(String(value).toLowerCase())
@@ -110,7 +177,7 @@ const applySegmentFilter = (profiles: any[], filterCriteria: any): any[] => {
   let filtered = hasDeletedFilter 
     ? profiles 
     : profiles.filter(p => {
-        const stage = (p.lifecycle_stage || p.status || '').toLowerCase()
+        const stage = (p.status || '').toLowerCase()
         return stage !== 'deleted'
       })
   
@@ -146,8 +213,10 @@ const useSegments = () => {
       setError(null)
 
       // First fetch all profiles to calculate accurate counts
+      console.log('SegmentList: Fetching all profiles for count calculation...')
       const profilesResult = await profilesApi.getProfiles()
       const profiles = profilesResult.data || []
+      console.log(`SegmentList: Received ${profiles.length} profiles from API`)
 
       // Get custom segments from database
       const { data: customSegments, error: customError } = await segmentsApi.getSegments()
@@ -165,7 +234,8 @@ const useSegments = () => {
 
       const transformedSegments: SegmentWithStats[] = allSegments.map((segment) => ({
         ...segment,
-        profileCount: segment.filter_criteria ? applySegmentFilter(profiles, segment.filter_criteria).length : 0,
+        // Use cached profile_count from database, fallback to calculated count
+        profileCount: (segment as any).profile_count || (segment.filter_criteria ? applySegmentFilter(profiles, segment.filter_criteria).length : 0),
         messagesSent: 0, // This would come from actual message tracking
         revenue: 0, // This would come from actual revenue tracking
         filter: segment.filter_criteria ? JSON.stringify(segment.filter_criteria, null, 2) : "No filter criteria",

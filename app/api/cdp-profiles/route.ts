@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (status) {
-      query = query.eq('lifecycle_stage', status)
+      query = query.eq('status', status)
     }
 
     // Apply pagination

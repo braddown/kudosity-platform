@@ -132,6 +132,13 @@ export const navigationConfig: NavigationItem[] = [
         icon: FileText,
         path: "/logs",
         description: "System and activity logs"
+      },
+      {
+        id: "analytics",
+        label: "Analytics",
+        icon: BarChart3,
+        path: "/dashboards/analytics",
+        description: "Comprehensive analytics and insights"
       }
     ]
   },
@@ -192,18 +199,18 @@ export const navigationConfig: NavigationItem[] = [
         description: "Live chat with contacts"
       },
       {
-        id: "broadcast",
-        label: "Broadcast",
-        icon: Send,
-        path: "/broadcast",
-        description: "Send broadcast messages"
-      },
-      {
         id: "templates",
         label: "Templates",
         icon: FileText,
         path: "/templates",
         description: "Message templates"
+      },
+      {
+        id: "activity",
+        label: "Activity",
+        icon: BarChart3,
+        path: "/messaging/activity",
+        description: "Messaging activity and performance"
       }
     ]
   },
@@ -213,6 +220,20 @@ export const navigationConfig: NavigationItem[] = [
     icon: Target,
     description: "Campaign management and tracking",
     children: [
+      {
+        id: "broadcast",
+        label: "Broadcast",
+        icon: Send,
+        path: "/campaigns/broadcast",
+        description: "Send broadcast messages"
+      },
+      {
+        id: "reports",
+        label: "Reports",
+        icon: BarChart3,
+        path: "/campaigns/reports",
+        description: "Campaign performance reports"
+      },
       {
         id: "touchpoints",
         label: "Touchpoints",
@@ -226,13 +247,6 @@ export const navigationConfig: NavigationItem[] = [
         icon: Route,
         path: "/journeys",
         description: "Customer journey automation"
-      },
-      {
-        id: "activity",
-        label: "Activity",
-        icon: BarChart3,
-        path: "/campaigns/activity",
-        description: "Campaign activity and performance"
       }
     ]
   },

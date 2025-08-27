@@ -55,6 +55,18 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
+  
+  // API routes that should be accessible with authentication but not redirect to login
+  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
+  
+  // Debug logging for API routes
+  if (isApiRoute) {
+    console.log('Middleware: API route check:', {
+      path: request.nextUrl.pathname,
+      hasUser: !!user,
+      userId: user?.id
+    })
+  }
 
   // Public routes that don't require authentication
   const publicRoutes = [
@@ -66,14 +78,12 @@ export async function middleware(request: NextRequest) {
     '/auth/error',
     '/debug-account', // Temporary debug route
     '/auth/setup-account-alt', // Alternative setup page for debugging
+    '/kudosity/webhook', // Webhook endpoint for Kudosity
   ]
 
   const isPublicRoute = publicRoutes.some(route => 
     request.nextUrl.pathname.startsWith(route)
   )
-
-  // API routes that should be accessible with authentication but not redirect to login
-  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
   
   // If user is not authenticated and trying to access protected route
   if (!user && !isPublicRoute && !isApiRoute) {
@@ -90,6 +100,8 @@ export async function middleware(request: NextRequest) {
     '/api/force-logout',
     '/api/test-db',
     '/api/lists',  // Lists API handles its own auth
+    '/api/kudosity/webhook',  // Webhook endpoint for Kudosity
+    '/api/kudosity/test-webhook',  // Test webhook endpoint
   ]
   
   const isAllowedApiRoute = allowedApiRoutes.some(route => 
@@ -97,7 +109,8 @@ export async function middleware(request: NextRequest) {
   )
   
   if (!user && isApiRoute && !isAllowedApiRoute) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    console.log('Middleware: Blocking unauthorized API request:', request.nextUrl.pathname)
+    return NextResponse.json({ error: 'Unauthorized - No authenticated user found' }, { status: 401 })
   }
 
   // Check if user needs to set up account (but not if they're on setup pages or trying to logout)

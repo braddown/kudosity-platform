@@ -43,6 +43,12 @@ export function MessageHistory() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [refreshing, setRefreshing] = useState(false)
   
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
+  const [totalMessages, setTotalMessages] = useState(0)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  
   // Statistics
   const [stats, setStats] = useState({
     total: 0,
@@ -54,19 +60,45 @@ export function MessageHistory() {
   })
 
   useEffect(() => {
-    loadMessages()
-  }, [statusFilter])
+    loadMessages(1, false) // Load first page
+    
+    // Auto-refresh every 5 seconds to catch webhook updates
+    const interval = setInterval(() => {
+      loadMessages(1, false, true) // Pass true for auto-refresh
+    }, 5000)
+    
+    return () => clearInterval(interval)
+  }, [statusFilter, pageSize])
 
-  const loadMessages = async () => {
+  const loadMessages = async (page: number = 1, append: boolean = false, isAutoRefresh = false) => {
     try {
-      setLoading(true)
+      if (page === 1 && !isAutoRefresh) {
+        setLoading(true)
+      } else if (!isAutoRefresh) {
+        setIsLoadingMore(true)
+      }
+      
       const supabase = createClient()
       
+      // First get the total count
+      let countQuery = supabase
+        .from('message_history')
+        .select('*', { count: 'exact', head: true })
+      
+      if (statusFilter !== 'all') {
+        countQuery = countQuery.eq('status', statusFilter)
+      }
+      
+      const { count } = await countQuery
+      setTotalMessages(count || 0)
+      
+      // Then get the paginated data
+      const offset = (page - 1) * pageSize
       let query = supabase
         .from('message_history')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(100)
+        .range(offset, offset + pageSize - 1)
       
       if (statusFilter !== 'all') {
         query = query.eq('status', statusFilter)
@@ -76,35 +108,54 @@ export function MessageHistory() {
       
       if (error) throw error
       
-      setMessages(data || [])
+      if (append) {
+        setMessages(prev => [...prev, ...(data || [])])
+      } else {
+        setMessages(data || [])
+      }
       
-      // Calculate statistics
-      if (data) {
-        const stats = data.reduce((acc, msg) => {
-          acc.total++
-          if (msg.status === 'sent') acc.sent++
-          if (msg.status === 'delivered') acc.delivered++
-          if (msg.status === 'failed' || msg.status === 'bounced') acc.failed++
-          acc.clicks += msg.click_count || 0
-          acc.cost += msg.cost || 0
-          return acc
-        }, { total: 0, sent: 0, delivered: 0, failed: 0, clicks: 0, cost: 0 })
+      setCurrentPage(page)
+      
+      // Calculate statistics - fetch all for stats (or use a separate query)
+      if (!isAutoRefresh && page === 1) {
+        let statsQuery = supabase
+          .from('message_history')
+          .select('status, click_count, cost')
         
-        setStats(stats)
+        if (statusFilter !== 'all') {
+          statsQuery = statsQuery.eq('status', statusFilter)
+        }
+        
+        const { data: statsData } = await statsQuery
+        
+        if (statsData) {
+          const stats = statsData.reduce((acc, msg) => {
+            acc.total++
+            if (msg.status === 'sent') acc.sent++
+            if (msg.status === 'delivered') acc.delivered++
+            if (msg.status === 'failed' || msg.status === 'bounced') acc.failed++
+            acc.clicks += msg.click_count || 0
+            acc.cost += msg.cost || 0
+            return acc
+          }, { total: 0, sent: 0, delivered: 0, failed: 0, clicks: 0, cost: 0 })
+          
+          setStats(stats)
+        }
       }
       
     } catch (error) {
       console.error('Failed to load messages:', error)
     } finally {
-      setLoading(false)
-      // Ensure loading state is cleared even if component unmounts
-      setTimeout(() => setLoading(false), 100)
+      if (!isAutoRefresh) {
+        setLoading(false)
+        setIsLoadingMore(false)
+      }
     }
   }
 
   const handleRefresh = async () => {
     setRefreshing(true)
-    await loadMessages()
+    await loadMessages(1, false)
     setRefreshing(false)
   }
 
@@ -285,6 +336,146 @@ export function MessageHistory() {
               </TableBody>
             </Table>
           </div>
+          
+          {/* Pagination Controls */}
+          {totalMessages > 0 && (
+            <div className="flex items-center justify-between space-x-2 p-4 border-t">
+              <div className="flex items-center gap-4">
+                <Select 
+                  value={pageSize.toString()} 
+                  onValueChange={(value) => {
+                    setPageSize(Number(value))
+                    setCurrentPage(1)  // Reset to first page when changing page size
+                  }}
+                >
+                  <SelectTrigger className="w-20 h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">
+                  Showing {Math.min((currentPage - 1) * pageSize + 1, totalMessages)} to{" "}
+                  {Math.min(currentPage * pageSize, totalMessages)} of {totalMessages} messages
+                </span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (currentPage > 1) {
+                      loadMessages(currentPage - 1, false)
+                    }
+                  }}
+                  disabled={currentPage === 1 || isLoadingMore}
+                >
+                  Previous
+                </Button>
+
+                {/* Page numbers */}
+                {(() => {
+                  const totalPages = Math.ceil(totalMessages / pageSize)
+                  if (totalPages <= 7) {
+                    // Show all pages if 7 or fewer
+                    return Array.from({ length: totalPages }, (_, i) => {
+                      const page = i + 1
+                      return (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => loadMessages(page, false)}
+                          disabled={isLoadingMore}
+                        >
+                          {page}
+                        </Button>
+                      )
+                    })
+                  } else {
+                    // Show smart pagination for large datasets
+                    const pages = []
+                    
+                    // First page
+                    pages.push(
+                      <Button
+                        key={1}
+                        variant={currentPage === 1 ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => loadMessages(1, false)}
+                        disabled={isLoadingMore}
+                      >
+                        1
+                      </Button>
+                    )
+                    
+                    // Show ellipsis if current page is far from start
+                    if (currentPage > 4) {
+                      pages.push(<span key="ellipsis-start" className="px-2 text-muted-foreground">...</span>)
+                    }
+                    
+                    // Show pages around current page
+                    for (let i = -1; i <= 1; i++) {
+                      const page = currentPage + i
+                      if (page > 1 && page < totalPages) {
+                        pages.push(
+                          <Button
+                            key={page}
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => loadMessages(page, false)}
+                            disabled={isLoadingMore}
+                          >
+                            {page}
+                          </Button>
+                        )
+                      }
+                    }
+                    
+                    // Show ellipsis if current page is far from end
+                    if (currentPage < totalPages - 3) {
+                      pages.push(<span key="ellipsis-end" className="px-2 text-muted-foreground">...</span>)
+                    }
+                    
+                    // Last page
+                    if (totalPages > 1) {
+                      pages.push(
+                        <Button
+                          key={totalPages}
+                          variant={currentPage === totalPages ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => loadMessages(totalPages, false)}
+                          disabled={isLoadingMore}
+                        >
+                          {totalPages}
+                        </Button>
+                      )
+                    }
+                    
+                    return pages
+                  }
+                })()}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const totalPages = Math.ceil(totalMessages / pageSize)
+                    if (currentPage < totalPages) {
+                      loadMessages(currentPage + 1, false)
+                    }
+                  }}
+                  disabled={currentPage === Math.ceil(totalMessages / pageSize) || isLoadingMore}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

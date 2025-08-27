@@ -172,9 +172,9 @@ export const segmentsApi = {
   tagProfiles: async (profileIds: string[], tag: string) => {
     try {
       const supabase = createClient()
-      // Get current profiles to update their tags
+      // Get current CDP profiles to update their tags
       const { data: profiles, error: fetchError } = await supabase
-        .from("profiles")
+        .from("cdp_profiles")
         .select("id, tags")
         .in("id", profileIds)
 
@@ -194,7 +194,7 @@ export const segmentsApi = {
         }) || []
 
       if (updates.length > 0) {
-        const { error: updateError } = await supabase.from("profiles").upsert(updates)
+        const { error: updateError } = await supabase.from("cdp_profiles").upsert(updates)
 
         if (updateError) throw updateError
       }
@@ -277,8 +277,7 @@ export const segmentsApi = {
   getListMembers: async (listId: string) => {
     try {
       const supabase = createClient()
-      // For now, since we're using segments as lists, we'll get all profiles
-      // and filter them based on the segment's filter criteria
+      // Get the segment details first
       const segmentResult = await segmentsApi.getSegmentById(listId)
 
       if (segmentResult.error || !segmentResult.data) {
@@ -287,8 +286,11 @@ export const segmentsApi = {
 
       const segment = segmentResult.data
 
-      // Get all profiles
-      const { data: profiles, error } = await supabase.from("profiles").select("*")
+      // Get all profiles from the CDP profiles table
+      const { data: profiles, error } = await supabase
+        .from("cdp_profiles")
+        .select("*")
+        .order('created_at', { ascending: false })
 
       if (error) throw error
 
@@ -303,7 +305,16 @@ export const segmentsApi = {
         return { data: filteredProfiles }
       }
 
-      // Otherwise return all profiles (this could be enhanced with more sophisticated filtering)
+      // If the segment has filter criteria, apply it
+      // Note: This should ideally be done in the query itself for better performance
+      // but for now we'll filter in memory to match the BroadcastMessage component logic
+      if (segment.filter_criteria) {
+        // This filtering would need to be implemented based on the filter_criteria structure
+        // For now, return all profiles if no tag is specified
+        console.log("Segment has filter criteria but no tag, returning all profiles for now")
+      }
+
+      // Return all profiles if no specific filtering
       return { data: profiles || [] }
     } catch (error) {
       console.error("Error fetching list members:", error)

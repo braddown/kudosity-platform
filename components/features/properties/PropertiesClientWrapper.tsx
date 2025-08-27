@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { profilesApi } from "@/api/profiles-api"
+import { profilesApi } from "@/lib/api/profiles-api"
 import { DataTable } from "@/components/ui/data-table"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Plus } from "lucide-react"

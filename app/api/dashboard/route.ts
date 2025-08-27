@@ -5,7 +5,7 @@ export async function GET() {
   try {
     // Get basic dashboard statistics
     const [profilesResult, campaignsResult, logsResult] = await Promise.all([
-      supabase.from("profiles").select("*", { count: "exact", head: true }),
+      supabase.from("cdp_profiles").select("*", { count: "exact", head: true }),
       supabase.from("campaigns").select("*", { count: "exact", head: true }),
       supabase.from("logs").select("*").order("created_at", { ascending: false }).limit(5),
     ])

@@ -708,21 +708,35 @@ export default function ProfilesPage() {
             }
           })
 
-          // Convert to field options with default text type for custom fields
+          // Convert to field options with proper types
           const customFieldOptions: FieldDefinition[] = Array.from(customFieldKeys)
             .filter(key => {
               // Skip custom fields that duplicate built-in fields
               const normalizedKey = key.toLowerCase()
               return !availableFields.some(f => f.value.toLowerCase() === normalizedKey)
             })
-            .map((key) => ({
-            value: `custom_fields.${key}`,
-              label: key
-              .split("_")
-              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                .join(" ") + " (Custom)",
-              type: "text" as FieldType, // Default to text for custom fields
-          }))
+            .map((key) => {
+              // Determine field type based on naming convention
+              let fieldType: FieldType = "text"
+              
+              // Check if field name suggests boolean
+              if (key.startsWith('is_') || key.startsWith('has_') || key.includes('enabled') || key.includes('active')) {
+                fieldType = "boolean"
+              } else if (key.includes('date') || key.includes('time') || key.includes('_at')) {
+                fieldType = "date"
+              } else if (key.includes('count') || key.includes('number') || key.includes('amount') || key.includes('price') || key.includes('score')) {
+                fieldType = "number"
+              }
+              
+              return {
+                value: `custom_fields.${key}`,
+                label: key
+                  .split("_")
+                  .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                  .join(" ") + " (Custom)",
+                type: fieldType,
+              }
+            })
 
           setCustomFields(customFieldOptions)
           setAllAvailableFields([...availableFields, ...customFieldOptions])

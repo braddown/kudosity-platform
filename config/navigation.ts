@@ -13,7 +13,7 @@ export const navItems: NavItem[] = [
   {
     name: "Dashboards",
     icon: LayoutDashboard,
-    subitems: ["Overview", "Performance", "Logs"],
+    subitems: ["Overview", "Performance", "Logs", "Analytics"],
   },
   {
     name: "Audience",
@@ -23,12 +23,12 @@ export const navItems: NavItem[] = [
   {
     name: "Messaging",
     icon: MessageSquare,
-    subitems: ["Chat", "Broadcast", "Templates"],
+    subitems: ["Chat", "Templates", "Activity"],
   },
   {
     name: "Campaigns",
     icon: Target,
-    subitems: ["Touchpoints", "Journeys", "Activity"],
+    subitems: ["Broadcast", "Touchpoints", "Journeys"],
   },
   {
     name: "Automation",
@@ -51,7 +51,13 @@ export const navItems: NavItem[] = [
 export const getRouteFromSubitem = (subitem: string, parentName: string): string => {
   // Special cases for routes that don't follow the standard pattern
   const specialRoutes: Record<string, string> = {
-    Activity: "/campaigns/activity",
+    // Messaging routes
+    Activity: "/messaging/activity",
+    // Campaigns routes
+    Broadcast: "/campaigns/broadcast",
+    // Dashboard routes
+    Analytics: "/dashboards/analytics",
+    // Other routes
     "Data-Sources": "/data-sources",
     "Reply-Automation": "/reply-automation",
     "API-Keys": "/api-keys",

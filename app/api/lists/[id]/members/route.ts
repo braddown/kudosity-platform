@@ -185,10 +185,10 @@ export async function POST(
     
     console.log('List found:', listExists)
 
-    // Check which profiles exist
-    console.log('Checking profiles with IDs:', profile_ids)
+    // Check which CDP profiles exist
+    console.log('Checking CDP profiles with IDs:', profile_ids)
     const { data: existingProfiles, error: profilesError } = await supabase
-      .from('profiles')
+      .from('cdp_profiles')
       .select('id')
       .in('id', profile_ids)
 
@@ -310,7 +310,7 @@ export async function POST(
       for (const profileId of newProfileIds) {
         // Get current tags
         const { data: profile, error: getTagsError } = await supabase
-          .from('profiles')
+          .from('cdp_profiles')
           .select('tags')
           .eq('id', profileId)
           .single()
@@ -321,7 +321,7 @@ export async function POST(
             const updatedTags = [...currentTags, listTag]
             
             await supabase
-              .from('profiles')
+              .from('cdp_profiles')
               .update({ tags: updatedTags })
               .eq('id', profileId)
           }
@@ -404,7 +404,7 @@ export async function DELETE(
       for (const profileId of profile_ids) {
         // Get current tags
         const { data: profile, error: getTagsError } = await supabase
-          .from('profiles')
+          .from('cdp_profiles')
           .select('tags')
           .eq('id', profileId)
           .single()
@@ -413,7 +413,7 @@ export async function DELETE(
           const updatedTags = profile.tags.filter((tag: string) => tag !== listTag)
           
           await supabase
-            .from('profiles')
+            .from('cdp_profiles')
             .update({ tags: updatedTags })
             .eq('id', profileId)
         }
