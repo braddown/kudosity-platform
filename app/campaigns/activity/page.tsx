@@ -140,8 +140,8 @@ export default function CampaignActivityPage() {
   return (
     <MainLayout>
       <PageLayout
-        title="Campaign Reports"
-        description="View performance reports and analytics for all campaigns"
+        title="Campaign Activity"
+        description="View and manage all campaign activities and performance"
         actions={actions}
       >
         <div className="space-y-4">

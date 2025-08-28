@@ -206,11 +206,11 @@ export const navigationConfig: NavigationItem[] = [
         description: "Message templates"
       },
       {
-        id: "activity",
-        label: "Activity",
-        icon: BarChart3,
-        path: "/messaging/activity",
-        description: "Messaging activity and performance"
+        id: "logs",
+        label: "Logs",
+        icon: FileText,
+        path: "/messaging/logs",
+        description: "Message logs and history"
       }
     ]
   },
@@ -228,11 +228,11 @@ export const navigationConfig: NavigationItem[] = [
         description: "Send broadcast messages"
       },
       {
-        id: "reports",
-        label: "Reports",
+        id: "activity",
+        label: "Activity",
         icon: BarChart3,
-        path: "/campaigns/reports",
-        description: "Campaign performance reports"
+        path: "/campaigns/activity",
+        description: "Campaign activity and performance"
       },
       {
         id: "touchpoints",

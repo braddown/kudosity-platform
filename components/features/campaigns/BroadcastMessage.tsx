@@ -311,7 +311,7 @@ const applySegmentFilter = (profiles: any[], filterCriteria: any): any[] => {
   return filtered
 }
 
-const BroadcastMessage = forwardRef<{ save: () => Promise<void> }>((props, ref) => {
+const BroadcastMessage = forwardRef<{ saveDraft: () => Promise<void> }>((props, ref) => {
   const [message, setMessage] = useState(`Type your message here...
 
 Opt-out reply STOP`)
@@ -425,10 +425,50 @@ Opt-out reply STOP`)
     loadData()
   }, [])
 
+  // Calculate total contacts from selected audiences
+  const totalContacts = selectedAudiences.reduce((sum, audienceName) => {
+    return sum + (audienceCounts[audienceName] || 0)
+  }, 0)
+
   useImperativeHandle(ref, () => ({
-    save: async () => {
-      console.log("Saving broadcast message...")
-      return Promise.resolve()
+    saveDraft: async () => {
+      console.log("Saving broadcast campaign as draft...")
+      
+      // Create campaign object
+      const campaignData = {
+        name: `Broadcast to ${selectedAudiences.join(", ")} - ${new Date().toLocaleDateString()}`,
+        type: "broadcast",
+        status: "Draft",  // Capital D to match DB constraint
+        channel: "sms",
+        audience_ids: selectedAudiences,
+        message_content: message,
+        sender_id: senderID,
+        track_links: trackLinks,
+        schedule_type: scheduleType,
+        scheduled_at: scheduleType === "scheduled" ? scheduledDate : null,
+        scheduled_time: scheduleType === "scheduled" ? scheduledTime : null,
+        estimated_recipients: totalContacts
+      }
+      
+      try {
+        // Save to campaigns table via API
+        const response = await fetch('/api/campaigns', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(campaignData)
+        })
+        
+        if (!response.ok) {
+          throw new Error('Failed to save draft')
+        }
+        
+        console.log("Draft saved successfully")
+      } catch (error) {
+        console.error("Error saving draft:", error)
+        throw error
+      }
     },
   }))
 
@@ -681,17 +721,12 @@ Opt-out reply STOP` ? 'Test message from Kudosity platform' : message
     setSplitMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, content: newContent } : msg)))
   }
 
-  // Calculate total contacts from selected audiences
-  const totalContacts = selectedAudiences.reduce((sum, audienceName) => {
-    return sum + (audienceCounts[audienceName] || 0)
-  }, 0)
-
   return (
     <div className="flex flex-col w-full min-h-screen overflow-x-auto">
       <div className="flex flex-col xl:flex-row w-full gap-6">
         {/* Left side - form content */}
         <div className="w-full xl:w-[70%]">
-          <div className="w-full max-w-6xl mx-auto">
+          <div className="w-full">
             <FormLayout columns={1}>
               {/* Audience Selection */}
               <FormSection

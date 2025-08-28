@@ -1,52 +1,68 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useRef, useState } from "react"
+import { useRef, useState, useEffect } from "react"
 import { X } from "lucide-react"
 import MainLayout from "@/components/MainLayout"
-import { BroadcastMessage } from "@/features/campaigns"
+import { BroadcastMessageEnhanced } from "@/components/features/campaigns/BroadcastMessageEnhancedOrdered"
 import PageLayout from "@/components/layouts/PageLayout"
 
 export default function BroadcastPage() {
   const router = useRouter()
-  const formRef = useRef<{ save: () => Promise<void> }>(null)
+  const formRef = useRef<{ 
+    saveDraft: () => Promise<void>,
+    canSaveDraft: () => boolean 
+  }>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [canSave, setCanSave] = useState(false)
 
-  const handleSave = async () => {
-    if (formRef.current) {
+  // Poll for form state changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (formRef.current) {
+        setCanSave(formRef.current.canSaveDraft())
+      }
+    }, 500)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleSaveDraft = async () => {
+    if (formRef.current && formRef.current.canSaveDraft()) {
       setIsSaving(true)
       try {
-        await formRef.current.save()
-        // Optionally show success message or navigate
+        await formRef.current.saveDraft()
+        router.push("/campaigns/activity")
+      } catch (error) {
+        console.error("Failed to save draft:", error)
       } finally {
         setIsSaving(false)
       }
     }
   }
 
-  const handleCancel = () => {
-    router.push("/")
+  const handleClose = () => {
+    router.push("/campaigns/activity")
   }
-
+  
   return (
     <MainLayout>
       <PageLayout
-        title="Broadcast Message"
-        showBackButton={true}
-        backHref="/"
+        title="Broadcast Campaign"
         actions={[
           {
-            label: isSaving ? "Saving..." : "Save",
-            onClick: handleSave,
+            label: isSaving ? "Saving..." : "Save Draft",
+            onClick: handleSaveDraft,
+            disabled: !canSave || isSaving,
           },
           {
             icon: <X className="h-4 w-4" />,
-            onClick: handleCancel,
+            onClick: handleClose,
             variant: "ghost",
           },
         ]}
       >
-        <BroadcastMessage ref={formRef} />
+        <BroadcastMessageEnhanced ref={formRef} />
       </PageLayout>
     </MainLayout>
   )

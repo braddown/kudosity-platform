@@ -3,12 +3,19 @@ import { Battery, Wifi } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 
+interface SplitMessage {
+  content: string
+  delay_seconds: number
+  wait_for_delivery: boolean
+}
+
 interface PhonePreviewProps {
   message: string
   senderID?: string
   showTestInput?: boolean
   showPreviewInfo?: boolean
   className?: string
+  splitMessages?: SplitMessage[]
 }
 
 export default function PhonePreview({
@@ -17,9 +24,10 @@ export default function PhonePreview({
   showTestInput = false,
   showPreviewInfo = true,
   className = "",
+  splitMessages = [],
 }: PhonePreviewProps) {
-  const messageLength = message.length
-  const smsCount = Math.ceil(messageLength / 160) || 1
+  const totalLength = message.length + splitMessages.reduce((acc, msg) => acc + msg.content.length, 0)
+  const totalSmsCount = Math.ceil(message.length / 160) + splitMessages.reduce((acc, msg) => acc + Math.ceil(msg.content.length / 160), 0) || 1
 
   return (
     <div className={`w-full ${className}`}>
@@ -53,10 +61,10 @@ export default function PhonePreview({
               </div>
 
               {/* Messages Area */}
-              <div className="flex-1 px-6 py-4 space-y-4">
+              <div className="flex-1 px-6 py-4 space-y-4 overflow-y-auto">
                 <p className="text-slate-400 text-xs text-center">Text Message</p>
 
-                {/* Message Bubble */}
+                {/* Main Message Bubble */}
                 <div className="flex justify-end">
                   <div className="max-w-[80%]">
                     <div className="bg-blue-500 text-white rounded-2xl rounded-br-md px-4 py-3 shadow-lg">
@@ -67,6 +75,32 @@ export default function PhonePreview({
                     <p className="text-slate-400 text-xs mt-1 text-right">2:26 PM</p>
                   </div>
                 </div>
+
+                {/* Split Messages */}
+                {splitMessages.map((splitMsg, index) => (
+                  <div key={index}>
+                    {/* Delay indicator */}
+                    <div className="flex justify-center my-2">
+                      <div className="text-slate-500 text-xs px-2 py-1 bg-slate-700/50 rounded-full">
+                        {splitMsg.delay_seconds}s delay{splitMsg.wait_for_delivery ? ' after delivery' : ''}
+                      </div>
+                    </div>
+                    
+                    {/* Split message bubble */}
+                    <div className="flex justify-end">
+                      <div className="max-w-[80%]">
+                        <div className="bg-blue-500 text-white rounded-2xl rounded-br-md px-4 py-3 shadow-lg">
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                            {splitMsg.content || `Message ${index + 2} content...`}
+                          </p>
+                        </div>
+                        <p className="text-slate-400 text-xs mt-1 text-right">
+                          2:{26 + index + 1} PM
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
 
               {/* Test Input Area */}
@@ -93,9 +127,15 @@ export default function PhonePreview({
         <div className="mt-6 text-center">
           <h4 className="font-semibold text-sm text-foreground mb-2">Message Preview</h4>
           <div className="flex justify-center space-x-4 text-xs text-muted-foreground">
-            <span>{messageLength} characters</span>
+            <span>{totalLength} characters</span>
             <span>•</span>
-            <span>{smsCount} SMS</span>
+            <span>{totalSmsCount} SMS</span>
+            {splitMessages.length > 0 && (
+              <>
+                <span>•</span>
+                <span>{splitMessages.length + 1} messages</span>
+              </>
+            )}
           </div>
         </div>
       )}

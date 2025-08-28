@@ -23,6 +23,7 @@ export interface Segment {
     searchTerm?: string
   }
   estimated_size?: number
+  profile_count?: number
   auto_update?: boolean
   type?: string
   shared?: boolean
