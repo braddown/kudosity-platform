@@ -22,120 +22,74 @@ export async function GET(request: NextRequest) {
       }, { status: 401 })
     }
 
-    // Get API credentials from environment
-    const apiKey = process.env.KUDOSITY_API_KEY
-    const apiSecret = process.env.KUDOSITY_API_SECRET
-    
-    console.log('Fetching senders for user:', user.id)
-    console.log('API Key configured:', !!apiKey)
-    console.log('API Secret configured:', !!apiSecret)
-    
-    if (!apiKey || !apiSecret) {
-      console.error('Missing Kudosity credentials - Key:', !!apiKey, 'Secret:', !!apiSecret)
+    // Get user's account
+    const { data: accountMember } = await supabase
+      .from('account_members')
+      .select('account_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!accountMember?.account_id) {
       return NextResponse.json({ 
-        error: 'Kudosity API credentials not configured. Please set KUDOSITY_API_KEY and KUDOSITY_API_SECRET in .env.local',
+        error: 'No account found for user',
+        senders: [] 
+      }, { status: 400 })
+    }
+
+    console.log('Fetching senders for account:', accountMember.account_id)
+
+    // Fetch senders from database
+    const { data: senders, error: sendersError } = await supabase
+      .from('senders')
+      .select('*')
+      .eq('account_id', accountMember.account_id)
+      .order('type', { ascending: true })
+      .order('created_at', { ascending: true })
+
+    if (sendersError) {
+      console.error('Error fetching senders from database:', sendersError)
+      return NextResponse.json({ 
+        error: 'Failed to fetch senders from database',
+        details: sendersError.message,
         senders: [] 
       }, { status: 500 })
     }
 
-    // Fetch sender IDs from Kudosity
-    const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')
-    
-    const allNumbers: any[] = []
-    
-    // First try to get owned numbers
-    let ownedUrl = `https://api.transmitsms.com/get-numbers.json?filter=owned&page=1&max=100`
-    console.log(`Fetching owned numbers from Kudosity...`)
-    
-    const ownedResponse = await fetch(ownedUrl, {
-      headers: {
-        'Authorization': `Basic ${auth}`,
-        'Accept': 'application/json',
-      },
-    })
-
-    if (ownedResponse.ok) {
-      const ownedData = await ownedResponse.json()
-      console.log('Owned numbers response:', { 
-        hasNumbers: !!ownedData.numbers, 
-        count: ownedData.numbers?.length || 0,
-        numbers_total: ownedData.numbers_total
-      })
-      
-      // If we have owned numbers in the array, use them
-      if (ownedData.numbers && Array.isArray(ownedData.numbers) && ownedData.numbers.length > 0) {
-        allNumbers.push(...ownedData.numbers)
-      } 
-      // If the API says there are owned numbers but doesn't return them (API bug),
-      // we need to fetch all and filter
-      else if (ownedData.numbers_total > 0) {
-        console.log('Owned numbers exist but not returned, fetching all numbers to find owned ones...')
-        
-        // Get all numbers and we'll filter for owned ones
-        // Note: In the real world, we'd need a way to identify which are owned
-        // For now, we'll get the first page of all numbers as a workaround
-        const allUrl = `https://api.transmitsms.com/get-numbers.json?filter=all&page=1&max=10`
-        const allResponse = await fetch(allUrl, {
-          headers: {
-            'Authorization': `Basic ${auth}`,
-            'Accept': 'application/json',
-          },
-        })
-        
-        if (allResponse.ok) {
-          const allData = await allResponse.json()
-          if (allData.numbers && Array.isArray(allData.numbers)) {
-            // Take the first few numbers as potential owned numbers
-            // This is a workaround for the API bug
-            allNumbers.push(...allData.numbers.slice(0, 5))
-          }
-        }
-      }
-    } else if (ownedResponse.status === 401) {
-      return NextResponse.json({ 
-        error: 'Invalid Kudosity API credentials. Please check your API key and secret.',
-        senders: [] 
-      }, { status: 401 })
-    }
-
-    // Format the response
-    const formattedSenders = allNumbers.map((num) => ({
-      number: num.number,
-      type: num.type || 'MOBILE',
-      country: num.country,
-      capabilities: num.capabilities || [],
+    // Format the response to match the expected format
+    const formattedSenders = (senders || []).map((sender) => ({
+      id: sender.id,
+      sender_id: sender.sender_id,
+      number: sender.sender_id, // Keep for backward compatibility
+      display_name: sender.display_name,
+      description: sender.description,
+      type: sender.type,
+      country: sender.country,
+      country_name: sender.country_name,
+      capabilities: sender.capabilities || ['SMS'],
+      status: sender.status,
+      approval_status: sender.approval_status,
+      use_case: sender.use_case,
+      price: sender.price,
+      next_charge: sender.next_charge,
+      auto_renew: sender.auto_renew,
+      source: sender.source,
+      last_synced_at: sender.last_synced_at
     }))
 
-    // Add alphanumeric sender if configured
-    if (process.env.KUDOSITY_ALPHANUMERIC_SENDER) {
-      formattedSenders.unshift({
-        number: process.env.KUDOSITY_ALPHANUMERIC_SENDER,
-        type: 'ALPHANUMERIC',
-        country: null,
-        capabilities: ['SMS'],
-      })
-    }
-    
-    // If no senders found, return an error
-    if (formattedSenders.length === 0) {
-      console.error('No sender IDs found from Kudosity API')
-      return NextResponse.json({ 
-        error: 'No sender IDs configured in your Kudosity account. Please configure sender IDs in Kudosity first.',
-        senders: [] 
-      }, { status: 404 })
-    }
-
-    console.log(`Returning ${formattedSenders.length} sender IDs`)
+    console.log(`Returning ${formattedSenders.length} senders from database`)
     
     return NextResponse.json({ 
       senders: formattedSenders,
-      count: formattedSenders.length 
+      count: formattedSenders.length,
+      needs_sync: senders?.some(s => s.sync_status === 'needs_sync') || false,
+      timestamp: new Date().toISOString()
     })
     
   } catch (error) {
-    console.error('Error fetching sender IDs:', error)
+    console.error('Error fetching senders:', error)
     return NextResponse.json({ 
-      error: 'Failed to fetch sender IDs',
+      error: 'Failed to fetch senders',
+      details: error instanceof Error ? error.message : 'Unknown error',
       senders: [] 
     }, { status: 500 })
   }

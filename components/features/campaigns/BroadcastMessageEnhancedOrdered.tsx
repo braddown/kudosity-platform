@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { FormLayout, FormSection, FormField } from "@/components/ui/form-layout"
-import { Plus, Minus, Save, Loader2, Link2, Clock, Send, SplitSquareVertical, X, Check, ChevronsUpDown, Search } from "lucide-react"
+import { Plus, Minus, Save, Loader2, Link2, Clock, Send, SplitSquareVertical, X, Check, ChevronsUpDown, Search, RefreshCw } from "lucide-react"
 import { SelectGroup, SelectLabel } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
@@ -32,6 +32,17 @@ interface Template {
   content: string
   split_messages?: SplitMessage[]
   variables?: string[]
+}
+
+interface Sender {
+  id: string
+  sender_id: string
+  display_name: string
+  description: string
+  type: 'virtual_number' | 'alphanumeric' | 'mobile_number'
+  status: 'active' | 'inactive' | 'pending' | 'expired'
+  source: 'kudosity_api' | 'manual' | 'imported'
+  use_case: 'marketing' | 'transactional' | 'private' | 'otp'
 }
 
 interface SplitMessage {
@@ -176,7 +187,7 @@ export const BroadcastMessageEnhanced = forwardRef<
 
   const [templates, setTemplates] = useState<Template[]>([])
   const [segments, setSegments] = useState<Segment[]>([])
-  const [senderIDs, setSenderIDs] = useState<string[]>([])
+  const [senders, setSenders] = useState<Sender[]>([])
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false)
   const [isSavingTemplate, setIsSavingTemplate] = useState(false)
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
@@ -194,12 +205,16 @@ export const BroadcastMessageEnhanced = forwardRef<
 
   // Set default sender when senders are loaded
   useEffect(() => {
-    if (senderIDs.length > 0 && !formData.senderID) {
-      // Set the first sender as default
-      // TODO: In the future, this should come from account settings
-      setFormData(prev => ({ ...prev, senderID: senderIDs[0] }))
+    if (senders.length > 0 && !formData.senderID) {
+      // Set the first active marketing sender as default
+      const defaultSender = senders.find(s => 
+        s.status === 'active' && s.use_case === 'marketing'
+      )
+      if (defaultSender) {
+        setFormData(prev => ({ ...prev, senderID: defaultSender.sender_id }))
+      }
     }
-  }, [senderIDs])
+  }, [senders])
 
   // Calculate total contacts when audiences change
   useEffect(() => {
@@ -219,16 +234,33 @@ export const BroadcastMessageEnhanced = forwardRef<
     }
   }
 
-  const fetchSenders = async () => {
+  const fetchSenders = async (forceRefresh = false) => {
     try {
-      const response = await fetch("/api/kudosity/senders")
+      // Auto-sync with Kudosity silently
+      try {
+        await fetch("/api/senders/sync", { method: 'POST' })
+      } catch (error) {
+        console.error("Auto-sync failed:", error)
+        // Continue even if sync fails
+      }
+      
+      // Add timestamp to prevent caching when force refreshing
+      const url = forceRefresh 
+        ? `/api/kudosity/senders?t=${Date.now()}`
+        : "/api/kudosity/senders"
+      
+      const response = await fetch(url, {
+        cache: forceRefresh ? 'no-cache' : 'default'
+      })
+      
       if (response.ok) {
         const data = await response.json()
-        setSenderIDs(data.senderIDs || [])
+        console.log('Fetched senders for broadcast:', data.senders?.length || 0, 'senders')
+        setSenders(data.senders || [])
       }
     } catch (error) {
       console.error("Error fetching senders:", error)
-      toast.error("Failed to load sender IDs")
+      toast.error("Failed to load senders")
     }
   }
 
@@ -443,8 +475,8 @@ export const BroadcastMessageEnhanced = forwardRef<
 
   return (
     <>
-      <div className="flex gap-6">
-        <div className="flex-1">
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex-1 min-w-0">
           <FormLayout>
             {/* STEP 1: Audience Selection */}
             <FormSection title="1. Audience Selection" description="Choose which segments will receive your broadcast">
@@ -489,30 +521,57 @@ export const BroadcastMessageEnhanced = forwardRef<
               </div>
             </FormSection>
 
-            {/* STEP 2: Sender Configuration */}
-            <FormSection title="2. Sender Configuration" description="Select which number to send from">
-              <div className="space-y-4">
-                <FormField label="Sender ID" required>
+
+
+            {/* STEP 2: Sender Selection */}
+            <FormSection title="2. Sender" description="Choose who the message will be sent from">
+              <FormField label="From" required>
+                <div className="flex items-center gap-2">
                   <Select
                     value={formData.senderID}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, senderID: value }))}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a sender ID" />
+                    <SelectTrigger className="flex-1 bg-background">
+                      <SelectValue placeholder="Select sender" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {senderIDs.map((id) => (
-                        <SelectItem key={id} value={id}>
-                          {id}
+                                            <SelectContent>
+                          {senders.filter(s => s.status === 'active' && s.use_case === 'marketing').map((sender) => (
+                        <SelectItem key={`${sender.id}-${sender.description}`} value={sender.sender_id}>
+                          <div className="flex flex-col w-full min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium truncate">{sender.sender_id}</span>
+                              <Badge variant="secondary" className="text-xs shrink-0">
+                                {sender.type === 'virtual_number' ? 'Virtual' : 
+                                 sender.type === 'alphanumeric' ? 'Alpha' : 
+                                 sender.type === 'mobile_number' ? 'Mobile' : 'Custom'}
+                              </Badge>
+                            </div>
+                            {sender.description && (
+                              <span className="text-xs text-muted-foreground truncate max-w-[250px]" title={sender.description}>
+                                {sender.description}
+                              </span>
+                            )}
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Default sender from your account settings. Change if sending to a different region.
-                  </p>
-                </FormField>
-              </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => fetchSenders(true)}
+                    className="h-10 w-10 p-0 shrink-0"
+                    title="Refresh senders"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
+                {senders.filter(s => s.status === 'active' && s.use_case === 'marketing').length === 0 && (
+                  <div className="text-sm text-muted-foreground mt-2">
+                    No marketing senders found. <a href="/settings/senders" className="text-primary hover:underline">Add a sender ID</a> and set the use case to "Marketing".
+                  </div>
+                )}
+              </FormField>
             </FormSection>
 
             {/* STEP 3: Message Content */}
@@ -524,6 +583,7 @@ export const BroadcastMessageEnhanced = forwardRef<
                 </TabsList>
 
                 <TabsContent value="compose" className="space-y-4">
+
                   <FormField label="Compose Your Message Sequence" required>
                     <div className="space-y-1">
                       <Textarea
@@ -704,7 +764,7 @@ export const BroadcastMessageEnhanced = forwardRef<
               </Tabs>
             </FormSection>
 
-            {/* STEP 4: Scheduling */}
+            {/* STEP 3: Scheduling */}
             <FormSection title="4. Scheduling & Delivery" description="Choose when and how to send your broadcast">
               <div className="space-y-4">
                 <FormField label="Send Options">
@@ -867,9 +927,9 @@ export const BroadcastMessageEnhanced = forwardRef<
           </FormLayout>
         </div>
 
-        {/* Phone Preview - Fixed on the right */}
-        <div className="hidden lg:block w-80">
-          <div className="sticky top-4">
+        {/* Phone Preview - Responsive */}
+        <div className="w-full lg:w-80 lg:shrink-0">
+          <div className="lg:sticky lg:top-4">
             <PhonePreview 
               message={processTrackLinks(formData.message, formData.trackLinks)}
               senderID={formData.senderID}

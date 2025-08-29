@@ -53,3 +53,4 @@ FROM message_link_clicks
 ORDER BY clicked_at DESC 
 LIMIT 10;
 
+
