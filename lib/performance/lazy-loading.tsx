@@ -318,10 +318,6 @@ export const LazyPageComponents = {
   ProfilePage: createDynamicComponent(
     () => import('@/components/features/profiles/ProfilePage'),
     { name: 'ProfilePage', loading: () => <LoadingState variant="page" count={3} /> }
-  ),
-  BroadcastMessage: createDynamicComponent(
-    () => import('@/components/features/campaigns').then(mod => ({ default: mod.BroadcastMessage })),
-    { name: 'BroadcastMessage', loading: () => <LoadingState variant="page" count={2} /> }
   )
 }
 

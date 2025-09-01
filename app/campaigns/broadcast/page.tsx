@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { useRef, useState, useEffect } from "react"
 import { X } from "lucide-react"
 import MainLayout from "@/components/MainLayout"
-import { BroadcastMessageEnhanced } from "@/components/features/campaigns/BroadcastMessageEnhancedOrdered"
+import BroadcastMessageEnhancedOrdered from "@/components/features/campaigns/BroadcastMessageEnhancedOrdered"
 import PageLayout from "@/components/layouts/PageLayout"
 
 export default function BroadcastPage() {
@@ -62,7 +62,7 @@ export default function BroadcastPage() {
           },
         ]}
       >
-        <BroadcastMessageEnhanced ref={formRef} />
+        <BroadcastMessageEnhancedOrdered ref={formRef} />
       </PageLayout>
     </MainLayout>
   )
