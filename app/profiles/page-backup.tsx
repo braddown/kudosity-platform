@@ -25,8 +25,6 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ListSelectionDialog } from "@/components/features/lists/ListSelectionDialog"
 import { SegmentListDropdown } from "@/components/features/profiles/SegmentListDropdown"
-import { ProfileAdvancedFilters } from "@/components/features/profiles/ProfileAdvancedFilters"
-import { ProfileImportExport } from "@/components/features/profiles/ProfileImportExport"
 import { LoadingSection } from "@/components/ui/loading"
 
 interface Profile {
@@ -2141,22 +2139,199 @@ export default function ProfilesPage() {
             }} 
           />
 
-          {/* Advanced Filters */}
-          <ProfileAdvancedFilters
-            showInlineFilter={showInlineFilter}
-            onToggleInlineFilter={() => setShowInlineFilter(!showInlineFilter)}
-            filterGroups={filterGroups}
-            onFilterGroupsChange={setFilterGroups}
-            filteredProfilesCount={filteredProfiles.length}
-            selectedSegment={selectedSegment}
-            onClearFilters={clearFilters}
-            segmentName={segmentName}
-            onSegmentNameChange={setSegmentName}
-            onSaveSegment={saveAsSegment}
-            isSavingSegment={isSavingSegment}
-            segments={segments}
-            allAvailableFields={allAvailableFields}
-          />
+          {/* Inline Filter UI */}
+          {showInlineFilter && (
+            <div className="bg-card rounded-lg border border-border">
+              <div className="p-4 border-b border-border">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-lg font-semibold text-foreground">{filteredProfiles.length} Profiles</h2>
+                    {selectedSegment && (
+                      <Button
+                        onClick={clearFilters}
+                        variant="outline"
+                        className="h-10 flex items-center gap-2"
+                      >
+                        <X className="h-4 w-4" />
+                        Clear Segment
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder="Enter segment name"
+                      value={segmentName}
+                      onChange={(e) => setSegmentName(e.target.value)}
+                      className="w-[200px] h-10 bg-background border-border"
+                    />
+                    <Button
+                      onClick={saveAsSegment}
+                      disabled={!segmentName.trim() || !filterGroups.some(g => g.conditions.length > 0) || isSavingSegment}
+                      className="bg-blue-600 hover:bg-blue-700 text-white h-10"
+                    >
+                      {(() => {
+                        const selectedSegmentData = selectedSegment ? segments.find(s => s.id === selectedSegment) : null
+                        const isUpdating = selectedSegmentData && selectedSegmentData.name === segmentName
+                        if (isSavingSegment) return "Saving..."
+                        if (isUpdating) return "Update Segment"
+                        return "Save Segment"
+                      })()}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowInlineFilter(false)}
+                      className="h-10 w-10 hover:bg-accent"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {filterGroups.map((group, groupIndex) => (
+                    <div key={group.id}>
+                      {/* OR separator between groups */}
+                      {groupIndex > 0 && (
+                        <div className="flex items-center justify-center py-2 mb-4">
+                          <div className="flex-1 border-t border-border"></div>
+                          <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-medium rounded mx-3">
+                            OR
+                          </span>
+                          <div className="flex-1 border-t border-border"></div>
+                        </div>
+                      )}
+
+                      {/* Filter Group */}
+                      <div className="bg-accent/30 rounded-lg p-3 border border-border/50">
+                        <div className="flex items-center justify-between mb-2 pb-2 border-b border-border/50">
+                          <span className="text-sm font-medium text-foreground">
+                            Group {groupIndex + 1} {group.conditions.length > 1 && "(All conditions must match)"}
+                          </span>
+                          {filterGroups.length > 1 && (
+                      <Button
+                              variant="ghost"
+                        size="sm"
+                              onClick={() => removeFilterGroup(group.id)}
+                              className="h-7 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
+                      >
+                              <X className="h-3 w-3 mr-1" />
+                              Remove Group
+                      </Button>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          {/* Show Add AND button if group has no conditions */}
+                          {group.conditions.length === 0 && (
+                      <Button
+                              variant="outline"
+                        size="sm"
+                              onClick={() => addConditionToGroup(group.id)}
+                              className="flex items-center gap-1 h-10 px-3 hover:bg-accent"
+                      >
+                              <Plus className="h-3 w-3" />
+                              Add Condition
+                      </Button>
+                          )}
+                          
+                          {group.conditions.map((condition, conditionIndex) => (
+                            <div key={conditionIndex}>
+                              {/* AND separator within group */}
+                              {conditionIndex > 0 && (
+                        <div className="flex items-center justify-center py-1">
+                                  <span className="px-2 py-0.5 bg-muted text-muted-foreground text-xs font-medium rounded">
+                                    AND
+                          </span>
+                        </div>
+                      )}
+
+                              <div className="flex items-center gap-2">
+                      <Select
+                        value={condition.field}
+                                  onValueChange={(value) => updateConditionInGroup(group.id, conditionIndex, "field", value)}
+                      >
+                        <SelectTrigger className="w-[180px] h-10 bg-background border-border">
+                          <SelectValue placeholder="Select field" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px] overflow-y-auto bg-card border-border">
+                          {allAvailableFields.map((field) => (
+                            <SelectItem 
+                              key={field.value} 
+                              value={field.value} 
+                              className="text-foreground text-left"
+                            >
+                              <span className="block text-left w-full">{field.label}</span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select
+                        value={condition.operator}
+                                  onValueChange={(value) => updateConditionInGroup(group.id, conditionIndex, "operator", value)}
+                      >
+                                  <SelectTrigger className="w-[140px] h-10 bg-background border-border">
+                                    <SelectValue placeholder="Select operator" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-border">
+                                    {getOperatorsForField(condition.field).map((op) => (
+                                      <SelectItem key={op.value} value={op.value} className="text-foreground">
+                                        {op.label}
+                          </SelectItem>
+                                    ))}
+                        </SelectContent>
+                      </Select>
+
+                                {/* Render appropriate value input based on field type */}
+                                {renderFieldValueInput(condition, group.id, conditionIndex)}
+
+                                {/* Trash can right after the filter fields */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                                  onClick={() => removeConditionFromGroup(group.id, conditionIndex)}
+                                  className="text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 h-10 w-10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+
+                                {/* Add AND button right next to trash can for the last condition */}
+                                {conditionIndex === group.conditions.length - 1 && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => addConditionToGroup(group.id)}
+                                    className="flex items-center gap-1 h-10 px-3 hover:bg-accent"
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                    AND
+                      </Button>
+                  )}
+                </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Add new group button - centered */}
+                  <div className="flex justify-center pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                      onClick={addFilterGroup}
+                      className="flex items-center gap-1 h-10 px-4 hover:bg-accent"
+                  >
+                    <Plus className="h-4 w-4" />
+                      OR
+                  </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Profiles Table */}
           <div>
@@ -2422,7 +2597,8 @@ export default function ProfilesPage() {
           </div>
         </div>
 
-        {/* Export/Import dialogs replaced with ProfileImportExport component */}
+        {/* Export Dialog */}
+        {showExportDialog && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-card rounded-lg p-6 w-96 max-h-[80vh] overflow-y-auto border border-border">
               <h3 className="text-lg font-semibold mb-4 text-foreground">Export Profiles to CSV</h3>
@@ -2615,18 +2791,6 @@ export default function ProfilesPage() {
         onClose={() => setShowListDialog(false)}
         onConfirm={handleAddToList}
         profileCount={selectedProfiles.length}
-      />
-
-      {/* Import/Export Component */}
-      <ProfileImportExport
-        profiles={filteredProfiles}
-        selectedProfiles={selectedProfiles}
-        availableFields={availableFields}
-        customFields={customFields}
-        onProfilesUpdated={() => {
-          fetchProfiles()
-          fetchSegments()
-        }}
       />
     </MainLayout>
   )
