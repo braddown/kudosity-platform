@@ -224,531 +224,65 @@ export default function ProfilesPage() {
   const [isSavingSegment, setIsSavingSegment] = useState(false)
   const [selectedProfiles, setSelectedProfiles] = useState<Profile[]>([])
 
-  const [showImportDialog, setShowImportDialog] = useState(false)
-  const [showExportDialog, setShowExportDialog] = useState(false)
-  const [csvFile, setCsvFile] = useState<File | null>(null)
-  const [csvData, setCsvData] = useState<any[]>([])
-  const [csvHeaders, setCsvHeaders] = useState<string[]>([])
-  const [fieldMapping, setFieldMapping] = useState<Record<string, string>>({})
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [exportFields, setExportFields] = useState<string[]>([
-    "first_name",
-    "last_name",
-    "email",
-    "mobile",
-    "status",
-    "country",
-    "created_at",
-  ])
+  // Import/Export state removed - now handled by ProfileImportExport component
 
   const searchParams = useSearchParams()
   const listId = searchParams.get("listId")
   const [listName, setListName] = useState<string>("")
-
-  const [createSegmentFromImport, setCreateSegmentFromImport] = useState(true)
-  const [segmentNameFromImport, setSegmentNameFromImport] = useState("")
   const [showListDialog, setShowListDialog] = useState(false)
 
-  // CSV Export function
-  const exportToCSV = () => {
-    const dataToExport =
-      selectedProfiles.length > 0 ? selectedProfiles : filteredProfiles
-
-    const headers = exportFields.map((field) => availableFields.find((f) => f.value === field)?.label || field)
-
-    const csvContent = [
-      headers.join(","),
-      ...dataToExport.map((profile) =>
-        exportFields
-          .map((field) => {
-            let value = profile[field as keyof Profile]
-            if (field.startsWith("custom_fields.")) {
-              const customFieldKey = field.replace("custom_fields.", "")
-              value = profile.custom_fields?.[customFieldKey]
-            }
-            // Escape commas and quotes in CSV
-            if (typeof value === "string" && (value.includes(",") || value.includes('"'))) {
-              value = `"${value.replace(/"/g, '""')}"`
-            }
-            return value || ""
-          })
-          .join(","),
-      ),
-    ].join("\n")
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    const url = URL.createObjectURL(blob)
-    link.setAttribute("href", url)
-    link.setAttribute("download", `profiles_${new Date().toISOString().split("T")[0]}.csv`)
-    link.style.visibility = "hidden"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    setShowExportDialog(false)
-  }
-
-  // CSV Import functions
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file && file.type === "text/csv") {
-      setCsvFile(file)
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const text = e.target?.result as string
-        const lines = text.split("\n").filter((line) => line.trim())
-        const headers = lines[0].split(",").map((h) => h.trim().replace(/"/g, ""))
-        const data = lines.slice(1).map((line) => {
-          const values = line.split(",").map((v) => v.trim().replace(/"/g, ""))
-          const row: any = {}
-          headers.forEach((header, index) => {
-            row[header] = values[index] || ""
-          })
-          return row
-        })
-        setCsvHeaders(headers)
-        setCsvData(data)
-        setSegmentNameFromImport(file.name.replace(".csv", ""))
-
-        // Auto-map common fields
-        const autoMapping: Record<string, string> = {}
-        headers.forEach((header) => {
-          const lowerHeader = header.toLowerCase()
-          if (lowerHeader.includes("first") && lowerHeader.includes("name")) {
-            autoMapping[header] = "first_name"
-          } else if (lowerHeader.includes("last") && lowerHeader.includes("name")) {
-            autoMapping[header] = "last_name"
-          } else if (lowerHeader.includes("email")) {
-            autoMapping[header] = "email"
-          } else if (lowerHeader.includes("mobile") || lowerHeader.includes("phone") || lowerHeader === "msisdn") {
-            autoMapping[header] = "mobile"
-          } else if (lowerHeader.includes("country")) {
-            autoMapping[header] = "country"
-          } else if (lowerHeader.includes("status")) {
-            autoMapping[header] = "status"
-          } else if (lowerHeader.includes("custom") && lowerHeader.includes("id")) {
-            autoMapping[header] = "custom_id"
-          }
-        })
-        setFieldMapping(autoMapping)
-      }
-      reader.readAsText(file)
-    } else {
-      alert("Please select a valid CSV file")
-    }
-  }
-
-  const importCSV = async () => {
-    if (!csvData.length) return
-
-    setIsProcessing(true)
+  // Data loading functions
+  const fetchProfiles = async () => {
     try {
-      let successCount = 0 // New profiles created
-      let updatedCount = 0 // Existing profiles updated
-      let errorCount = 0
-      let skippedCount = 0
-      const errors: string[] = []
-      const skipped: string[] = []
-      const createdProfileIds: string[] = []
-      const updatedProfileIds: string[] = []
-
-      // Create the import tag for this batch
-      const importTag =
-        createSegmentFromImport && segmentNameFromImport.trim()
-          ? segmentNameFromImport.trim().toLowerCase().replace(/\s+/g, "_")
-          : null
-
-      for (const row of csvData) {
-        try {
-          const profileData: any = {
-            status: "Active",
-            updated_at: new Date().toISOString(),
-          }
-
-          // Map CSV fields to profile fields
-          Object.entries(fieldMapping).forEach(([csvField, profileField]) => {
-            if (row[csvField] && profileField !== "ignore") {
-              const value = row[csvField].trim() // Trim whitespace
-              if (value) {
-                // Only set if not empty after trimming
-                if (profileField.startsWith("custom_fields.")) {
-                  if (!profileData.custom_fields) profileData.custom_fields = {}
-                  const customFieldKey = profileField.replace("custom_fields.", "")
-                  profileData.custom_fields[customFieldKey] = value
-                } else {
-                  // Handle mobile number field variations
-                  if (profileField === "mobile_number") {
-                    profileData.mobile = value // Map mobile_number to mobile
-                  } else {
-                    profileData[profileField] = value
-                  }
-                }
-              }
-            }
-          })
-
-          // Validate and set default values for required fields
-          if (!profileData.first_name) {
-            profileData.first_name = "Unknown"
-          }
-
-          if (!profileData.last_name) {
-            profileData.last_name = "User"
-          }
-
-          // Check for mobile number (required unless custom_id is provided)
-          const hasMobileNumber =
-            profileData.mobile ||
-            profileData.phone ||
-            profileData.mobile_number ||
-            profileData.msisdn ||
-            // Also check if any mapped field contains mobile data
-            Object.entries(fieldMapping).some(([csvField, profileField]) => {
-              if (
-                (profileField === "mobile" || profileField === "phone" || profileField === "mobile_number") &&
-                row[csvField] &&
-                row[csvField].trim()
-              ) {
-                return true
-              }
-              return false
-            })
-
-          // Skip if no mobile number and no custom ID
-          if (!hasMobileNumber && !profileData.custom_id) {
-            skipped.push(
-              `Row ${successCount + updatedCount + errorCount + skippedCount + 1}: No mobile number or custom ID provided`,
-            )
-            skippedCount++
-            continue
-          }
-
-          // Handle email - set to NULL if empty or invalid, don't reject the row
-          if (profileData.email) {
-            // Validate email format if provided
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profileData.email)) {
-              // Set to NULL instead of rejecting the row
-              profileData.email = null
-            }
-          } else {
-            // Explicitly set to NULL if not provided
-            profileData.email = null
-          }
-
-          // Add import tag if segment creation is enabled
-          if (importTag) {
-            if (!profileData.tags) profileData.tags = []
-            if (!profileData.tags.includes(importTag)) {
-              profileData.tags.push(importTag)
-            }
-          }
-
-          // Check if profile exists by mobile number (if mobile is provided)
-          let existingProfile = null
-          if (profileData.mobile) {
-            existingProfile = profiles.find((p) => p.mobile === profileData.mobile)
-          }
-
-          if (existingProfile) {
-            // UPDATE EXISTING PROFILE
-            try {
-              // Merge new data with existing profile
-              const updateData = {
-                ...profileData,
-                id: existingProfile.id, // Keep the same ID
-                created_at: existingProfile.created_at, // Keep original creation date
-              }
-
-              // Merge custom fields if they exist
-              if (existingProfile.custom_fields && profileData.custom_fields) {
-                updateData.custom_fields = {
-                  ...existingProfile.custom_fields,
-                  ...profileData.custom_fields,
-                }
-              }
-
-              // Merge tags if they exist
-              if (existingProfile.tags && profileData.tags) {
-                const existingTags = Array.isArray(existingProfile.tags) ? existingProfile.tags : []
-                const newTags = Array.isArray(profileData.tags) ? profileData.tags : []
-                updateData.tags = Array.from(new Set([...existingTags, ...newTags]))
-              }
-
-              const result = await updateProfile(existingProfile.id, updateData)
-              if (result.error) {
-                errors.push(
-                  `Row ${successCount + updatedCount + errorCount + skippedCount + 1}: Update failed - ${result.error}`,
-                )
-                errorCount++
-              } else {
-                updatedCount++
-                updatedProfileIds.push(existingProfile.id)
-              }
-            } catch (error) {
-              errors.push(`Row ${successCount + updatedCount + errorCount + skippedCount + 1}: Update error - ${error}`)
-              errorCount++
-            }
-          } else {
-            // CREATE NEW PROFILE
-            try {
-              // Set creation timestamp for new profiles
-              profileData.created_at = new Date().toISOString()
-
-              // Store custom_id in custom_fields if provided
-              if (profileData.custom_id) {
-                if (!profileData.custom_fields) profileData.custom_fields = {}
-                profileData.custom_fields.custom_id = profileData.custom_id
-                delete profileData.custom_id // Remove from main fields
-              }
-
-              const result = await createProfile(profileData)
-              if (result.error) {
-                errors.push(
-                  `Row ${successCount + updatedCount + errorCount + skippedCount + 1}: Create failed - ${result.error}`,
-                )
-                errorCount++
-              } else {
-                successCount++
-                createdProfileIds.push(result.data.id)
-              }
-            } catch (error) {
-              errors.push(`Row ${successCount + updatedCount + errorCount + skippedCount + 1}: Create error - ${error}`)
-              errorCount++
-            }
-          }
-        } catch (error) {
-          errors.push(`Row ${successCount + updatedCount + errorCount + skippedCount + 1}: Processing error - ${error}`)
-          errorCount++
-        }
-      }
-
-      // Refresh profiles list - fetch ALL profiles without limit
       const result = await getProfiles()
       if (result.data) {
         setProfiles(result.data)
-        setFilteredProfiles(result.data)
       }
-
-      let segmentCreationMessage = ""
-
-      // Create segment from import if requested
-      if (
-        createSegmentFromImport &&
-        segmentNameFromImport.trim() &&
-        (createdProfileIds.length > 0 || updatedProfileIds.length > 0)
-      ) {
-        const allProfileIds = [...createdProfileIds, ...updatedProfileIds]
-
-        // Use the first profile as the creator, or try to get an existing profile
-        let creatorId = allProfileIds[0]
-
-        if (!creatorId && profiles.length > 0) {
-          creatorId = profiles[0].id
-        }
-
-        try {
-          // Create a segment from the uploaded list using tag-based filtering
-          const segmentResult = await segmentsApi.createSegment({
-            name: segmentNameFromImport.trim(),
-            description: `Imported from ${csvFile?.name || "CSV"} on ${new Date().toLocaleString()}. ${successCount} new, ${updatedCount} updated.`,
-            creator_id: creatorId,
-            filter_criteria: {
-              conditions: [
-                {
-                  field: "tags",
-                  operator: "contains",
-                  value: importTag || segmentNameFromImport.trim().toLowerCase().replace(/\s+/g, "_"),
-                },
-              ],
-              profileType: "all",
-              searchTerm: "",
-            },
-            estimated_size: allProfileIds.length,
-            auto_update: true,
-            type: "Custom", // Changed from "Import" to "Custom"
-            shared: false,
-            tags: [importTag || segmentNameFromImport.trim().toLowerCase().replace(/\s+/g, "_")],
-          })
-
-          if (segmentResult.data) {
-            console.log(`Created segment "${segmentNameFromImport}" for uploaded list`)
-
-            // Refresh segments list
-            const segmentsResult = await segmentsApi.getSegments()
-            if (segmentsResult.data) {
-              setSegments(segmentsResult.data)
-            }
-
-            segmentCreationMessage = `\n\n✅ Segment "${segmentNameFromImport}" created with ${allProfileIds.length} profiles`
-          } else if (segmentResult.error) {
-            console.warn(`Failed to create segment: ${segmentResult.error}`)
-            segmentCreationMessage = `\n\n⚠️ Failed to create segment: ${segmentResult.error}`
-          }
-        } catch (error) {
-          console.error("Error creating segment:", error)
-          segmentCreationMessage = `\n\n⚠️ Error creating segment: ${error}`
-        }
-      }
-
-      // Show detailed results with all categories
-      const errorSummary =
-        errors.length > 0
-          ? `\n\nFirst 5 errors:\n${errors.slice(0, 5).join("\n")}${errors.length > 5 ? "\n..." : ""}`
-          : ""
-
-      const skippedSummary =
-        skipped.length > 0
-          ? `\n\nFirst 5 skipped:\n${skipped.slice(0, 5).join("\n")}${skipped.length > 5 ? "\n..." : ""}`
-          : ""
-
-      alert(
-        `Import completed!\n\nNew Profiles: ${successCount}\nUpdated Profiles: ${updatedCount}\nErrors: ${errorCount}\nSkipped: ${skippedCount}${errorSummary}${skippedSummary}${segmentCreationMessage}`,
-      )
-
-      // Reset import state
-      setShowImportDialog(false)
-      setCsvFile(null)
-      setCsvData([])
-      setCsvHeaders([])
-      setFieldMapping({})
-      setCreateSegmentFromImport(true)
-      setSegmentNameFromImport("")
     } catch (error) {
-      console.error("Import error:", error)
-      alert("Import failed. Please try again.")
-    } finally {
-      setIsProcessing(false)
+      console.error('Error fetching profiles:', error)
     }
   }
 
-  // Fetch profiles from database
+  const fetchSegments = async () => {
+    try {
+      const result = await segmentsApi.getSegments()
+      if (result.data) {
+        setSegments(result.data)
+      }
+    } catch (error) {
+      console.error('Error fetching segments:', error)
+    }
+  }
+
+  // Load initial data
   useEffect(() => {
-    async function fetchProfiles() {
+    const loadInitialData = async () => {
+      setLoading(true)
       try {
-        setLoading(true)
-        // Fetch ALL profiles without any limit - don't pass any parameters
-        const result = await getProfiles()
-
-        if (result.error) {
-          console.error("Error fetching profiles:", result.error)
-          return
+        await Promise.all([fetchProfiles(), fetchSegments()])
+        
+        // Load custom fields for filtering
+        try {
+          const response = await fetch('/api/profiles/custom-fields')
+          if (response.ok) {
+            const data = await response.json()
+            const customFieldOptions = data.custom_fields.map((field: any) => ({
+              value: `custom_fields.${field.name}`,
+              label: field.display_name || field.name,
+              type: 'text' as const
+            }))
+            setCustomFields(customFieldOptions)
+            setAllAvailableFields([...availableFields, ...customFieldOptions])
+          }
+        } catch (error) {
+          console.error("Error fetching custom fields:", error)
         }
-
-        console.log(`Loaded ${result.data?.length || 0} profiles from database`)
-        setProfiles(result.data || [])
-        setFilteredProfiles(result.data || [])
-      } catch (error) {
-        console.error("Error fetching profiles:", error)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchProfiles()
-  }, [])
-
-  // Fetch segments and lists with profile counts
-  useEffect(() => {
-    async function fetchSegments() {
-      try {
-        const result = await segmentsApi.getSegments()
-        if (result.data) {
-          // Calculate profile counts for each segment
-          const segmentsWithCounts = result.data.map(segment => {
-            let count = 0
-            
-            // Calculate count based on segment filter criteria
-            if (segment.filter_criteria) {
-              const filtered = applySegmentFilter(profiles, segment.filter_criteria)
-              count = filtered.length
-            }
-            
-            return {
-              ...segment,
-              profile_count: count
-            }
-          })
-          
-          setSegments(segmentsWithCounts)
-        }
-      } catch (error) {
-        console.error("Error fetching segments:", error)
-      }
-    }
-
-    async function fetchLists() {
-      try {
-        const response = await fetch('/api/lists')
-        if (response.ok) {
-          const data = await response.json()
-          setLists(data)
-        }
-      } catch (error) {
-        console.error('Error fetching lists:', error)
-      }
-    }
-
-    fetchSegments()
-    fetchLists()
-  }, [profiles])
-
-  useEffect(() => {
-    async function fetchCustomFields() {
-      try {
-        // Get all profiles to analyze custom fields (no limit)
-        const result = await getProfiles()
-
-        if (result.data) {
-          const customFieldKeys = new Set<string>()
-
-          // Extract all unique custom field keys from all profiles
-          result.data.forEach((profile) => {
-            if (profile.custom_fields && typeof profile.custom_fields === "object") {
-              Object.keys(profile.custom_fields).forEach((key) => {
-                customFieldKeys.add(key)
-              })
-            }
-          })
-
-          // Convert to field options with proper types
-          const customFieldOptions: FieldDefinition[] = Array.from(customFieldKeys)
-            .filter(key => {
-              // Skip custom fields that duplicate built-in fields
-              const normalizedKey = key.toLowerCase()
-              return !availableFields.some(f => f.value.toLowerCase() === normalizedKey)
-            })
-            .map((key) => {
-              // Determine field type based on naming convention
-              let fieldType: FieldType = "text"
-              
-              // Check if field name suggests boolean
-              if (key.startsWith('is_') || key.startsWith('has_') || key.includes('enabled') || key.includes('active')) {
-                fieldType = "boolean"
-              } else if (key.includes('date') || key.includes('time') || key.includes('_at')) {
-                fieldType = "date"
-              } else if (key.includes('count') || key.includes('number') || key.includes('amount') || key.includes('price') || key.includes('score')) {
-                fieldType = "number"
-              }
-              
-              return {
-                value: `custom_fields.${key}`,
-                label: key
-                  .split("_")
-                  .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                  .join(" ") + " (Custom)",
-                type: fieldType,
-              }
-            })
-
-          setCustomFields(customFieldOptions)
-          setAllAvailableFields([...availableFields, ...customFieldOptions])
-        }
-      } catch (error) {
-        console.error("Error fetching custom fields:", error)
-      }
-    }
-
-    fetchCustomFields()
+    loadInitialData()
   }, [])
 
   // Helper function to get nested value from an object
@@ -1644,7 +1178,6 @@ export default function ProfilesPage() {
 
   const filterOptions = [
     { label: "Filter Profiles", value: "filter_profiles" },
-    { label: "Import CSV", value: "import_csv" },
     // Remove the built-in filters that are already shown as cards
     // Add custom segments to filter options (exclude predefined ones)
     ...(segments.length > 0 ? [
@@ -1664,17 +1197,6 @@ export default function ProfilesPage() {
 
   // Data operations - all bulk actions (disabled when no selection)
   const dataOperations = [
-    {
-      label: "Export CSV",
-      icon: <Download className="h-4 w-4" />,
-      onClick: () => setShowExportDialog(true),
-      disabled: false, // Always enabled
-    },
-    {
-      label: "---divider---",
-      icon: null,
-      onClick: () => {},
-    },
     {
       label: "Tag",
       icon: <Tag className="h-4 w-4" />,
@@ -2213,14 +1735,6 @@ export default function ProfilesPage() {
                     <Filter className="h-4 w-4 mr-2" />
                     Filter
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowImportDialog(true)}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Import CSV
-                  </Button>
                 </div>
               }
               filterOptions={filterOptions}
@@ -2231,8 +1745,6 @@ export default function ProfilesPage() {
                   if (!showInlineFilter && filterGroups[0].conditions.length === 0) {
                     setFilterGroups([{ id: '1', conditions: [{ field: "first_name", operator: "contains", value: "" }] }])
                   }
-                } else if (value === "import_csv") {
-                  setShowImportDialog(true)
                 } else if (value.startsWith("divider")) {
                   // Do nothing for dividers
                   return
@@ -2423,190 +1935,7 @@ export default function ProfilesPage() {
         </div>
 
         {/* Export/Import dialogs replaced with ProfileImportExport component */}
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-card rounded-lg p-6 w-96 max-h-[80vh] overflow-y-auto border border-border">
-              <h3 className="text-lg font-semibold mb-4 text-foreground">Export Profiles to CSV</h3>
 
-              <div className="mb-4">
-                <p className="text-sm text-muted-foreground mb-2">
-                  {selectedProfiles.length > 0
-                    ? `Exporting ${selectedProfiles.length} selected profiles`
-                    : `Exporting ${filteredProfiles.length} profiles`}
-                </p>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2 text-foreground">Select fields to export:</label>
-                <div className="space-y-2 max-h-48 overflow-y-auto border rounded p-2 border-border bg-background">
-                  {[...availableFields, ...customFields].map((field) => (
-                    <label key={field.value} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={exportFields.includes(field.value)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setExportFields([...exportFields, field.value])
-                          } else {
-                            setExportFields(exportFields.filter((f) => f !== field.value))
-                          }
-                        }}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-foreground">{field.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button onClick={exportToCSV} className="flex-1">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export
-                </Button>
-                <Button variant="outline" onClick={() => setShowExportDialog(false)} className="flex-1 hover:bg-accent">
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Import Dialog */}
-        {showImportDialog && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-card rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto border border-border">
-              <h3 className="text-lg font-semibold mb-4 text-foreground">Import Profiles from CSV</h3>
-
-              {!csvFile ? (
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2 text-foreground">Select CSV file:</label>
-                  <input
-                    type="file"
-                    accept=".csv"
-                    onChange={handleFileUpload}
-                    className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent file:text-accent-foreground hover:file:bg-accent/90"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">CSV should contain headers in the first row</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      File: {csvFile.name} ({csvData.length} rows)
-                    </p>
-                  </div>
-
-                  {/* Segment Creation Section */}
-                  <div className="bg-accent/30 p-4 rounded-lg border border-border">
-                    <div className="flex items-center gap-2 mb-3">
-                      <input
-                        type="checkbox"
-                        id="createSegment"
-                        checked={createSegmentFromImport}
-                        onChange={(e) => setCreateSegmentFromImport(e.target.checked)}
-                        className="rounded"
-                      />
-                      <label htmlFor="createSegment" className="text-sm font-medium text-foreground">
-                        Create segment from this import
-                      </label>
-                    </div>
-
-                    {createSegmentFromImport && (
-                      <div>
-                        <label className="block text-sm font-medium mb-1 text-foreground">Segment name:</label>
-                        <Input
-                          value={segmentNameFromImport}
-                          onChange={(e) => setSegmentNameFromImport(e.target.value)}
-                          placeholder="Enter segment name (e.g., 'VIP Customers', 'Newsletter Subscribers')"
-                          className="w-full bg-background border-border"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          All imported profiles will be tagged with this name and grouped into a segment
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium mb-2 text-foreground">Map CSV fields to profile fields:</h4>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {csvHeaders.map((header) => (
-                        <div key={header} className="flex items-center gap-2">
-                          <span className="text-sm w-32 truncate text-foreground" title={header}>
-                            {header}
-                          </span>
-                          <span className="text-muted-foreground">→</span>
-                          <Select
-                            value={fieldMapping[header] || "ignore"}
-                            onValueChange={(value) =>
-                              setFieldMapping({
-                                ...fieldMapping,
-                                [header]: value,
-                              })
-                            }
-                          >
-                            <SelectTrigger className="w-48 bg-background border-border">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="bg-card border-border">
-                              <SelectItem value="ignore" className="text-foreground">
-                                Ignore
-                              </SelectItem>
-                              {[...availableFields, ...customFields].map((field) => (
-                                <SelectItem key={field.value} value={field.value} className="text-foreground">
-                                  {field.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="bg-yellow-50/10 p-3 rounded border border-yellow-200/20 dark:border-yellow-900/20">
-                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                      <strong>Import Logic:</strong>
-                      <br />• <strong>Update:</strong> If mobile number exists, profile will be updated with new data
-                      <br />• <strong>Create:</strong> If mobile number is new, a new profile will be created
-                      <br />• <strong>Custom ID:</strong> Allows duplicate mobile numbers (stored in custom fields)
-                      <br />• <strong>Skip:</strong> Rows without mobile number or custom ID will be skipped
-                      <br />• Email is optional, invalid formats will cause errors
-                      <br />• Empty names default to "Unknown" and "User"
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-2 mt-6">
-                {csvFile && (
-                  <Button
-                    onClick={importCSV}
-                    disabled={isProcessing || Object.keys(fieldMapping).length === 0}
-                    className="flex-1"
-                  >
-                    {isProcessing ? "Importing..." : "Import"}
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowImportDialog(false)
-                    setCsvFile(null)
-                    setCsvData([])
-                    setCsvHeaders([])
-                    setFieldMapping({})
-                    setCreateSegmentFromImport(true)
-                    setSegmentNameFromImport("")
-                  }}
-                  className="flex-1 hover:bg-accent"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
       </PageLayout>
       
       {/* List Selection Dialog */}
