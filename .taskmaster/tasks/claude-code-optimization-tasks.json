@@ -1,0 +1,222 @@
+{
+  "0": {
+    "id": "CC001",
+    "title": "Critical: Consolidate Filter Components",
+    "description": "Merge three separate filter implementations (profiles/page.tsx, ProfileFilterBuilder.tsx, campaigns/BroadcastMessage.tsx) into a single reusable FilterBuilder component. This is causing code duplication and maintenance issues.",
+    "status": "pending",
+    "priority": "critical",
+    "category": "design-consistency",
+    "estimatedHours": 16,
+    "dependencies": [],
+    "subagent": "design-consistency"
+  },
+  "1": {
+    "id": "CC002", 
+    "title": "Critical: Clean Up Console Statements",
+    "description": "Remove 878 console.log statements across 130 files and implement proper logging system with different log levels for development vs production environments.",
+    "status": "pending",
+    "priority": "critical",
+    "category": "code-quality",
+    "estimatedHours": 12,
+    "dependencies": [],
+    "subagent": "code-quality"
+  },
+  "2": {
+    "id": "CC003",
+    "title": "Critical: Refactor Large Components",
+    "description": "Break down monolithic components (915+ lines in settings/senders/page.tsx and similar large components) into smaller, testable, maintainable modules following single responsibility principle.",
+    "status": "pending",
+    "priority": "critical", 
+    "category": "architecture",
+    "estimatedHours": 32,
+    "dependencies": [],
+    "subagent": "code-quality"
+  },
+  "3": {
+    "id": "CC004",
+    "title": "High: Implement Error Boundary System",
+    "description": "Create comprehensive error boundary coverage for all major component trees. Implement centralized error reporting and user-friendly error UI components.",
+    "status": "pending",
+    "priority": "high",
+    "category": "reliability",
+    "estimatedHours": 20,
+    "dependencies": ["CC001"],
+    "subagent": "design-consistency"
+  },
+  "4": {
+    "id": "CC005",
+    "title": "High: Standardize State Management",
+    "description": "Review and standardize state management patterns. Only 2 components use useState which suggests over-reliance on server components. Create consistent client-side state coordination patterns.",
+    "status": "pending",
+    "priority": "high",
+    "category": "architecture",
+    "estimatedHours": 24,
+    "dependencies": ["CC003"],
+    "subagent": "code-quality"
+  },
+  "5": {
+    "id": "CC006",
+    "title": "High: SMS Integration Reliability Enhancement",
+    "description": "Add retry mechanisms for failed webhook processing, implement proper error handling for Kudosity API failures, and add monitoring for SMS delivery status.",
+    "status": "pending",
+    "priority": "high",
+    "category": "integrations",
+    "estimatedHours": 16,
+    "dependencies": [],
+    "subagent": "integration-management"
+  },
+  "6": {
+    "id": "CC007",
+    "title": "High: Queue Management System",
+    "description": "Implement asynchronous queue system for SMS sending, webhook processing, and bulk operations. Replace synchronous processing with background job queue to improve performance and reliability.",
+    "status": "pending",
+    "priority": "high",
+    "category": "performance",
+    "estimatedHours": 28,
+    "dependencies": ["CC006"],
+    "subagent": "integration-management"
+  },
+  "7": {
+    "id": "CC008",
+    "title": "Medium: Design System Standardization",
+    "description": "Create comprehensive component style guide, standardize loading states across all components, and ensure consistent shadcn/ui usage patterns throughout the application.",
+    "status": "pending",
+    "priority": "medium",
+    "category": "design-consistency",
+    "estimatedHours": 20,
+    "dependencies": ["CC001", "CC004"],
+    "subagent": "design-consistency"
+  },
+  "8": {
+    "id": "CC009",
+    "title": "Medium: API Route Standardization",
+    "description": "Consolidate multiple API endpoints with similar functionality, remove test/debug routes from production code, and implement consistent error handling patterns across all API routes.",
+    "status": "pending",
+    "priority": "medium",
+    "category": "api-architecture",
+    "estimatedHours": 18,
+    "dependencies": [],
+    "subagent": "integration-management"
+  },
+  "9": {
+    "id": "CC010",
+    "title": "Medium: Performance Monitoring Enhancement",
+    "description": "Implement automated performance budgets, enhance Core Web Vitals tracking, optimize bundle size monitoring, and create performance regression alerts.",
+    "status": "pending",
+    "priority": "medium",
+    "category": "performance",
+    "estimatedHours": 16,
+    "dependencies": [],
+    "subagent": "performance-monitoring"
+  },
+  "10": {
+    "id": "CC011",
+    "title": "Medium: Webhook Processing Optimization",
+    "description": "Optimize webhook processing performance, implement proper queuing for high-volume webhook events, add webhook event validation and security enhancements.",
+    "status": "pending",
+    "priority": "medium",
+    "category": "integrations",
+    "estimatedHours": 20,
+    "dependencies": ["CC007"],
+    "subagent": "integration-management"
+  },
+  "11": {
+    "id": "CC012",
+    "title": "Low: Testing Infrastructure",
+    "description": "Implement comprehensive testing suite with unit tests, integration tests, and E2E testing. Set up automated testing in CI/CD pipeline and establish testing standards.",
+    "status": "pending",
+    "priority": "low",
+    "category": "testing",
+    "estimatedHours": 40,
+    "dependencies": ["CC001", "CC003", "CC005"],
+    "subagent": "code-quality"
+  },
+  "12": {
+    "id": "CC013",
+    "title": "Low: Documentation Enhancement",
+    "description": "Create Architecture Decision Records (ADRs), component documentation, API documentation, and development onboarding guide for Claude Code transition.",
+    "status": "pending",
+    "priority": "low",
+    "category": "documentation",
+    "estimatedHours": 24,
+    "dependencies": ["CC008"],
+    "subagent": "code-quality"
+  },
+  "13": {
+    "id": "CC014",
+    "title": "Setup: Design Consistency Subagent",
+    "description": "Configure specialized agent for maintaining design system integrity, monitoring shadcn/ui patterns, consolidating duplicate UI implementations, and enforcing consistent component patterns.",
+    "status": "pending",
+    "priority": "high",
+    "category": "subagent-setup",
+    "estimatedHours": 8,
+    "dependencies": [],
+    "subagent": "setup"
+  },
+  "14": {
+    "id": "CC015",
+    "title": "Setup: Integration Management Subagent",
+    "description": "Configure agent for SMS API monitoring, webhook processing management, external service integration health checks, and API performance tracking.",
+    "status": "pending",
+    "priority": "high",
+    "category": "subagent-setup",
+    "estimatedHours": 8,
+    "dependencies": [],
+    "subagent": "setup"
+  },
+  "15": {
+    "id": "CC016",
+    "title": "Setup: Performance Monitoring Subagent",
+    "description": "Configure agent for bundle size monitoring, Core Web Vitals tracking, database query optimization monitoring, and performance regression detection.",
+    "status": "pending",
+    "priority": "medium",
+    "category": "subagent-setup",
+    "estimatedHours": 8,
+    "dependencies": [],
+    "subagent": "setup"
+  },
+  "16": {
+    "id": "CC017",
+    "title": "Setup: Code Quality Subagent",
+    "description": "Configure agent for code consistency monitoring, TypeScript strict mode compliance, component size alerts, and automated code quality analysis.",
+    "status": "pending",
+    "priority": "medium",
+    "category": "subagent-setup",
+    "estimatedHours": 8,
+    "dependencies": [],
+    "subagent": "setup"
+  },
+  "17": {
+    "id": "CC018",
+    "title": "Architecture: Fix CDP Activity Endpoints",
+    "description": "Resolve 404 errors on activity endpoints (/api/cdp-profiles/{id}/activity), implement proper activity tracking, and ensure consistent API responses.",
+    "status": "pending",
+    "priority": "high",
+    "category": "api-fixes",
+    "estimatedHours": 12,
+    "dependencies": ["CC009"],
+    "subagent": "integration-management"
+  },
+  "18": {
+    "id": "CC019", 
+    "title": "Architecture: Resolve Webpack Warnings",
+    "description": "Fix Supabase realtime WebSocket factory critical dependency warnings, resolve bundle serialization performance issues, and optimize webpack configuration for development.",
+    "status": "pending",
+    "priority": "medium",
+    "category": "build-optimization",
+    "estimatedHours": 8,
+    "dependencies": [],
+    "subagent": "performance-monitoring"
+  },
+  "19": {
+    "id": "CC020",
+    "title": "Feature: Implement SMS Queue Dashboard",
+    "description": "Create admin dashboard for monitoring SMS queue status, retry failed messages, view delivery statistics, and manage SMS sending priorities.",
+    "status": "pending", 
+    "priority": "low",
+    "category": "feature-enhancement",
+    "estimatedHours": 32,
+    "dependencies": ["CC007", "CC008"],
+    "subagent": "design-consistency"
+  }
+}

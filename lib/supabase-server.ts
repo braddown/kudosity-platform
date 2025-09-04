@@ -24,3 +24,6 @@ export const supabaseServer = createClient(supabaseUrl, supabaseServiceKey, {
     persistSession: false
   }
 })
+
+// Export createClient function for webhook and other server-side usage
+export { createClient }

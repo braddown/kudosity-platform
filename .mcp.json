@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "shadcn": {
+      "command": "npx",
+      "args": [
+        "shadcn@latest",
+        "mcp"
+      ]
+    },
+    "railway": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@jasontanswe/railway-mcp"
+      ],
+      "env": {
+        "RAILWAY_API_TOKEN": "e9722dfa-b585-4a90-9aee-836acb7a34e9"
+      }
+    }
+  }
+}

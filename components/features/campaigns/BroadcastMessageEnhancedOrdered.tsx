@@ -48,7 +48,7 @@ interface Sender {
 interface SplitMessage {
   content: string
   delay_seconds: number
-  wait_for_delivery?: boolean
+  wait_for_delivery: boolean
   track_links?: boolean
 }
 
@@ -765,7 +765,7 @@ const BroadcastMessageEnhancedOrdered = forwardRef<BroadcastMessageEnhancedOrder
                   <div className="flex justify-center">
                     <PhonePreview
                       message={formData.message}
-                      senderName={senders.find(s => s.id === formData.senderID)?.display_name || "Your Business"}
+                      senderID={senders.find(s => s.id === formData.senderID)?.display_name || "Your Business"}
                       splitMessages={formData.splitMessages}
                     />
                   </div>
@@ -808,7 +808,7 @@ const BroadcastMessageEnhancedOrdered = forwardRef<BroadcastMessageEnhancedOrder
                   <div className="flex justify-center">
                     <PhonePreview
                       message={formData.template?.content || ""}
-                      senderName={senders.find(s => s.id === formData.senderID)?.display_name || "Your Business"}
+                      senderID={senders.find(s => s.id === formData.senderID)?.display_name || "Your Business"}
                       splitMessages={formData.template?.split_messages || []}
                     />
                   </div>

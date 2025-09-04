@@ -20,21 +20,16 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { ProfileFilterBuilder } from "./ProfileFilterBuilder"
+import { UnifiedFilterBuilder, FilterEngine, type FilterGroup, type FilterCondition } from "@/components/ui/unified-filter-builder"
+import { profileFilterFields } from "@/lib/utils/filter-definitions"
+import { createLogger } from "@/lib/utils/logger"
 
 import * as SelectPrimitive from "@radix-ui/react-select"
 
 const inter = Inter({ subsets: ["latin"] })
+const logger = createLogger('Contacts')
 
-export interface FilterCondition {
-  field: string
-  operator: string
-  value: string
-}
-
-export interface FilterGroup {
-  conditions: FilterCondition[]
-}
+// Filter interfaces now imported from unified-filter-builder
 
 export interface Segment {
   id: string
@@ -333,10 +328,10 @@ export default function Contacts({
 
   // Sort function with proper implementation
   const requestSort = useCallback((key: keyof ExtendedContact) => {
-    console.log("Requesting sort for key:", key)
+    logger.debug('Requesting sort for key', { key })
     setSortConfig((prevConfig) => {
       const newDirection = prevConfig.key === key && prevConfig.direction === "asc" ? "desc" : "asc"
-      console.log("New sort config:", { key, direction: newDirection })
+      logger.debug('Sort configuration updated', { key, direction: newDirection })
       return { key, direction: newDirection }
     })
   }, [])
@@ -449,11 +444,11 @@ export default function Contacts({
           })
           .filter((contact) => contact.id && contact.id !== `temp-${contact.numericIndex}`)
 
-        console.log(`Loaded ${listId ? "list members" : "all profiles"}:`, transformedContacts.length)
+        logger.info(`Loaded ${listId ? 'list members' : 'all profiles'}`, { count: transformedContacts.length, listId })
         setContacts(transformedContacts)
         setError(null)
       } catch (err) {
-        console.error(`Error fetching ${listId ? "list members" : "profiles"}:`, err)
+        logger.error(`Error fetching ${listId ? 'list members' : 'profiles'}`, err, { listId })
         setError(
           err instanceof Error ? err.message : `Failed to load ${listId ? "list members" : "profiles"} from database`,
         )
@@ -479,7 +474,7 @@ export default function Contacts({
           setLists(listsResult.data)
         }
       } catch (error) {
-        console.error("Error fetching segments and lists:", error)
+        logger.error('Error fetching segments and lists', error)
       }
     }
 
@@ -487,60 +482,9 @@ export default function Contacts({
   }, [])
 
   // Helper functions for applying filters - move these before filteredContacts useMemo
-  const applyStringOperator = (contactValue: string, operator: string, conditionValue: string): boolean => {
-    if (!contactValue) return false
-    switch (operator) {
-      case "contains":
-        return contactValue.toLowerCase().includes(conditionValue.toLowerCase())
-      case "is":
-        return contactValue.toLowerCase() === conditionValue.toLowerCase()
-      case "is not":
-        return contactValue.toLowerCase() !== conditionValue.toLowerCase()
-      case "starts with":
-        return contactValue.toLowerCase().startsWith(conditionValue.toLowerCase())
-      case "ends with":
-        return contactValue.toLowerCase().endsWith(conditionValue.toLowerCase())
-      default:
-        return false
-    }
-  }
+  // Filter logic now handled by FilterEngine
 
-  const applyNumberOperator = (contactValue: number, operator: string, conditionValue: number): boolean => {
-    switch (operator) {
-      case "equals":
-        return contactValue === conditionValue
-      case "greater than":
-        return contactValue > conditionValue
-      case "less than":
-        return contactValue < conditionValue
-      case "greater than or equal to":
-        return contactValue >= conditionValue
-      case "less than or equal to":
-        return contactValue <= conditionValue
-      default:
-        return false
-    }
-  }
 
-  const applyDateOperator = (contactValue: Date, operator: string, conditionValue: Date): boolean => {
-    const contactDate = contactValue instanceof Date ? contactValue.getTime() : new Date(contactValue).getTime()
-    const conditionDate = conditionValue instanceof Date ? conditionValue.getTime() : new Date(conditionValue).getTime()
-
-    switch (operator) {
-      case "is":
-        return contactDate === conditionDate
-      case "is before":
-        return contactDate < conditionDate
-      case "is after":
-        return contactDate > conditionDate
-      case "is on or before":
-        return contactDate <= conditionDate
-      case "is on or after":
-        return contactDate >= conditionDate
-      default:
-        return false
-    }
-  }
 
   // Filter contacts based on search term, profile type, and advanced filters
   const filteredContacts = useMemo(() => {
@@ -574,36 +518,9 @@ export default function Contacts({
       )
     }
 
-    // Apply advanced filters
+    // Apply advanced filters using FilterEngine
     if (filters.length > 0) {
-      filtered = filtered.filter((contact) => {
-        return filters.some((group) => {
-          return group.conditions.every((condition) => {
-            const contactValue = contact[condition.field as keyof ExtendedContact]
-            const fieldType = getProfileFieldType(condition.field)
-
-            if (!contactValue && condition.value) return false
-
-            switch (fieldType) {
-              case "string":
-                return applyStringOperator(contactValue?.toString() || "", condition.operator, condition.value)
-              case "number":
-                return applyNumberOperator(
-                  Number(contactValue) || 0,
-                  condition.operator,
-                  Number.parseFloat(condition.value),
-                )
-              case "date":
-                return applyDateOperator(new Date(contactValue as any), condition.operator, new Date(condition.value))
-              case "boolean":
-                // This logic correctly handles "true" or "false" string values from the filter
-                return contactValue === (condition.value.toLowerCase() === "true")
-              default:
-                return false
-            }
-          })
-        })
-      })
+      filtered = FilterEngine.filterData(filtered, filters, profileFilterFields)
     }
 
     return filtered
@@ -626,7 +543,11 @@ export default function Contacts({
     setIsSaving(true)
     try {
       const filterCriteria = {
-        conditions: filters.flatMap((group) => group.conditions),
+        conditions: filters.flatMap((group) => group.conditions.map(condition => ({
+          field: condition.field,
+          operator: condition.operator,
+          value: Array.isArray(condition.value) ? condition.value.join(',') : String(condition.value)
+        }))),
         searchTerm: searchTerm,
         profileType: selectedProfileType,
       }
@@ -654,7 +575,7 @@ export default function Contacts({
           setSegments(segmentsResult.data)
         }
 
-        console.log("Segment saved successfully:", result.data)
+        logger.info('Segment saved successfully', { segmentId: result.data?.id, name: result.data?.name })
       } else {
         const result = await listsApi.createList({
           name: saveFilterName,
@@ -678,7 +599,7 @@ export default function Contacts({
           setLists(listsResult.data)
         }
 
-        console.log("List saved successfully:", result.data)
+        logger.info('List saved successfully', { listId: result.data?.id, name: result.data?.name })
       }
 
       // Clear the form after successful save
@@ -688,7 +609,7 @@ export default function Contacts({
       // Show success message (you might want to add a toast notification here)
       alert(`${saveType === "segment" ? "Segment" : "List"} "${saveFilterName}" saved successfully!`)
     } catch (error) {
-      console.error(`Error saving ${saveType}:`, error)
+      logger.error(`Error saving ${saveType}`, error, { saveType })
       alert(`Failed to save ${saveType}. Please try again.`)
     } finally {
       setIsSaving(false)
@@ -712,14 +633,14 @@ export default function Contacts({
     switch (action) {
       case "tag":
         // TODO: Open tag dialog for selected contacts
-        console.log("Tagging contacts:", selectedContactsArray)
+        logger.info('Tagging contacts', { count: selectedContactsArray.length, contacts: selectedContactsArray })
         alert(`Tagging ${selectedContactsArray.length} contacts`)
         break
 
       case "unsubscribe":
         if (confirm(`Are you sure you want to unsubscribe ${selectedContactsArray.length} contacts?`)) {
           // TODO: Implement bulk unsubscribe
-          console.log("Unsubscribing contacts:", selectedContactsArray)
+          logger.info('Unsubscribing contacts', { count: selectedContactsArray.length, contacts: selectedContactsArray })
           alert(`Unsubscribed ${selectedContactsArray.length} contacts`)
           setSelectedContacts(new Set())
         }
@@ -732,7 +653,7 @@ export default function Contacts({
           )
         ) {
           // TODO: Implement bulk delete
-          console.log("Deleting contacts:", selectedContactsArray)
+          logger.warn('Deleting contacts', { count: selectedContactsArray.length, contacts: selectedContactsArray })
           alert(`Deleted ${selectedContactsArray.length} contacts`)
           setSelectedContacts(new Set())
         }
@@ -740,7 +661,7 @@ export default function Contacts({
 
       case "addToList":
         // TODO: Open list selection dialog
-        console.log("Adding contacts to list:", selectedContactsArray)
+        logger.info('Adding contacts to list', { count: selectedContactsArray.length, contacts: selectedContactsArray })
         alert(`Adding ${selectedContactsArray.length} contacts to list`)
         break
 
@@ -751,34 +672,34 @@ export default function Contacts({
             : filteredContacts
 
         // TODO: Implement CSV export
-        console.log("Exporting contacts:", contactsToExport)
+        logger.info('Exporting contacts', { count: contactsToExport.length })
         alert(`Exporting ${contactsToExport.length} contacts to CSV`)
         break
 
       case "import":
         // TODO: Open import dialog
-        console.log("Opening import dialog")
+        logger.debug('Opening import dialog')
         alert("Opening CSV import dialog")
         break
 
       default:
-        console.log("Unknown action:", action)
+        logger.warn('Unknown action received', { action })
     }
   }
 
   // Toggle individual contact selection - use numeric index for selection
   const toggleSelectContact = (contactIndex: number) => {
-    console.log("toggleSelectContact called with index:", contactIndex, "Type:", typeof contactIndex)
+    logger.debug('Toggle contact selection', { contactIndex, type: typeof contactIndex })
     setSelectedContacts((prev) => {
       const newSet = new Set(prev)
       if (newSet.has(contactIndex)) {
         newSet.delete(contactIndex)
-        console.log("Removed contact index:", contactIndex)
+        logger.debug('Contact deselected', { contactIndex })
       } else {
         newSet.add(contactIndex)
-        console.log("Added contact index:", contactIndex)
+        logger.debug('Contact selected', { contactIndex })
       }
-      console.log("Updated selectedContacts:", Array.from(newSet))
+      logger.debug('Selection updated', { selectedCount: newSet.size })
       return newSet
     })
   }
@@ -890,11 +811,13 @@ export default function Contacts({
                 </div>
               </div>
 
-              <ProfileFilterBuilder
+              <UnifiedFilterBuilder
+                fieldDefinitions={profileFilterFields}
                 onFilterChange={(newFilters) => {
                   setFilters(newFilters)
                 }}
                 initialFilters={filters}
+                placeholder="Add profile filter..."
               />
             </div>
           </CardContent>
@@ -1118,19 +1041,19 @@ export default function Contacts({
           isLoading={isLoading}
           onEditContact={(contact) => onProfileSelect(String(contact.id))}
           onTagContact={(contactId) => {
-            console.log("Tagging contact:", contactId)
+            logger.info('Tagging individual contact', { contactId })
             alert(`Tagging contact ${contactId}`)
           }}
           onAddToList={(contactId) => {
-            console.log("Adding contact to list:", contactId)
+            logger.info('Adding individual contact to list', { contactId })
             alert(`Adding contact ${contactId} to list`)
           }}
           onUnsubscribeContact={(contactId) => {
-            console.log("Unsubscribing contact:", contactId)
+            logger.info('Unsubscribing individual contact', { contactId })
             alert(`Unsubscribing contact ${contactId}`)
           }}
           onDeleteContact={(contactId) => {
-            console.log("Deleting contact:", contactId)
+            logger.warn('Deleting individual contact', { contactId })
             alert(`Deleting contact ${contactId}`)
           }}
         />

@@ -4,15 +4,12 @@ import { useRouter } from "next/navigation"
 import { useRef, useState, useEffect } from "react"
 import { X } from "lucide-react"
 import MainLayout from "@/components/MainLayout"
-import BroadcastMessageEnhancedOrdered from "@/components/features/campaigns/BroadcastMessageEnhancedOrdered"
+import BroadcastMessageEnhancedOrdered, { BroadcastMessageEnhancedOrderedRef } from "@/components/features/campaigns/BroadcastMessageEnhancedOrdered"
 import PageLayout from "@/components/layouts/PageLayout"
 
 export default function BroadcastPage() {
   const router = useRouter()
-  const formRef = useRef<{ 
-    saveDraft: () => Promise<void>,
-    canSaveDraft: () => boolean 
-  }>(null)
+  const formRef = useRef<BroadcastMessageEnhancedOrderedRef>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [canSave, setCanSave] = useState(false)
 

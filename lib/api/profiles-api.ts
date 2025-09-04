@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/auth/client"
+import { createLogger } from "@/lib/utils/logger"
 
 // Create a supabase client for each request
 const supabase = createClient()
+const logger = createLogger('ProfilesAPI')
 
 // Get all profiles with optional filtering
 export const getProfiles = async (options?: {
@@ -11,7 +13,7 @@ export const getProfiles = async (options?: {
   offset?: number
 }) => {
   try {
-    console.log("Fetching profiles from CDP with options:", options)
+    logger.debug('Fetching profiles from CDP', { options })
 
     // Use the CDP profiles table as the source of truth
     let query = supabase
@@ -37,11 +39,11 @@ export const getProfiles = async (options?: {
       const { data, error, count } = await query
       
       if (error) {
-        console.error("Error fetching CDP profiles:", error)
+        logger.error('Error fetching CDP profiles', error)
         return { data: [], error: error.message }
       }
       
-      console.log(`Successfully fetched ${data?.length || 0} CDP profiles (paginated)`)
+      logger.info('Successfully fetched CDP profiles (paginated)', { count: data?.length || 0 })
       return { data: data || [], error: null, count }
     }
 
@@ -54,11 +56,11 @@ export const getProfiles = async (options?: {
       .select('*', { count: 'exact', head: true })
     
     if (countError) {
-      console.error("Error getting CDP profiles count:", countError)
+      logger.error('Error getting CDP profiles count', countError)
       return { data: [], error: countError.message }
     }
     
-    console.log(`Total CDP profiles count: ${totalCount}`)
+    logger.info('Total CDP profiles count retrieved', { totalCount })
     
     if (!totalCount) {
       return { data: [], error: null, count: 0 }
@@ -89,21 +91,21 @@ export const getProfiles = async (options?: {
       const { data: batchData, error: batchError } = await batchQuery
       
       if (batchError) {
-        console.error(`Error fetching CDP batch ${i}:`, batchError)
+        logger.error('Error fetching CDP batch', batchError, { batchIndex: i })
         continue
       }
       
       if (batchData) {
         allProfiles = [...allProfiles, ...batchData]
-        console.log(`CDP Batch ${i + 1}/${batches} fetched: ${batchData.length} records. Total: ${allProfiles.length}`)
+        logger.debug('CDP batch fetched', { batchIndex: i + 1, totalBatches: batches, batchSize: batchData.length, totalRecords: allProfiles.length })
       }
     }
     
-    console.log(`Total CDP profiles fetched: ${allProfiles.length}`)
-    console.log(`Sample profile status values:`, allProfiles.slice(0, 5).map(p => ({ id: p.id, status: p.status, mobile: p.mobile })))
+    logger.info('CDP profiles fetch completed', { totalCount: allProfiles.length })
+    logger.debug('Sample profile status values', { sample: allProfiles.slice(0, 5).map(p => ({ id: p.id, status: p.status, mobile: p.mobile })) })
     return { data: allProfiles, error: null, count: totalCount }
   } catch (error: any) {
-    console.error("Profiles API error:", error)
+    logger.error('Profiles API error', error)
     return { data: [], error: error.message || "Failed to fetch profiles" }
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase-server'
+import { supabaseServer } from '@/lib/supabase-server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     //   return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
     // }
     
-    const supabase = createClient()
+    const supabase = supabaseServer
     
     // Store the webhook event
     const { error: eventError } = await supabase
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function handleSmsSent(payload: any) {
-  const supabase = createClient()
+  const supabase = supabaseServer
   
   // Update message status to sent
   const { error } = await supabase
@@ -85,7 +85,7 @@ async function handleSmsSent(payload: any) {
 }
 
 async function handleSmsDelivered(payload: any) {
-  const supabase = createClient()
+  const supabase = supabaseServer
   
   // Update message status to delivered
   const { error } = await supabase
@@ -103,7 +103,7 @@ async function handleSmsDelivered(payload: any) {
 }
 
 async function handleSmsFailed(payload: any) {
-  const supabase = createClient()
+  const supabase = supabaseServer
   
   // Update message status to failed or bounced
   const { error } = await supabase
@@ -122,7 +122,7 @@ async function handleSmsFailed(payload: any) {
 }
 
 async function handleLinkClicked(payload: any) {
-  const supabase = createClient()
+  const supabase = supabaseServer
   
   // First, find the message
   const { data: message } = await supabase
