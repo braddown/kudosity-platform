@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Edit, Trash2, Plus, Shield, User, Activity, UserPlus, Settings, Users } from "lucide-react"
+import Link from "next/link"
 import { usePageHeader } from "@/components/PageHeaderContext"
 import { createClient } from "@/lib/auth/client"
 import { useToast } from "@/components/ui/use-toast"
@@ -34,6 +35,7 @@ interface ActivityLog {
   action: string
   details: string
   timestamp: string
+  metadata?: any
   user_profiles?: {
     full_name: string
     email: string
@@ -118,6 +120,7 @@ export default function UsersSettingsPage() {
           action: activity.activity_type.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
           details: activity.description,
           timestamp: activity.created_at,
+          metadata: activity.metadata,
           user_profiles: profileMap.get(activity.user_id) || {
             full_name: 'Unknown User',
             email: ''
@@ -374,6 +377,32 @@ export default function UsersSettingsPage() {
     })
   }
 
+  const renderActivityDescription = (description: string, metadata?: any) => {
+    // Check if this is a profile update activity with profile_id in metadata
+    if (metadata?.profile_id && description.includes('Updated ')) {
+      // Extract profile name and change description
+      const match = description.match(/^Updated (.+?): (.+)$/)
+      if (match) {
+        const [, profileName, changeDescription] = match
+        return (
+          <span>
+            Updated{' '}
+            <Link 
+              href={`/profiles/edit/${metadata.profile_id}`}
+              className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+            >
+              {profileName}
+            </Link>
+            : {changeDescription}
+          </span>
+        )
+      }
+    }
+    
+    // For other descriptions, render as plain text
+    return description
+  }
+
   const userColumns = [
     {
       header: "Name",
@@ -485,7 +514,7 @@ export default function UsersSettingsPage() {
                             by {activity.user_profiles?.full_name || activity.user_profiles?.email}
                           </span>
                         </div>
-                        <p className="text-sm text-muted-foreground">{activity.details}</p>
+                        <p className="text-sm text-muted-foreground">{renderActivityDescription(activity.details, activity.metadata)}</p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {formatDateTime(activity.timestamp)}
                         </p>

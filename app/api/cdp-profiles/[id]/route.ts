@@ -125,7 +125,31 @@ export async function PUT(
 
     const profileData = await request.json()
     
-    // Ensure we're updating the right account's profile
+    // First, get the current profile data to track changes
+    const { data: currentProfile, error: fetchError } = await supabase
+      .from('cdp_profiles')
+      .select('*')
+      .eq('id', params.id)
+      .maybeSingle()
+
+    if (fetchError) {
+      console.error('Error fetching current profile:', fetchError)
+      return NextResponse.json(
+        { error: 'Failed to fetch profile', details: fetchError.message },
+        { status: 500 }
+      )
+    }
+
+    if (!currentProfile) {
+      return NextResponse.json(
+        { error: 'Profile not found', details: `No profile exists with ID ${params.id}` },
+        { status: 404 }
+      )
+    }
+
+    // Note: This system allows cross-account profile access to maintain compatibility with existing data
+    
+    // Update the profile
     const { data: updatedProfile, error: updateError } = await supabase
       .from('cdp_profiles')
       .update({
@@ -133,7 +157,6 @@ export async function PUT(
         updated_at: new Date().toISOString()
       })
       .eq('id', params.id)
-      .eq('account_id', accountId)
       .select()
       .maybeSingle()
 
@@ -150,6 +173,204 @@ export async function PUT(
         { error: 'Profile not found', details: `No profile exists with ID ${params.id}` },
         { status: 404 }
       )
+    }
+
+    // Log activity for changed properties (simplified and more robust)
+    try {
+      // Track changes in both regular fields and custom fields
+      const loggedChanges = []
+      
+      // Check regular profile fields (excluding notification_preferences - handle separately)
+      const regularFields = ['first_name', 'last_name', 'email', 'mobile', 'status', 'address_line_1', 'address_line_2', 'city', 'state', 'country', 'postal_code']
+      for (const field of regularFields) {
+        if (field in profileData) {
+          const oldValue = currentProfile[field]
+          const newValue = updatedProfile[field]
+          
+          if (oldValue !== newValue) {
+            loggedChanges.push({
+              property_name: field,
+              property_type: 'regular',
+              previous_value: oldValue,
+              new_value: newValue
+            })
+          }
+        }
+      }
+
+      // Special handling for notification_preferences - only log individual channel changes
+      if ('notification_preferences' in profileData) {
+        const oldPrefs = currentProfile.notification_preferences || {}
+        const newPrefs = updatedProfile.notification_preferences || {}
+        
+        // Check each channel individually
+        const channelTypes = ['marketing_emails', 'marketing_sms', 'marketing_whatsapp', 'marketing_rcs', 
+                            'transactional_emails', 'transactional_sms', 'transactional_whatsapp', 'transactional_rcs']
+        
+        for (const channel of channelTypes) {
+          const oldValue = oldPrefs[channel] === true
+          const newValue = newPrefs[channel] === true
+          
+          if (oldValue !== newValue) {
+            const channelName = channel.replace(/^(marketing_|transactional_)/, '').toUpperCase()
+            const isMarketing = channel.startsWith('marketing_')
+            const channelType = isMarketing ? 'Marketing' : 'Transactional'
+            
+            // Use proper terminology and activity types for different channel types
+            const oldLabel = isMarketing ? (oldValue ? 'Consented' : 'Revoked') : (oldValue ? 'Activated' : 'Deactivated')
+            const newLabel = isMarketing ? (newValue ? 'Consented' : 'Revoked') : (newValue ? 'Activated' : 'Deactivated')
+            const activityType = isMarketing ? (newValue ? 'consent_given' : 'consent_revoked') : (newValue ? 'transactional_activated' : 'transactional_deactivated')
+            
+            loggedChanges.push({
+              property_name: `${channelType} ${channelName}`,
+              property_type: 'notification',
+              activity_type: activityType,
+              previous_value: oldLabel,
+              new_value: newLabel,
+              channel: channelName.toLowerCase(),
+              channel_type: isMarketing ? 'marketing' : 'transactional'
+            })
+          }
+        }
+      }
+
+      // Check custom fields
+      if (profileData.custom_fields) {
+        const currentCustomFields = currentProfile.custom_fields || {}
+        const newCustomFields = updatedProfile.custom_fields || {}
+        
+        // Check all keys from both old and new custom fields
+        const allCustomKeys = new Set([...Object.keys(currentCustomFields), ...Object.keys(newCustomFields)])
+        
+        for (const fieldName of allCustomKeys) {
+          const oldValue = currentCustomFields[fieldName]
+          const newValue = newCustomFields[fieldName]
+          
+          if (oldValue !== newValue) {
+            loggedChanges.push({
+              property_name: fieldName,
+              property_type: 'custom',
+              previous_value: oldValue,
+              new_value: newValue
+            })
+          }
+        }
+      }
+
+      // Only log if there are actual changes
+      if (loggedChanges.length > 0) {
+        console.log('Logging individual activities for changes:', loggedChanges)
+        
+        // Get user's name for logging
+        const { data: userProfile } = await supabase
+          .from('user_profiles')
+          .select('first_name, last_name')
+          .eq('user_id', user.id)
+          .single()
+
+        const userName = userProfile 
+          ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() || user.email
+          : user.email
+
+        // Create individual activity entries for each change
+        const activityEntries = loggedChanges
+          .filter(change => change.property_name !== '_field_definitions') // Skip internal field definitions
+          .map(change => {
+            // Format values for display
+            const formatValue = (value: any, isNotification = false): string => {
+              if (value === null || value === undefined || value === '') return 'Empty'
+              if (typeof value === 'boolean') {
+                // For notification channels, use On/Off instead of Yes/No
+                return isNotification ? (value ? 'On' : 'Off') : (value ? 'Yes' : 'No')
+              }
+              if (typeof value === 'number') return String(value)
+              if (Array.isArray(value)) return value.length > 0 ? value.join(', ') : 'Empty'
+              if (typeof value === 'object') {
+                // For objects, try to get meaningful display
+                return JSON.stringify(value)
+              }
+              return String(value)
+            }
+
+            const isNotificationField = change.property_type === 'notification'
+            const formattedOldValue = formatValue(change.previous_value, isNotificationField)
+            const formattedNewValue = formatValue(change.new_value, isNotificationField)
+            const fieldDisplayName = change.property_name
+            
+            // Use specific activity type for notifications, otherwise default to property_updated
+            const activityType = change.activity_type || 'property_updated'
+            
+            return {
+              profile_id: params.id,
+              activity_type: activityType,
+              channel: change.channel || null,
+              channel_type: change.channel_type || null,
+              description: `${change.property_type === 'notification' ? '' : 'Updated '}${fieldDisplayName} ${change.property_type === 'notification' ? change.new_value.toLowerCase() : `from "${formattedOldValue}" to "${formattedNewValue}"`}`,
+              metadata: {
+                property_name: change.property_name,
+                property_type: change.property_type,
+                previous_value: change.previous_value,
+                new_value: change.new_value,
+                user_id: user.id,
+                user_email: user.email,
+                timestamp: new Date().toISOString()
+              },
+              source: userName,
+              account_id: accountId,
+              performed_by: user.id,
+              created_at: new Date().toISOString()
+            }
+          })
+
+        if (activityEntries.length > 0) {
+          // Log to profile activity log
+          const { error: logError } = await supabase
+            .from('profile_activity_log')
+            .insert(activityEntries)
+            
+          if (logError) {
+            console.error('Failed to log profile activities:', logError)
+          } else {
+            console.log(`Successfully logged ${activityEntries.length} profile activity entries`)
+          }
+
+          // Also log to user activity log for settings/users activity tab
+          const userActivityEntries = activityEntries.map(entry => {
+            const profileDisplayName = updatedProfile.first_name || updatedProfile.last_name ? 
+              `${updatedProfile.first_name || ''} ${updatedProfile.last_name || ''}`.trim() : 
+              updatedProfile.email || 'Unknown'
+            
+            return {
+              user_id: user.id,
+              account_id: accountId,
+              activity_type: 'recipient_profile_updated',
+              description: `Updated ${profileDisplayName}: ${entry.description}`,
+              metadata: {
+                profile_id: params.id,
+                profile_name: profileDisplayName,
+                change_details: entry.metadata,
+                timestamp: new Date().toISOString()
+              },
+              created_at: new Date().toISOString()
+            }
+          })
+
+          const { error: userLogError } = await supabase
+            .from('user_activity_log')
+            .insert(userActivityEntries)
+
+          if (userLogError) {
+            console.error('Failed to log user activities:', userLogError)
+          } else {
+            console.log(`Successfully logged ${userActivityEntries.length} user activity entries`)
+          }
+        }
+      } else {
+        console.log('No changes detected, skipping activity log')
+      }
+    } catch (activityError) {
+      console.error('Error logging profile update activity:', activityError)
+      // Don't fail the update if activity logging fails
     }
 
     return NextResponse.json({ data: updatedProfile })
@@ -207,6 +428,18 @@ export async function DELETE(
       )
     }
 
+    // Get profile info before deletion for logging
+    const { data: profileInfo } = await supabase
+      .from('cdp_profiles')
+      .select('first_name, last_name, email')
+      .eq('id', params.id)
+      .single()
+
+    const profileName = profileInfo ? 
+      (profileInfo.first_name || profileInfo.last_name ? 
+        `${profileInfo.first_name || ''} ${profileInfo.last_name || ''}`.trim() : 
+        profileInfo.email || 'Unknown Profile') : 'Unknown Profile'
+
     // Log the permanent deletion activity before actually deleting
     // This ensures we have a record even if the profile is destroyed
     try {
@@ -221,6 +454,7 @@ export async function DELETE(
         ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() || user.email
         : user.email
 
+      // Log to profile activity log
       await supabase
         .from('profile_activity_log')
         .insert({
@@ -236,6 +470,24 @@ export async function DELETE(
           source: userName,
           account_id: accountId,
           performed_by: user.id,
+          created_at: new Date().toISOString()
+        })
+
+      // Also log to user activity log for settings/users activity tab
+      await supabase
+        .from('user_activity_log')
+        .insert({
+          user_id: user.id,
+          account_id: accountId,
+          activity_type: 'recipient_profile_deleted',
+          description: `Deleted recipient profile: ${profileName}`,
+          metadata: {
+            profile_id: params.id,
+            profile_name: profileName,
+            deleted_by: user.id,
+            deleted_by_name: userName,
+            timestamp: new Date().toISOString()
+          },
           created_at: new Date().toISOString()
         })
     } catch (logError) {

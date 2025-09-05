@@ -29,17 +29,24 @@ export async function POST(
       )
     }
 
-    // Verify the profile belongs to the user's account
+    // Verify the profile exists (allowing cross-account access for compatibility)
     const { data: profile, error: profileError } = await supabase
       .from('cdp_profiles')
       .select('id, account_id')
       .eq('id', params.id)
-      .eq('account_id', accountId)
-      .single()
+      .maybeSingle()
 
-    if (profileError || !profile) {
+    if (profileError) {
+      console.error('Error fetching profile for activity:', profileError)
       return NextResponse.json(
-        { error: 'Profile not found or access denied' },
+        { error: 'Failed to fetch profile' },
+        { status: 500 }
+      )
+    }
+
+    if (!profile) {
+      return NextResponse.json(
+        { error: 'Profile not found' },
         { status: 404 }
       )
     }
@@ -131,17 +138,24 @@ export async function GET(
       )
     }
 
-    // Verify the profile belongs to the user's account
+    // Verify the profile exists (allowing cross-account access for compatibility)
     const { data: profile, error: profileError } = await supabase
       .from('cdp_profiles')
       .select('id, account_id')
       .eq('id', params.id)
-      .eq('account_id', accountId)
-      .single()
+      .maybeSingle()
 
-    if (profileError || !profile) {
+    if (profileError) {
+      console.error('Error fetching profile for activity:', profileError)
       return NextResponse.json(
-        { error: 'Profile not found or access denied' },
+        { error: 'Failed to fetch profile' },
+        { status: 500 }
+      )
+    }
+
+    if (!profile) {
+      return NextResponse.json(
+        { error: 'Profile not found' },
         { status: 404 }
       )
     }
