@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/auth/client"
+import { logger } from "@/lib/utils/logger"
 
 export interface Segment {
   id: string
@@ -44,7 +45,7 @@ export const segmentsApi = {
 
       return { data: data || [] }
     } catch (error) {
-      console.error("Error fetching segments:", error)
+      logger.error("Error fetching segments:", error)
       return {
         data: [],
         error: error instanceof Error ? error.message : "Failed to fetch segments",
@@ -62,7 +63,7 @@ export const segmentsApi = {
 
       return { data }
     } catch (error) {
-      console.error("Error fetching segment:", error)
+      logger.error("Error fetching segment:", error)
       return {
         data: null,
         error: error instanceof Error ? error.message : "Failed to fetch segment",
@@ -109,7 +110,7 @@ export const segmentsApi = {
 
       return { data }
     } catch (error) {
-      console.error("Error creating segment:", error)
+      logger.error("Error creating segment:", error)
       return {
         data: null,
         error: error instanceof Error ? error.message : "Failed to create segment",
@@ -161,7 +162,7 @@ export const segmentsApi = {
 
       return { data }
     } catch (error) {
-      console.error("Error creating segment from upload:", error)
+      logger.error("Error creating segment from upload:", error)
       return {
         data: null,
         error: error instanceof Error ? error.message : "Failed to create segment from upload",
@@ -202,7 +203,7 @@ export const segmentsApi = {
 
       return { success: true }
     } catch (error) {
-      console.error("Error tagging profiles:", error)
+      logger.error("Error tagging profiles:", error)
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to tag profiles",
@@ -241,7 +242,7 @@ export const segmentsApi = {
 
       return { data }
     } catch (error) {
-      console.error("Error updating segment:", error)
+      logger.error("Error updating segment:", error)
       return {
         data: null,
         error: error instanceof Error ? error.message : "Failed to update segment",
@@ -259,7 +260,7 @@ export const segmentsApi = {
 
       return { success: true }
     } catch (error) {
-      console.error("Error deleting segment:", error)
+      logger.error("Error deleting segment:", error)
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to delete segment",
@@ -312,13 +313,13 @@ export const segmentsApi = {
       if (segment.filter_criteria) {
         // This filtering would need to be implemented based on the filter_criteria structure
         // For now, return all profiles if no tag is specified
-        console.log("Segment has filter criteria but no tag, returning all profiles for now")
+        logger.debug("Segment has filter criteria but no tag, returning all profiles for now")
       }
 
       // Return all profiles if no specific filtering
       return { data: profiles || [] }
     } catch (error) {
-      console.error("Error fetching list members:", error)
+      logger.error("Error fetching list members:", error)
       return {
         data: [],
         error: error instanceof Error ? error.message : "Failed to fetch list members",

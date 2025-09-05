@@ -12,6 +12,7 @@ import { format, subDays, parseISO, isWithinInterval } from "date-fns"
 import { cn } from "@/lib/utils"
 import type { DateRange } from "react-day-picker"
 import Link from "next/link"
+import { logger } from "@/lib/utils/logger"
 
 interface CampaignMetric {
   metric_type: string
@@ -266,7 +267,7 @@ export default function Overview({ data }: { data: DashboardData }) {
         campaignData: filteredCampaignData,
       })
     } catch (error) {
-      console.error("Error filtering data:", error)
+      logger.error("Error filtering data:", error)
       setFilteredData(safeData)
     } finally {
       setIsLoading(false)

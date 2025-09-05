@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/auth/server'
+import { logger } from "@/lib/utils/logger"
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
     // Fetch numbers from Kudosity API
     const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')
     
-    console.log('Syncing senders from Kudosity API...')
+    logger.debug('Syncing senders from Kudosity API...')
     
     // Fetch owned numbers from Kudosity
     const ownedResponse = await fetch('https://api.transmitsms.com/get-numbers.json?filter=owned&max=100', {
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     if (!ownedResponse.ok) {
       const errorText = await ownedResponse.text()
-      console.error('Kudosity API error:', ownedResponse.status, errorText)
+      logger.error('Kudosity API error:', ownedResponse.status, errorText)
       return NextResponse.json({ 
         error: 'Failed to fetch numbers from Kudosity',
         details: `HTTP ${ownedResponse.status}: ${errorText}`
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     const ownedData = await ownedResponse.json()
-    console.log('Kudosity API response:', { 
+    logger.debug('Kudosity API response:', { 
       hasNumbers: !!ownedData.numbers, 
       count: ownedData.numbers?.length || 0,
       numbers_total: ownedData.numbers_total
@@ -97,10 +98,10 @@ export async function POST(request: NextRequest) {
       const use_case = existingUseCase || 'marketing'
       
       if (existingDescription) {
-        console.log(`Preserving custom description for ${senderId}: "${existingDescription}"`)
+        logger.debug(`Preserving custom description for ${senderId}: "${existingDescription}"`)
       }
       if (existingUseCase && existingUseCase !== 'marketing') {
-        console.log(`Preserving custom use case for ${senderId}: "${existingUseCase}"`)
+        logger.debug(`Preserving custom use case for ${senderId}: "${existingUseCase}"`)
       }
       
       const senderData = {
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log(`Upserting ${sendersToUpsert.length} senders to database...`)
+    logger.debug(`Upserting ${sendersToUpsert.length} senders to database...`)
 
     // Upsert senders to database
     const { data: upsertedSenders, error: upsertError } = await supabase
@@ -155,7 +156,7 @@ export async function POST(request: NextRequest) {
       .select()
 
     if (upsertError) {
-      console.error('Database upsert error:', upsertError)
+      logger.error('Database upsert error:', upsertError)
       return NextResponse.json({ 
         error: 'Failed to save senders to database',
         details: upsertError.message
@@ -177,7 +178,7 @@ export async function POST(request: NextRequest) {
         .not('sender_id', 'in', `(${currentSenderIds.map(id => `'${id}'`).join(',')})`)
 
       if (markStaleError) {
-        console.error('Error marking stale senders:', markStaleError)
+        logger.error('Error marking stale senders:', markStaleError)
       }
     }
 
@@ -189,7 +190,7 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Error syncing senders:', error)
+    logger.error('Error syncing senders:', error)
     return NextResponse.json({ 
       error: 'Failed to sync senders',
       details: error instanceof Error ? error.message : 'Unknown error'

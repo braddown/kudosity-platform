@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Send, Search, Phone, Mail, MapPin, Clock, Building, Globe } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { logger } from "@/lib/utils/logger"
 
 interface Contact {
   id: string
@@ -487,7 +488,7 @@ export default function ChatApp() {
   }, [])
 
   const handleAction = useCallback((action: string) => {
-    console.log(`Action: ${action}`)
+    logger.debug(`Action: ${action}`)
   }, [])
 
   const filteredChats = sampleChats.filter((chat) =>

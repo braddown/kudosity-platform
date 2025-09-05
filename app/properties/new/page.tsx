@@ -13,6 +13,7 @@ import { AlertTriangle, Check, Type, Hash, Calendar, ToggleLeft, Mail, Phone, Li
 import MainLayout from "@/components/MainLayout"
 import { profilesApi } from "@/lib/api/profiles-api"
 import { usePageHeader } from "@/components/PageHeaderContext"
+import { logger } from "@/lib/utils/logger"
 
 interface CustomField {
   key: string
@@ -61,7 +62,7 @@ export default function NewCustomFieldPage() {
     setSuccess(null)
 
     try {
-      console.log("Submitting form data:", formData)
+      logger.debug("Submitting form data:", formData)
 
       const result = await profilesApi.createCustomField({
         key: formData.key,
@@ -72,7 +73,7 @@ export default function NewCustomFieldPage() {
         description: formData.description,
       })
 
-      console.log("API result:", result)
+      logger.debug("API result:", result)
 
       if (result.error) {
         setError(result.error)
@@ -83,7 +84,7 @@ export default function NewCustomFieldPage() {
         }, 1500)
       }
     } catch (err) {
-      console.error("Form submission error:", err)
+      logger.error("Form submission error:", err)
       setError(err instanceof Error ? err.message : "An unexpected error occurred")
     } finally {
       setLoading(false)

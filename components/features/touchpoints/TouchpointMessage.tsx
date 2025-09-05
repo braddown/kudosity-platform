@@ -11,6 +11,7 @@ import { FormLayout, FormSection, FormField } from "@/components/ui/form-layout"
 import { Plus, Smile, Paperclip, Bot } from "lucide-react"
 import PhonePreview from "@/components/PhonePreview"
 import { Card, CardContent } from "@/components/ui/card"
+import { logger } from "@/lib/utils/logger"
 
 interface TouchpointMessageProps {
   touchpointId?: string
@@ -69,10 +70,10 @@ const TouchpointMessage = forwardRef<{ save: () => Promise<void> }, TouchpointMe
 
   const handleSave = async () => {
     try {
-      console.log("Saving touchpoint:", touchpointData)
+      logger.debug("Saving touchpoint:", touchpointData)
       // Here you would typically make an API call to save the data
     } catch (error) {
-      console.error("Error saving touchpoint:", error)
+      logger.error("Error saving touchpoint:", error)
     }
   }
 

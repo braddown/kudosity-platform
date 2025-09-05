@@ -3,6 +3,7 @@ import MainLayout from "@/components/MainLayout"
 import OverviewClientWrapper from "@/components/OverviewClientWrapper"
 import { supabase } from "@/lib/supabase"
 import { subDays } from "date-fns"
+import { logger } from "@/lib/utils/logger"
 
 // Server component to fetch data
 async function OverviewData() {
@@ -18,7 +19,7 @@ async function OverviewData() {
     const schemaNotSetUp = campaignsError || !campaigns || campaigns.length === 0
 
     if (schemaNotSetUp) {
-      console.log("Campaign schema not set up yet, using default data")
+      logger.debug("Campaign schema not set up yet, using default data")
 
       // Return default data structure
       return {
@@ -40,12 +41,12 @@ async function OverviewData() {
       .order("created_at", { ascending: false })
 
     if (campaignError) {
-      console.error("Error fetching campaigns:", campaignError)
+      logger.error("Error fetching campaigns:", campaignError)
       throw new Error(`Error fetching campaigns: ${campaignError.message}`)
     }
 
     if (!allCampaigns || allCampaigns.length === 0) {
-      console.log("No campaigns found")
+      logger.debug("No campaigns found")
       return {
         metrics: {
           message_stats: { total_messages: 0, opens: 0, clicks: 0, responses: 0, conversions: 0, total_revenue: 0 },
@@ -91,7 +92,7 @@ async function OverviewData() {
       .select("*", { count: "exact", head: true })
 
     if (contactCountError) {
-      console.error("Error fetching contact count:", contactCountError)
+      logger.error("Error fetching contact count:", contactCountError)
     }
 
     // Get new contacts (last 30 days)
@@ -101,7 +102,7 @@ async function OverviewData() {
       .gte("created_at", dateFrom.toISOString())
 
     if (newContactsError) {
-      console.error("Error fetching new contacts:", newContactsError)
+      logger.error("Error fetching new contacts:", newContactsError)
     }
 
     // Calculate aggregate metrics from campaign data
@@ -166,7 +167,7 @@ async function OverviewData() {
       schemaSetup: true,
     }
   } catch (error) {
-    console.error("Error fetching dashboard data:", error)
+    logger.error("Error fetching dashboard data:", error)
     // Return fallback data structure
     return {
       metrics: {

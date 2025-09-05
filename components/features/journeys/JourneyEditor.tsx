@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Plus, Clock, MessageSquare, Trash2, Edit, Eye, Play } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 interface Touchpoint {
   id: string
@@ -98,7 +99,7 @@ const JourneyEditor = forwardRef<{ save: () => Promise<void> }, JourneyEditorPro
 
   useImperativeHandle(ref, () => ({
     save: async () => {
-      console.log("Saving journey:", {
+      logger.debug("Saving journey:", {
         name: journeyName,
         description: journeyDescription,
         audience: selectedAudience,

@@ -1,5 +1,6 @@
 
 import { simpleMD5 } from './simple-md5'
+import { logger } from "@/lib/utils/logger"
 
 /**
  * Get Gravatar URL with proper MD5 hashing
@@ -27,7 +28,7 @@ export function getGravatarUrlSimple(
     return gravatarUrl
   } catch (error) {
     // If MD5 fails, fallback to UI Avatars
-    console.warn('Failed to generate Gravatar hash:', error)
+    logger.warn('Failed to generate Gravatar hash:', error)
     const name = email.split('@')[0].replace(/[._-]/g, ' ')
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=${size}&background=6366f1&color=fff&rounded=true`
   }

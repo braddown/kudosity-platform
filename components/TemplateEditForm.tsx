@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { X } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 interface Template {
   id: string
@@ -35,7 +36,7 @@ export default function TemplateEditForm({ template }: TemplateEditFormProps) {
 
   const handleSave = () => {
     // TODO: Implement save logic
-    console.log("Saving template:", formData)
+    logger.debug("Saving template:", formData)
     router.push("/templates")
   }
 

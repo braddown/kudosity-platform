@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/auth/server'
+import { logger } from "@/lib/utils/logger"
 
 // Kudosity has rate limits - typically 10 messages per second for standard accounts
 const MESSAGES_PER_SECOND = 10
@@ -73,7 +74,7 @@ async function sendSingleMessage(
     } else if (response.status === 429 || response.status === 503) {
       // Rate limit or server error - should retry
       if (attempt < RETRY_ATTEMPTS) {
-        console.log(`Retrying message to ${recipient} (attempt ${attempt + 1}/${RETRY_ATTEMPTS})`)
+        logger.debug(`Retrying message to ${recipient} (attempt ${attempt + 1}/${RETRY_ATTEMPTS})`)
         await sleep(RETRY_DELAY * attempt) // Exponential backoff
         return sendSingleMessage(recipient, message, sender, trackLinks, apiKey, apiSecret, attempt + 1)
       }
@@ -166,7 +167,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (campaignError) {
-      console.error('Failed to create campaign:', campaignError)
+      logger.error('Failed to create campaign:', campaignError)
       return NextResponse.json({ 
         error: 'Failed to create campaign record'
       }, { status: 500 })
@@ -290,7 +291,7 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Broadcast error:', error)
+    logger.error('Broadcast error:', error)
     return NextResponse.json({ 
       error: 'Failed to send broadcast',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -334,7 +335,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ campaign })
     
   } catch (error) {
-    console.error('Error fetching campaign:', error)
+    logger.error('Error fetching campaign:', error)
     return NextResponse.json({ 
       error: 'Failed to fetch campaign status'
     }, { status: 500 })

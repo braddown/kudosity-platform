@@ -15,6 +15,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useNavigation } from '@/lib/navigation/useNavigation'
+import { logger } from "@/lib/utils/logger"
 
 // Local interface definition since it's not exported from useNavigation
 interface BaseNavigationOptions {
@@ -414,7 +415,7 @@ export function useEnhancedNavigation(options: UseEnhancedNavigationOptions = {}
       }))
       sessionStorage.setItem(STORAGE_KEYS.FREQUENT_ROUTES, JSON.stringify(frequentRoutes))
     } catch (error) {
-      console.warn('Failed to save navigation session:', error)
+      logger.warn('Failed to save navigation session:', error)
     }
   }, [enablePersistence, history, routeVisitCounts, routeTimestamps, frequentRoutes])
 
@@ -439,7 +440,7 @@ export function useEnhancedNavigation(options: UseEnhancedNavigationOptions = {}
         setRouteTimestamps(new Map(timestamps.map(([path, timestamp]: [string, string]) => [path, new Date(timestamp)])))
       }
     } catch (error) {
-      console.warn('Failed to load navigation session:', error)
+      logger.warn('Failed to load navigation session:', error)
     }
   }, [enablePersistence])
 
@@ -451,7 +452,7 @@ export function useEnhancedNavigation(options: UseEnhancedNavigationOptions = {}
         sessionStorage.removeItem(key)
       })
     } catch (error) {
-      console.warn('Failed to clear navigation session:', error)
+      logger.warn('Failed to clear navigation session:', error)
     }
     
     clearHistory()

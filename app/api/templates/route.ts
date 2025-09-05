@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/auth/server"
+import { logger } from "@/lib/utils/logger"
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,13 +19,13 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Error fetching templates:', error)
+      logger.error('Error fetching templates:', error)
       return NextResponse.json({ error: 'Failed to fetch templates' }, { status: 500 })
     }
 
-    return NextResponse.json(templates || [])
+    return NextResponse.json({ templates: templates || [] })
   } catch (error) {
-    console.error('Error in templates GET:', error)
+    logger.error('Error in templates GET:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch templates' },
       { status: 500 }
@@ -60,13 +61,13 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Error creating template:', error)
+      logger.error('Error creating template:', error)
       return NextResponse.json({ error: 'Failed to create template' }, { status: 500 })
     }
 
     return NextResponse.json(template)
   } catch (error) {
-    console.error('Error in templates POST:', error)
+    logger.error('Error in templates POST:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create template' },
       { status: 500 }

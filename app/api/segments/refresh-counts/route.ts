@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/auth/server"
+import { logger } from "@/lib/utils/logger"
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase.rpc('update_segment_profile_counts')
     
     if (error) {
-      console.error("Error refreshing segment counts:", error)
+      logger.error("Error refreshing segment counts:", error)
       return NextResponse.json({ error: "Failed to refresh counts" }, { status: 500 })
     }
 
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
       .order("name")
 
     if (segmentsError) {
-      console.error("Error fetching updated segments:", segmentsError)
+      logger.error("Error fetching updated segments:", segmentsError)
       return NextResponse.json({ error: "Failed to fetch updated segments" }, { status: 500 })
     }
 
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
       segments 
     })
   } catch (error) {
-    console.error("Error in refresh-counts:", error)
+    logger.error("Error in refresh-counts:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

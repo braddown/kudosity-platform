@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { logger } from "@/lib/utils/logger"
 import { ContactPropertiesForm } from "./features/profiles/ContactPropertiesForm"
 import { CustomFieldsSection } from "./features/profiles/CustomFieldsSection"
 import { NotificationPreferences } from "./features/profiles/NotificationPreferences"
@@ -111,7 +112,7 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
         const { data: schema, error } = await profilesApi.getCustomFieldsSchema()
         
         if (error) {
-          console.error('Error fetching custom fields schema:', error)
+          logger.error('Error fetching custom fields schema:', error)
           toast.error('Failed to load custom fields')
         } else {
           setCustomFieldsSchema(schema || {})
@@ -130,7 +131,7 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
           }))
         }
       } catch (error) {
-        console.error('Error fetching custom fields schema:', error)
+        logger.error('Error fetching custom fields schema:', error)
         toast.error('Failed to load custom fields')
       } finally {
         setLoadingSchema(false)
@@ -174,7 +175,7 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
         profileToSave.status = 'active'
       }
 
-      console.log('Saving profile:', JSON.stringify(profileToSave, null, 2))
+      logger.debug('Saving profile:', JSON.stringify(profileToSave, null, 2))
 
       const response = await fetch('/api/cdp-profiles', {
         method: 'POST',
@@ -185,8 +186,8 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
       })
 
       const responseText = await response.text()
-      console.log('Response status:', response.status)
-      console.log('Response text:', responseText)
+      logger.debug('Response status:', response.status)
+      logger.debug('Response text:', responseText)
 
       if (!response.ok) {
         let error
@@ -195,7 +196,7 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
         } catch {
           error = { message: responseText }
         }
-        console.error('API Error:', error)
+        logger.error('API Error:', error)
         throw new Error(error.details || error.message || 'Failed to create profile')
       }
 
@@ -225,7 +226,7 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
           }),
         })
       } catch (activityError) {
-        console.error('Failed to log activity:', activityError)
+        logger.error('Failed to log activity:', activityError)
         // Don't fail the whole operation if activity logging fails
       }
       
@@ -237,7 +238,7 @@ export default function NewProfileForm({ onSubmit, onCancel, onClose, onSave, on
       }, 500)
       
     } catch (error) {
-      console.error('Error creating profile:', error)
+      logger.error('Error creating profile:', error)
       toast.error(error instanceof Error ? error.message : "Failed to create profile")
       if (onSaveError) onSaveError()
     } finally {

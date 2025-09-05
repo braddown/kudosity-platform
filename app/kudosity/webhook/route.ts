@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
+import { logger } from "@/lib/utils/logger"
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function POST(request: NextRequest) {
     const payload = await request.json()
     
     // Log the webhook event
-    console.log('Received Kudosity webhook at /kudosity/webhook:', JSON.stringify(payload, null, 2))
+    logger.debug('Received Kudosity webhook at /kudosity/webhook:', JSON.stringify(payload, null, 2))
     
     // Use service role client for webhooks (no auth needed)
     const supabase = supabaseServer
@@ -30,13 +31,13 @@ export async function POST(request: NextRequest) {
       .single()
     
     if (eventError) {
-      console.error('Failed to store webhook event:', eventError)
+      logger.error('Failed to store webhook event:', eventError)
       throw eventError
     }
     
     const eventType = payload.event || payload.event_type || payload.type
     const recordId = webhookEvent?.id
-    console.log('Processing webhook event type:', eventType, 'Record ID:', recordId)
+    logger.debug('Processing webhook event type:', eventType, 'Record ID:', recordId)
     
     // Process the event based on type
     let processed = false
@@ -55,10 +56,10 @@ export async function POST(request: NextRequest) {
           processed = true
           break
         default:
-          console.log('Unknown event type:', eventType)
+          logger.debug('Unknown event type:', eventType)
       }
     } catch (processingError) {
-      console.error(`Failed to process ${eventType} event:`, processingError)
+      logger.error(`Failed to process ${eventType} event:`, processingError)
       processed = false // Don't mark as processed if handler failed
     }
     
@@ -70,9 +71,9 @@ export async function POST(request: NextRequest) {
         .eq('id', recordId)
       
       if (updateError) {
-        console.error('Failed to mark event as processed:', updateError)
+        logger.error('Failed to mark event as processed:', updateError)
       } else {
-        console.log('Marked webhook event as processed:', recordId)
+        logger.debug('Marked webhook event as processed:', recordId)
       }
     }
     
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Webhook processing error:', error)
+    logger.error('Webhook processing error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to process webhook' },
       { status: 500 }
@@ -106,7 +107,7 @@ async function handleSmsStatus(payload: any, supabase: any) {
   // Extract status data from nested structure
   const statusData = payload.status || payload
   
-  console.log('Processing SMS_STATUS:', {
+  logger.debug('Processing SMS_STATUS:', {
     status: statusData.status,
     message_ref: statusData.message_ref,
     message_id: statusData.id
@@ -114,7 +115,7 @@ async function handleSmsStatus(payload: any, supabase: any) {
   
   const messageRef = statusData.message_ref || statusData.message_id
   if (!messageRef) {
-    console.error('No message_ref in SMS_STATUS payload')
+    logger.error('No message_ref in SMS_STATUS payload')
     return // Not an error, just skip
   }
   
@@ -139,7 +140,7 @@ async function handleSmsStatus(payload: any, supabase: any) {
     .or(`message_id.eq.${messageRef},message_ref.eq.${messageRef}`)
   
   if (error) {
-    console.error('Failed to update message status:', error)
+    logger.error('Failed to update message status:', error)
     // Don't throw for status updates as the message might not exist yet
   }
 }
@@ -148,7 +149,7 @@ async function handleSmsInbound(payload: any, supabase: any) {
   // Extract inbound message data from nested structure
   const moData = payload.mo || payload
   
-  console.log('Processing SMS_INBOUND:', {
+  logger.debug('Processing SMS_INBOUND:', {
     sender: moData.sender,
     recipient: moData.recipient,
     message: moData.message?.substring(0, 50)
@@ -170,7 +171,7 @@ async function handleSmsInbound(payload: any, supabase: any) {
     })
   
   if (error) {
-    console.error('Failed to store inbound message:', error)
+    logger.error('Failed to store inbound message:', error)
     throw error // Throw error so event won't be marked as processed
   }
 }
@@ -179,7 +180,7 @@ async function handleLinkHit(payload: any, supabase: any) {
   // Extract link hit data from nested structure
   const linkData = payload.link_hit || payload
   
-  console.log('Processing LINK_HIT:', {
+  logger.debug('Processing LINK_HIT:', {
     url: linkData.url,
     hits: linkData.hits,
     source_message: linkData.source_message
@@ -202,7 +203,7 @@ async function handleLinkHit(payload: any, supabase: any) {
       })
     
     if (error) {
-      console.error('Failed to store link click:', error)
+      logger.error('Failed to store link click:', error)
     }
   }
   

@@ -1,3 +1,4 @@
+import { logger } from "@/lib/utils/logger"
 /**
  * Simple CDP Migration Applier
  * 
@@ -14,7 +15,7 @@ const SUPABASE_URL = 'https://hgfsmeudhvsvwmzxexmv.supabase.co'
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY
 
 if (!SUPABASE_SERVICE_KEY) {
-  console.error('❌ Please set SUPABASE_SERVICE_ROLE_KEY or SUPABASE_KEY environment variable')
+  logger.error('❌ Please set SUPABASE_SERVICE_ROLE_KEY or SUPABASE_KEY environment variable')
   process.exit(1)
 }
 
@@ -27,18 +28,18 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
 })
 
 async function applyCDPMigration() {
-  console.log('🚀 Starting CDP Architecture Migration...')
+  logger.debug('🚀 Starting CDP Architecture Migration...')
   
   try {
     // Step 1: Enable required extensions
-    console.log('📦 Enabling required extensions...')
+    logger.debug('📦 Enabling required extensions...')
     
     const { error: ext1Error } = await supabase.rpc('exec_sql', {
       sql_query: 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'
     })
     
     if (ext1Error) {
-      console.warn('⚠️  uuid-ossp extension:', ext1Error.message)
+      logger.warn('⚠️  uuid-ossp extension:', ext1Error.message)
     }
     
     const { error: ext2Error } = await supabase.rpc('exec_sql', {
@@ -46,13 +47,13 @@ async function applyCDPMigration() {
     })
     
     if (ext2Error) {
-      console.warn('⚠️  pg_trgm extension:', ext2Error.message)
+      logger.warn('⚠️  pg_trgm extension:', ext2Error.message)
     }
     
-    console.log('✅ Extensions enabled')
+    logger.debug('✅ Extensions enabled')
 
     // Step 2: Create core tables
-    console.log('🏗️  Creating core tables...')
+    logger.debug('🏗️  Creating core tables...')
     
     // Create users table
     const createUsersSQL = `
@@ -81,10 +82,10 @@ async function applyCDPMigration() {
     
     const { error: usersError } = await supabase.rpc('exec_sql', { sql_query: createUsersSQL })
     if (usersError) {
-      console.error('❌ Failed to create users table:', usersError.message)
+      logger.error('❌ Failed to create users table:', usersError.message)
       throw usersError
     }
-    console.log('✅ Users table created')
+    logger.debug('✅ Users table created')
 
     // Create profiles table
     const createProfilesSQL = `
@@ -135,10 +136,10 @@ async function applyCDPMigration() {
     
     const { error: profilesError } = await supabase.rpc('exec_sql', { sql_query: createProfilesSQL })
     if (profilesError) {
-      console.error('❌ Failed to create profiles table:', profilesError.message)
+      logger.error('❌ Failed to create profiles table:', profilesError.message)
       throw profilesError
     }
-    console.log('✅ Profiles table created')
+    logger.debug('✅ Profiles table created')
 
     // Create contacts table
     const createContactsSQL = `
@@ -176,10 +177,10 @@ async function applyCDPMigration() {
     
     const { error: contactsError } = await supabase.rpc('exec_sql', { sql_query: createContactsSQL })
     if (contactsError) {
-      console.error('❌ Failed to create contacts table:', contactsError.message)
+      logger.error('❌ Failed to create contacts table:', contactsError.message)
       throw contactsError
     }
-    console.log('✅ Contacts table created')
+    logger.debug('✅ Contacts table created')
 
     // Create profile_activities table
     const createActivitiesSQL = `
@@ -205,13 +206,13 @@ async function applyCDPMigration() {
     
     const { error: activitiesError } = await supabase.rpc('exec_sql', { sql_query: createActivitiesSQL })
     if (activitiesError) {
-      console.error('❌ Failed to create profile_activities table:', activitiesError.message)
+      logger.error('❌ Failed to create profile_activities table:', activitiesError.message)
       throw activitiesError
     }
-    console.log('✅ Profile activities table created')
+    logger.debug('✅ Profile activities table created')
 
     // Step 3: Create indexes
-    console.log('📊 Creating indexes...')
+    logger.debug('📊 Creating indexes...')
     
     const indexes = [
       'CREATE INDEX IF NOT EXISTS idx_profiles_mobile ON profiles(mobile);',
@@ -226,10 +227,10 @@ async function applyCDPMigration() {
     for (const indexSQL of indexes) {
       const { error: indexError } = await supabase.rpc('exec_sql', { sql_query: indexSQL })
       if (indexError) {
-        console.warn('⚠️  Index creation warning:', indexError.message)
+        logger.warn('⚠️  Index creation warning:', indexError.message)
       }
     }
-    console.log('✅ Indexes created')
+    logger.debug('✅ Indexes created')
 
     // Step 4: Add foreign key constraint for profiles self-reference
     const addForeignKeySQL = `
@@ -247,11 +248,11 @@ async function applyCDPMigration() {
     
     const { error: fkError } = await supabase.rpc('exec_sql', { sql_query: addForeignKeySQL })
     if (fkError) {
-      console.warn('⚠️  Foreign key constraint warning:', fkError.message)
+      logger.warn('⚠️  Foreign key constraint warning:', fkError.message)
     }
 
     // Step 5: Create default admin user
-    console.log('👤 Creating default admin user...')
+    logger.debug('👤 Creating default admin user...')
     
     const createAdminSQL = `
       INSERT INTO users (
@@ -273,29 +274,29 @@ async function applyCDPMigration() {
     
     const { error: adminError } = await supabase.rpc('exec_sql', { sql_query: createAdminSQL })
     if (adminError) {
-      console.warn('⚠️  Admin user creation warning:', adminError.message)
+      logger.warn('⚠️  Admin user creation warning:', adminError.message)
     }
-    console.log('✅ Default admin user created (admin@kudosity.com / admin123)')
+    logger.debug('✅ Default admin user created (admin@kudosity.com / admin123)')
     
-    console.log('🎉 CDP Architecture Migration completed successfully!')
-    console.log('')
-    console.log('📋 Summary:')
-    console.log('  ✅ Extensions enabled (uuid-ossp, pg_trgm)')
-    console.log('  ✅ Core tables created (users, profiles, contacts, profile_activities)')
-    console.log('  ✅ Indexes created for performance')
-    console.log('  ✅ Foreign key constraints added')
-    console.log('  ✅ Default admin user created')
-    console.log('')
-    console.log('🔑 Next steps:')
-    console.log('  1. Update your application to use the new CDP types and hooks')
-    console.log('  2. Create custom field definitions as needed')
-    console.log('  3. Set up contact processing workflows')
-    console.log('  4. Configure notification preferences')
-    console.log('')
-    console.log('⚠️  Remember to change the default admin password!')
+    logger.debug('🎉 CDP Architecture Migration completed successfully!')
+    logger.debug('')
+    logger.debug('📋 Summary:')
+    logger.debug('  ✅ Extensions enabled (uuid-ossp, pg_trgm)')
+    logger.debug('  ✅ Core tables created (users, profiles, contacts, profile_activities)')
+    logger.debug('  ✅ Indexes created for performance')
+    logger.debug('  ✅ Foreign key constraints added')
+    logger.debug('  ✅ Default admin user created')
+    logger.debug('')
+    logger.debug('🔑 Next steps:')
+    logger.debug('  1. Update your application to use the new CDP types and hooks')
+    logger.debug('  2. Create custom field definitions as needed')
+    logger.debug('  3. Set up contact processing workflows')
+    logger.debug('  4. Configure notification preferences')
+    logger.debug('')
+    logger.debug('⚠️  Remember to change the default admin password!')
     
   } catch (error) {
-    console.error('💥 Migration failed:', error)
+    logger.error('💥 Migration failed:', error)
     process.exit(1)
   }
 }
@@ -303,10 +304,10 @@ async function applyCDPMigration() {
 // Run the migration
 applyCDPMigration()
   .then(() => {
-    console.log('✨ Migration completed successfully')
+    logger.debug('✨ Migration completed successfully')
     process.exit(0)
   })
   .catch((error) => {
-    console.error('💥 Migration failed:', error)
+    logger.error('💥 Migration failed:', error)
     process.exit(1)
   })

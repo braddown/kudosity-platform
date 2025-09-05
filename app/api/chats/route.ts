@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/utils/logger"
 
 export async function GET() {
   try {
-    console.log("🔍 API: Fetching chats with profiles...")
+    logger.debug("🔍 API: Fetching chats with profiles...")
 
     const { data: chats, error } = await supabase
       .from("chats")
@@ -24,14 +25,14 @@ export async function GET() {
       .order("updated_at", { ascending: false })
 
     if (error) {
-      console.error("❌ API: Error fetching chats:", error)
+      logger.error("❌ API: Error fetching chats:", error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    console.log(`✅ API: Successfully fetched ${chats?.length || 0} chats`)
+    logger.debug(`✅ API: Successfully fetched ${chats?.length || 0} chats`)
     return NextResponse.json({ data: chats || [] })
   } catch (error) {
-    console.error("❌ API: Unexpected error in chats route:", error)
+    logger.error("❌ API: Unexpected error in chats route:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { profile_id, channel = "SMS", subject } = body
 
-    console.log("🆕 API: Creating new chat:", { profile_id, channel, subject })
+    logger.debug("🆕 API: Creating new chat:", { profile_id, channel, subject })
 
     const { data, error } = await supabase
       .from("chats")
@@ -58,14 +59,14 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      console.error("❌ API: Error creating chat:", error)
+      logger.error("❌ API: Error creating chat:", error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    console.log("✅ API: Chat created successfully:", data?.id)
+    logger.debug("✅ API: Chat created successfully:", data?.id)
     return NextResponse.json({ data })
   } catch (error) {
-    console.error("❌ API: Unexpected error creating chat:", error)
+    logger.error("❌ API: Unexpected error creating chat:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

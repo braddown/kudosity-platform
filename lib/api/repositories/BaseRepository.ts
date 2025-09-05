@@ -16,6 +16,7 @@ import {
   RepositoryConfig,
   BulkOperationResult
 } from './types'
+import { logger } from "@/lib/utils/logger"
 
 export abstract class BaseRepository<T, TInsert = Partial<T>, TUpdate = Partial<T>> 
   implements IBaseRepository<T, TInsert, TUpdate> {
@@ -66,7 +67,7 @@ export abstract class BaseRepository<T, TInsert = Partial<T>, TUpdate = Partial<
    */
   protected log(operation: string, details?: any): void {
     if (this.config.enableLogging) {
-      console.log(`[${this.config.tableName}Repository] ${operation}:`, details)
+      logger.debug(`[${this.config.tableName}Repository] ${operation}:`, details)
     }
   }
 

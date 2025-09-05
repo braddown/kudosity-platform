@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/auth/server"
+import { logger } from "@/lib/utils/logger"
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     const apiSecret = process.env.KUDOSITY_API_SECRET
 
     if (!apiKey || !apiSecret) {
-      console.error("Kudosity API credentials not configured")
+      logger.error("Kudosity API credentials not configured")
       return NextResponse.json({ trackedMessage: message })
     }
 
@@ -59,16 +60,16 @@ export async function POST(request: NextRequest) {
             trackedMessage = trackedMessage.replace(url, data.short_url)
           }
         } else {
-          console.error(`Failed to shorten URL ${url}:`, await response.text())
+          logger.error(`Failed to shorten URL ${url}:`, await response.text())
         }
       } catch (error) {
-        console.error(`Error shortening URL ${url}:`, error)
+        logger.error(`Error shortening URL ${url}:`, error)
       }
     }
 
     return NextResponse.json({ trackedMessage })
   } catch (error) {
-    console.error('Error in track-links:', error)
+    logger.error('Error in track-links:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to track links' },
       { status: 500 }

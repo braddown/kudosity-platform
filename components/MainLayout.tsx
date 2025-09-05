@@ -15,6 +15,7 @@ import {
   FileText,
   User,
 } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -91,7 +92,7 @@ function AccountDropdown({ onSelectProfileItem }: { onSelectProfileItem: (item: 
           }
         }
       } catch (error) {
-        console.error('Error fetching user info:', error)
+        logger.error('Error fetching user info:', error)
       }
     }
     
@@ -331,7 +332,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 if (item === "Pricing") {
                   router.push("/pricing")
                 } else {
-                  console.log("Profile dropdown item selected:", item)
+                  logger.debug("Profile dropdown item selected:", item)
                 }
               }}
             />
@@ -411,7 +412,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 {pathname === "/pricing" && (
                                   <Button
                   onClick={() => {
-                    console.log("Contact sales clicked")
+                    logger.debug("Contact sales clicked")
                   }}
                   variant="default"
                 >

@@ -1,5 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr'
 import { authConfig } from './config'
+import { logger } from "@/lib/utils/logger"
 
 // Create Supabase client for browser
 export function createClient() {
@@ -157,23 +158,23 @@ export async function getCurrentUser() {
 export async function createAccount(name: string) {
   const supabase = createClient()
   
-  console.log('Creating account with name:', name)
+  logger.debug('Creating account with name:', name)
   
   // Get just the basic user without profile/orgs to avoid recursion
   const { data: { user }, error: userError } = await supabase.auth.getUser()
   
-  console.log('Current user:', user?.id, user?.email)
+  logger.debug('Current user:', user?.id, user?.email)
   
   if (userError || !user) {
-    console.error('User error:', userError)
+    logger.error('User error:', userError)
     throw new Error('Not authenticated')
   }
 
   // Generate slug from name
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
   
-  console.log('Generated slug:', slug)
-  console.log('Calling RPC with params:', {
+  logger.debug('Generated slug:', slug)
+  logger.debug('Calling RPC with params:', {
     p_name: name,
     p_slug: slug,
     p_user_id: user.id,
@@ -190,10 +191,10 @@ export async function createAccount(name: string) {
       p_user_email: user.email || ''
     })
 
-  console.log('RPC response:', { data, error })
+  logger.debug('RPC response:', { data, error })
 
   if (error) {
-    console.error('Account creation error details:', {
+    logger.error('Account creation error details:', {
       message: error.message,
       details: error.details,
       hint: error.hint,
@@ -203,7 +204,7 @@ export async function createAccount(name: string) {
   }
 
   if (!data || data.length === 0) {
-    console.error('No data returned from RPC')
+    logger.error('No data returned from RPC')
     throw new Error('Account creation failed - no data returned')
   }
 
@@ -213,12 +214,12 @@ export async function createAccount(name: string) {
     slug: data[0].account_slug
   }
   
-  console.log('Account created successfully:', account)
+  logger.debug('Account created successfully:', account)
 
   // Set as current account
   document.cookie = `current_account=${account.id}; path=/; max-age=${60 * 60 * 24 * 30}`
   
-  console.log('Account cookie set, redirecting to overview...')
+  logger.debug('Account cookie set, redirecting to overview...')
   
   // Force a page reload to ensure the middleware picks up the new account
   window.location.href = '/overview'

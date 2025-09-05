@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/auth/server'
+import { logger } from "@/lib/utils/logger"
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,13 +20,13 @@ export async function GET(request: NextRequest) {
       .limit(100)
 
     if (error) {
-      console.error('Error fetching webhook events:', error)
+      logger.error('Error fetching webhook events:', error)
       return NextResponse.json({ error: 'Failed to fetch webhook events' }, { status: 500 })
     }
 
     return NextResponse.json({ events: events || [] })
   } catch (error) {
-    console.error('Error in webhook-events API:', error)
+    logger.error('Error in webhook-events API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

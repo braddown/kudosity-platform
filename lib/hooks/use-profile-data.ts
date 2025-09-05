@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { profilesApi } from '@/lib/api/profiles-api'
+import { logger } from "@/lib/utils/logger"
 
 interface UseProfileDataOptions {
   profileId: string
@@ -26,7 +27,7 @@ interface UseProfileDataResult {
  * ```tsx
  * const { profile, loading, error, customFieldsSchema, refetch } = useProfileData({
  *   profileId: '123',
- *   onError: (error) => console.error('Profile error:', error)
+ *   onError: (error) => logger.error('Profile error:', error)
  * })
  * ```
  */
@@ -49,16 +50,16 @@ export function useProfileData({
       const { data: schema, error } = await profilesApi.getCustomFieldsSchema()
 
       if (error) {
-        console.error("Error fetching custom fields schema:", error)
+        logger.error("Error fetching custom fields schema:", error)
         if (onError) onError(`Failed to load custom fields schema: ${error}`)
         setCustomFieldsSchema({})
         return
       }
 
-      console.log("Custom fields schema loaded from API:", schema)
+      logger.debug("Custom fields schema loaded from API:", schema)
       setCustomFieldsSchema(schema || {})
     } catch (err) {
-      console.error("Exception fetching custom fields schema:", err)
+      logger.error("Exception fetching custom fields schema:", err)
       const errorMessage = err instanceof Error ? err.message : String(err)
       if (onError) onError(`Exception loading custom fields schema: ${errorMessage}`)
       setCustomFieldsSchema({})
@@ -75,12 +76,12 @@ export function useProfileData({
     setError(null)
 
     try {
-      console.log(`Fetching CDP profile with ID: ${profileId}`)
+      logger.debug(`Fetching CDP profile with ID: ${profileId}`)
       
       const { data, error } = await profilesApi.getProfile(profileId)
 
       if (error) {
-        console.error("Error fetching CDP profile:", error)
+        logger.error("Error fetching CDP profile:", error)
         const errorMessage = `Failed to load profile: ${error}`
         setError(errorMessage)
         if (onError) onError(errorMessage)
@@ -88,15 +89,15 @@ export function useProfileData({
       }
 
       if (!data) {
-        console.error("No profile data returned")
+        logger.error("No profile data returned")
         const errorMessage = "Profile not found"
         setError(errorMessage)
         if (onError) onError(errorMessage)
         return
       }
 
-      console.log("CDP profile data loaded:", data)
-      console.log("Contact fields from DB:", {
+      logger.debug("CDP profile data loaded:", data)
+      logger.debug("Contact fields from DB:", {
         notes: data.notes,
         address_line_1: data.address_line_1,
         address_line_2: data.address_line_2,
@@ -170,7 +171,7 @@ export function useProfileData({
 
       setProfile(completeProfile)
     } catch (err) {
-      console.error("Exception fetching CDP profile:", err)
+      logger.error("Exception fetching CDP profile:", err)
       const errorMessage = `An error occurred: ${err instanceof Error ? err.message : String(err)}`
       setError(errorMessage)
       if (onError) onError(errorMessage)
@@ -187,10 +188,10 @@ export function useProfileData({
 
   // Update profile data directly
   const updateProfile = (updatedProfile: any) => {
-    console.log("🔄 updateProfile called with:", updatedProfile)
-    console.log("🔄 New notification_preferences:", updatedProfile.notification_preferences)
+    logger.debug("🔄 updateProfile called with:", updatedProfile)
+    logger.debug("🔄 New notification_preferences:", updatedProfile.notification_preferences)
     setProfile(updatedProfile)
-    console.log("✅ Profile state updated")
+    logger.debug("✅ Profile state updated")
   }
 
   // Load custom fields schema on mount

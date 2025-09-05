@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/auth/server'
+import { logger } from "@/lib/utils/logger"
 
 interface SendSMSParams {
   recipient: string
@@ -55,7 +56,7 @@ export class KudosityAPI {
         )
 
         if (!response.ok) {
-          console.error('Failed to fetch sender IDs:', response.status)
+          logger.error('Failed to fetch sender IDs:', response.status)
           break
         }
 
@@ -87,7 +88,7 @@ export class KudosityAPI {
 
       return allNumbers
     } catch (error) {
-      console.error('Error fetching sender IDs:', error)
+      logger.error('Error fetching sender IDs:', error)
       return []
     }
   }
@@ -149,7 +150,7 @@ export class KudosityAPI {
         ...result,
       }
     } catch (error) {
-      console.error('Error sending SMS:', error)
+      logger.error('Error sending SMS:', error)
       throw error
     }
   }

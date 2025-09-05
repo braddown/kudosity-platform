@@ -4,20 +4,21 @@ import MainLayout from "@/components/MainLayout"
 import ReplyAutomation from "@/components/ReplyAutomation"
 import PageLayout from "@/components/layouts/PageLayout"
 import { Plus, Settings } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 export default function ReplyAutomationPage() {
   const handleCreateRule = () => {
-    console.log("Creating new automation rule")
+    logger.debug("Creating new automation rule", {}, "reply-automation")
     // Add create rule logic here
   }
 
   const handleSettings = () => {
-    console.log("Opening automation settings")
+    logger.debug("Opening automation settings", {}, "reply-automation")
     // Add settings logic here
   }
 
   const handleSaveChanges = () => {
-    console.log("Saving automation changes")
+    logger.debug("Saving automation changes", {}, "reply-automation")
     // Add save logic here - this will need to be connected to the ReplyAutomation component
   }
 

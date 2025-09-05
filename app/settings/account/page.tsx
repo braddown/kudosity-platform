@@ -12,6 +12,7 @@ import { createClient } from "@/lib/auth/client"
 import { useToast } from "@/components/ui/use-toast"
 import { LoadingSection } from "@/components/ui/loading"
 import { Building2, Globe, Clock, MapPin, Hash } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 interface AccountInfo {
   id: string
@@ -141,7 +142,7 @@ export default function AccountSettingsPage() {
           
           if (membershipData) {
             accountId = membershipData.account_id
-            console.log('Found account from membership:', accountId)
+            logger.debug('Found account from membership:', accountId)
           }
         }
         
@@ -150,7 +151,7 @@ export default function AccountSettingsPage() {
           const cookies = document.cookie.split('; ')
           const accountCookie = cookies.find(c => c.startsWith('current_account='))
           accountId = accountCookie?.split('=')[1]
-          console.log('Using account from cookie:', accountId)
+          logger.debug('Using account from cookie:', accountId)
         }
         
         if (!accountId) {
@@ -164,18 +165,18 @@ export default function AccountSettingsPage() {
         }
         
         // Fetch account details
-        console.log('Fetching account with ID:', accountId)
+        logger.debug('Fetching account with ID:', accountId)
         const { data, error } = await supabase
           .from('accounts')
           .select('*')
           .eq('id', accountId)
           .single()
         
-        console.log('Account data:', data)
-        console.log('Account error:', error)
+        logger.debug('Account data:', data)
+        logger.debug('Account error:', error)
         
         if (error) {
-          console.error('Error fetching account:', error)
+          logger.error('Error fetching account:', error)
           toast({
             title: "Error",
             description: "Failed to load account information.",
@@ -195,7 +196,7 @@ export default function AccountSettingsPage() {
           })
         }
       } catch (error) {
-        console.error('Error:', error)
+        logger.error('Error:', error)
         toast({
           title: "Error",
           description: "An unexpected error occurred.",
@@ -241,7 +242,7 @@ export default function AccountSettingsPage() {
                 .single()
               
               if (error) {
-                console.error('Update error details:', error)
+                logger.error('Update error details:', error)
                 throw error
               }
               
@@ -265,7 +266,7 @@ export default function AccountSettingsPage() {
                 })
               }
             } catch (error: any) {
-              console.error('Error saving:', error)
+              logger.error('Error saving:', error)
               toast({
                 title: "Error",
                 description: error.message || "Failed to save account settings. Please check your permissions.",

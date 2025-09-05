@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/auth/server'
+import { logger } from "@/lib/utils/logger"
 
 export async function GET(request: NextRequest) {
   try {
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
     const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')
     const apiUrl = `https://api.transmitsms.com/get-numbers.json?${params.toString()}`
     
-    console.log('Fetching available numbers from Kudosity:', apiUrl)
+    logger.debug('Fetching available numbers from Kudosity:', apiUrl)
     
     const response = await fetch(apiUrl, {
       headers: {
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('Kudosity API error:', response.status, errorText)
+      logger.error('Kudosity API error:', response.status, errorText)
       return NextResponse.json({ 
         error: 'Failed to fetch available numbers from Kudosity',
         details: `HTTP ${response.status}: ${errorText}`
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json()
-    console.log('Kudosity available numbers response:', { 
+    logger.debug('Kudosity available numbers response:', { 
       hasNumbers: !!data.numbers, 
       count: data.numbers?.length || 0,
       numbers_total: data.numbers_total,
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Error fetching available numbers:', error)
+    logger.error('Error fetching available numbers:', error)
     return NextResponse.json({ 
       error: 'Failed to fetch available numbers',
       details: error instanceof Error ? error.message : 'Unknown error'

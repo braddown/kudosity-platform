@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/auth/server'
+import { logger } from "@/lib/utils/logger"
 
 export async function POST(request: Request) {
   try {
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
     const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
     const slug = `${baseSlug}-${Date.now()}`
     
-    console.log('Creating account directly:', { name, slug, userId: user.id })
+    logger.debug('Creating account directly:', { name, slug, userId: user.id })
     
     // Create account directly
     const { data: account, error: accountError } = await supabase
@@ -39,14 +40,14 @@ export async function POST(request: Request) {
       .single()
     
     if (accountError) {
-      console.error('Account creation error:', accountError)
+      logger.error('Account creation error:', accountError)
       return NextResponse.json({
         error: 'Failed to create account',
         details: accountError
       }, { status: 500 })
     }
     
-    console.log('Account created:', account)
+    logger.debug('Account created:', account)
     
     // Create membership
     const { data: membership, error: memberError } = await supabase
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
       .single()
     
     if (memberError) {
-      console.error('Membership creation error:', memberError)
+      logger.error('Membership creation error:', memberError)
       // Try to clean up the account
       await supabase.from('accounts').delete().eq('id', account.id)
       
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
       }, { status: 500 })
     }
     
-    console.log('Membership created:', membership)
+    logger.debug('Membership created:', membership)
     
     // Set cookie
     const response = NextResponse.json({
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
     
     return response
   } catch (error: any) {
-    console.error('Unexpected error:', error)
+    logger.error('Unexpected error:', error)
     return NextResponse.json({
       error: error.message,
       stack: error.stack

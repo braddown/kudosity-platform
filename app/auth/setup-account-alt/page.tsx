@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Building, Loader2, AlertCircle } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
+import { logger } from "@/lib/utils/logger"
 
 export default function SetupAccountAltPage() {
   const router = useRouter()
@@ -29,7 +30,7 @@ export default function SetupAccountAltPage() {
     }
 
     try {
-      console.log('Submitting account creation for:', accountName)
+      logger.debug('Submitting account creation for:', accountName)
       
       const response = await fetch('/api/create-account-direct', {
         method: 'POST',
@@ -40,7 +41,7 @@ export default function SetupAccountAltPage() {
       })
 
       const data = await response.json()
-      console.log('Response from server:', data)
+      logger.debug('Response from server:', data)
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create account')
@@ -54,7 +55,7 @@ export default function SetupAccountAltPage() {
       // Redirect to overview
       router.push('/overview')
     } catch (err: any) {
-      console.error('Account setup error:', err)
+      logger.error('Account setup error:', err)
       setError(err.message || 'Failed to create account')
       setLoading(false)
     }

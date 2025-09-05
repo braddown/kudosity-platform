@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import MainLayout from "@/components/MainLayout"
 import { EditPageHeader } from "@/components/EditPageHeader"
 import { JourneyEditor } from "@/features/journeys"
+import { logger } from "@/lib/utils/logger"
 
 export default function CreateJourneyPage() {
   const router = useRouter()
@@ -18,7 +19,7 @@ export default function CreateJourneyPage() {
         await journeyEditorRef.current.save()
         router.push("/journeys")
       } catch (error) {
-        console.error("Failed to create journey:", error)
+        logger.error("Failed to create journey:", error)
       } finally {
         setIsSaving(false)
       }

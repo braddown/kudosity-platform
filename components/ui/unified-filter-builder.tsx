@@ -265,11 +265,21 @@ export function UnifiedFilterBuilder({
   showLogic = false,
   maxGroups = 10
 }: UnifiedFilterBuilderProps) {
-  const [filterGroups, setFilterGroups] = useState<FilterGroup[]>(() =>
-    initialFilters.length > 0 
-      ? initialFilters 
-      : [{ id: crypto.randomUUID(), conditions: [{ field: '', operator: 'equals', value: '' }] }]
-  )
+  const [filterGroups, setFilterGroups] = useState<FilterGroup[]>(() => {
+    if (initialFilters.length > 0) {
+      return initialFilters
+    }
+    // Start with a single group with a default condition
+    const firstField = fieldDefinitions.length > 0 ? fieldDefinitions[0].key : ''
+    return [{ 
+      id: crypto.randomUUID(), 
+      conditions: [{ 
+        field: firstField, 
+        operator: 'equals', 
+        value: '' 
+      }] 
+    }]
+  })
 
   useEffect(() => {
     const validGroups = filterGroups.filter(group =>
@@ -292,9 +302,10 @@ export function UnifiedFilterBuilder({
       return
     }
 
+    const firstField = fieldDefinitions.length > 0 ? fieldDefinitions[0].key : ''
     const newGroup: FilterGroup = {
       id: crypto.randomUUID(),
-      conditions: [{ field: '', operator: 'equals', value: '' }]
+      conditions: [{ field: firstField, operator: 'equals', value: '' }]
     }
     
     setFilterGroups(prev => [...prev, newGroup])
@@ -307,11 +318,12 @@ export function UnifiedFilterBuilder({
   }
 
   const addCondition = (groupId: string) => {
+    const firstField = fieldDefinitions.length > 0 ? fieldDefinitions[0].key : ''
     setFilterGroups(prev => prev.map(group =>
       group.id === groupId
         ? {
             ...group,
-            conditions: [...group.conditions, { field: '', operator: 'equals', value: '' }]
+            conditions: [...group.conditions, { field: firstField, operator: 'equals', value: '' }]
           }
         : group
     ))
@@ -373,7 +385,7 @@ export function UnifiedFilterBuilder({
             placeholder="Enter value..."
             value={String(condition.value || '')}
             onChange={(e) => updateValue(e.target.value)}
-            className="input-glass"
+            className="flex-1 h-10 bg-background border-border"
           />
         )
 
@@ -384,7 +396,7 @@ export function UnifiedFilterBuilder({
             placeholder="Enter number..."
             value={String(condition.value || '')}
             onChange={(e) => updateValue(Number(e.target.value))}
-            className="input-glass"
+            className="flex-1 h-10 bg-background border-border"
           />
         )
 
@@ -392,7 +404,7 @@ export function UnifiedFilterBuilder({
         return (
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="perplexity-button justify-start">
+              <Button variant="outline" className="flex-1 h-10 bg-background border-border justify-start">
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {condition.value 
                   ? format(new Date(condition.value as Date), 'PPP')
@@ -422,12 +434,12 @@ export function UnifiedFilterBuilder({
       case 'enum':
         return (
           <Select value={String(condition.value || '')} onValueChange={updateValue}>
-            <SelectTrigger className="perplexity-button">
+            <SelectTrigger className="flex-1 h-10 bg-background border-border">
               <SelectValue placeholder="Select option..." />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-card border-border">
               {fieldDef.options?.map(option => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem key={option.value} value={option.value} className="text-foreground">
                   {option.label}
                 </SelectItem>
               ))}
@@ -441,7 +453,7 @@ export function UnifiedFilterBuilder({
             placeholder="Enter value..."
             value={String(condition.value || '')}
             onChange={(e) => updateValue(e.target.value)}
-            className="input-glass"
+            className="flex-1 h-10 bg-background border-border"
           />
         )
     }
@@ -450,117 +462,151 @@ export function UnifiedFilterBuilder({
   return (
     <div className={cn('space-y-4', className)}>
       {filterGroups.map((group, groupIndex) => (
-        <div key={group.id} className="form-glass p-4 rounded-lg space-y-3">
-          {/* Group Header */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground/90">
-              Filter Group {groupIndex + 1}
-            </span>
-            {filterGroups.length > 1 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => removeFilterGroup(group.id)}
-                className="h-8 w-8 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+        <div key={group.id}>
+          {/* OR separator between groups */}
+          {groupIndex > 0 && (
+            <div className="flex items-center justify-center py-2 mb-4">
+              <div className="flex-1 border-t border-border"></div>
+              <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-medium rounded mx-3">
+                OR
+              </span>
+              <div className="flex-1 border-t border-border"></div>
+            </div>
+          )}
+          
+          <div className="bg-accent/30 rounded-lg p-3 border border-border/50">
+            {/* Group Header - simplified */}
+            <div className="mb-2">
+              <span className="text-sm font-medium text-foreground">
+                Group {groupIndex + 1} {group.conditions.length > 1 && "(All conditions must match)"}
+              </span>
+            </div>
 
-          {/* Conditions */}
-          <div className="space-y-2">
-            {group.conditions.map((condition, conditionIndex) => (
-              <div key={conditionIndex} className="flex items-center gap-2">
-                {/* Field Select */}
-                <Select
-                  value={condition.field}
-                  onValueChange={(value) => updateCondition(group.id, conditionIndex, { 
-                    field: value, 
-                    operator: 'equals', 
-                    value: '' 
-                  })}
-                >
-                  <SelectTrigger className="perplexity-button min-w-[150px]">
-                    <SelectValue placeholder="Select field..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fieldDefinitions.map(field => (
-                      <SelectItem key={field.key} value={field.key}>
-                        {field.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Conditions */}
+            <div className="space-y-2">
+              {group.conditions.map((condition, conditionIndex) => (
+                <div key={conditionIndex}>
+                  {/* AND separator within group (except first condition) */}
+                  {conditionIndex > 0 && (
+                    <div className="flex items-center justify-center py-2">
+                      <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-xs font-medium rounded">
+                        AND
+                      </span>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-2">
+                    {/* Field Select */}
+                    <Select
+                      value={condition.field}
+                      onValueChange={(value) => updateCondition(group.id, conditionIndex, { 
+                        field: value, 
+                        operator: 'equals', 
+                        value: '' 
+                      })}
+                    >
+                      <SelectTrigger className="w-48 h-10 bg-background border-border">
+                        <SelectValue placeholder="Select field..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border max-h-[200px]">
+                        {fieldDefinitions.map(field => (
+                          <SelectItem key={field.key} value={field.key} className="text-foreground">
+                            {field.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
 
-                {/* Operator Select */}
-                {condition.field && (
-                  <Select
-                    value={condition.operator}
-                    onValueChange={(value) => updateCondition(group.id, conditionIndex, { 
-                      operator: value as FilterOperator,
-                      value: ''
-                    })}
-                  >
-                    <SelectTrigger className="perplexity-button min-w-[150px]">
-                      <SelectValue placeholder="Select operator..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getAvailableOperators(condition.field).map(operator => (
-                        <SelectItem key={operator} value={operator}>
-                          {operatorLabels[operator]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                    {/* Operator Select */}
+                    {condition.field && (
+                      <Select
+                        value={condition.operator}
+                        onValueChange={(value) => updateCondition(group.id, conditionIndex, { 
+                          operator: value as FilterOperator,
+                          value: ''
+                        })}
+                      >
+                        <SelectTrigger className="w-32 h-10 bg-background border-border">
+                          <SelectValue placeholder="Select operator..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-border">
+                          {getAvailableOperators(condition.field).map(operator => (
+                            <SelectItem key={operator} value={operator} className="text-foreground">
+                              {operatorLabels[operator]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
 
-                {/* Value Input */}
-                {condition.field && condition.operator && (
-                  <div className="flex-1">
-                    {renderValueInput(condition, group.id, conditionIndex)}
+                    {/* Value Input */}
+                    {condition.field && condition.operator && (
+                      <div className="flex-1">
+                        {renderValueInput(condition, group.id, conditionIndex)}
+                      </div>
+                    )}
+
+                    {/* Right side buttons - only show on last condition */}
+                    <div className="flex items-center gap-2">
+                      {/* Add Condition - only on last condition */}
+                      {conditionIndex === group.conditions.length - 1 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => addCondition(group.id)}
+                          className="h-10 px-2 text-xs text-blue-600 hover:text-blue-700"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          AND
+                        </Button>
+                      )}
+                      
+                      {/* Remove Group - only on last condition of last group */}
+                      {conditionIndex === group.conditions.length - 1 && filterGroups.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFilterGroup(group.id)}
+                          className="h-10 px-2 text-xs text-red-600 hover:text-red-700"
+                        >
+                          <X className="h-3 w-3 mr-1" />
+                          Group
+                        </Button>
+                      )}
+                      
+                      {/* Remove Condition */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeCondition(group.id, conditionIndex)}
+                        disabled={group.conditions.length === 1}
+                        className="h-10 w-10 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                )}
+                </div>
+              ))}
+            </div>
 
-                {/* Remove Condition */}
-                {group.conditions.length > 1 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeCondition(group.id, conditionIndex)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
           </div>
-
-          {/* Add Condition */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => addCondition(group.id)}
-            className="perplexity-button"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add Condition
-          </Button>
         </div>
       ))}
 
-      {/* Add Group */}
-      {filterGroups.length < maxGroups && (
-        <Button
-          variant="outline"
-          onClick={addFilterGroup}
-          className="perplexity-button"
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Add Filter Group
-        </Button>
-      )}
+      {/* Add OR group button */}
+      <div className="flex justify-center">
+        {filterGroups.length < maxGroups && (
+          <Button
+            variant="outline"
+            onClick={addFilterGroup}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add OR Group
+          </Button>
+        )}
+      </div>
     </div>
   )
 }

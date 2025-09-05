@@ -6,6 +6,7 @@
  */
 
 import { onCLS, onINP, onFCP, onLCP, onTTFB } from 'web-vitals'
+import { logger } from "@/lib/utils/logger"
 
 // Performance thresholds (in milliseconds)
 export const PERFORMANCE_THRESHOLDS = {
@@ -122,7 +123,7 @@ class PerformanceMonitor {
     
     // Console logging in development
     if (!this.isProduction) {
-      console.log(`📊 Performance Metric: ${name}`, {
+      logger.debug(`📊 Performance Metric: ${name}`, {
         value: `${value.toFixed(2)}${name === 'CLS' ? '' : 'ms'}`,
         rating,
         threshold: PERFORMANCE_THRESHOLDS[name as MetricName] || 'custom'
@@ -179,7 +180,7 @@ class PerformanceMonitor {
   endMeasurement(id: string): number | null {
     const metric = this.customMetrics.get(id)
     if (!metric) {
-      console.warn(`Performance measurement not found: ${id}`)
+      logger.warn(`Performance measurement not found: ${id}`)
       return null
     }
 
@@ -288,7 +289,7 @@ class PerformanceMonitor {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(metric)
       }).catch(error => {
-        console.error('Failed to send performance metric:', error)
+        logger.error('Failed to send performance metric:', error)
       })
     }
   }

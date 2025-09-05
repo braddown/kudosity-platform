@@ -1,3 +1,4 @@
+import { logger } from "@/lib/utils/logger"
 // Deployment Diagnostics Script
 // Identifies specific issues that commonly cause deployment failures
 
@@ -180,13 +181,13 @@ class DeploymentDiagnostics {
   }
 
   runDiagnostics(): string {
-    console.log("🔍 Running deployment diagnostics...")
+    logger.debug("🔍 Running deployment diagnostics...")
 
     this.checkCommonDeploymentIssues()
     this.checkSpecificFileIssues()
     this.checkBuildConfiguration()
 
-    console.log("✅ Diagnostics complete!")
+    logger.debug("✅ Diagnostics complete!")
     return this.generateDiagnosticReport()
   }
 }

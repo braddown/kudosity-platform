@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { logger } from "@/lib/utils/logger"
 import { Button } from "@/components/ui/button"
 import { Save, X } from "lucide-react"
 import { useProfileData } from "@/hooks/use-profile-data"
@@ -73,7 +74,7 @@ export default function ProfilePage({
     updateProfile
   } = useProfileData({
     profileId,
-    onError: (error) => console.error('Profile data error:', error)
+    onError: (error) => logger.error('Profile data error:', error)
   })
 
   // Handle form state and mutations
@@ -101,7 +102,7 @@ export default function ProfilePage({
   
   // Debug logging - must be before any returns
   useEffect(() => {
-    console.log('ProfilePage status debug:', {
+    logger.debug('ProfilePage status debug:', {
       profileExists: !!profile,
       profileStatus: profile?.status,
       editedProfileExists: !!editedProfile,
@@ -168,7 +169,7 @@ export default function ProfilePage({
   const currentStatus = statusToUse.toLowerCase()
   
   // Log the status resolution
-  console.log('Status resolution:', {
+  logger.debug('Status resolution:', {
     hasEditedProfile: !!editedProfile,
     editedProfileStatus: editedProfile?.status,
     profileStatus: profile?.status,

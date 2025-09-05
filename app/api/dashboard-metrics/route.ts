@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/utils/logger"
 
 export async function GET() {
   try {
@@ -22,7 +23,7 @@ export async function GET() {
       recentActivity: recentLogs || [],
     })
   } catch (error) {
-    console.error("Error fetching dashboard metrics:", error)
+    logger.error("Error fetching dashboard metrics:", error)
     return NextResponse.json({ error: "Failed to fetch dashboard metrics" }, { status: 500 })
   }
 }

@@ -7,6 +7,7 @@ import { useApiState, useMutationState } from "@/hooks/use-async-state"
 import { LoadingState, ErrorState, EmptyState, AsyncStateWrapper } from "@/components/ui/async-states"
 import { Badge } from "@/components/ui/badge"
 import { RefreshCw, Plus } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 // Demo data interface
 interface User {
@@ -72,7 +73,7 @@ function NewApproachDemo() {
       description: 'Add some users to get started.',
       action: {
         label: 'Add User',
-        onClick: () => console.log('Add user clicked')
+        onClick: () => logger.debug('Add user clicked')
       }
     },
     // Simulate API call with setTimeout
@@ -164,7 +165,7 @@ function IndividualComponentsDemo() {
           {demoState === 'error' && (
             <ErrorState
               error={{ message: "Failed to load users", code: 500 }}
-              onRetry={() => console.log('Retry clicked')}
+              onRetry={() => logger.debug('Retry clicked')}
               variant="default"
             />
           )}
@@ -173,7 +174,7 @@ function IndividualComponentsDemo() {
               <ErrorState
                 error="Network error"
                 variant="inline"
-                onRetry={() => console.log('Retry')}
+                onRetry={() => logger.debug('Retry')}
               />
               <ErrorState
                 error="Validation failed"
@@ -204,7 +205,7 @@ function IndividualComponentsDemo() {
               description="There's nothing to show here yet."
               action={{
                 label: "Add Data",
-                onClick: () => console.log('Add data clicked')
+                onClick: () => logger.debug('Add data clicked')
               }}
             />
           )}
@@ -237,7 +238,7 @@ function IndividualComponentsDemo() {
             error={demoState === 'error' ? { message: "Something went wrong" } : null}
             data={demoState === 'success' ? ['item1', 'item2'] : null}
             isEmpty={demoState === 'empty'}
-            onRetry={() => console.log('Wrapper retry')}
+            onRetry={() => logger.debug('Wrapper retry')}
           >
             <div className="p-4 bg-green-50 rounded border border-green-200">
               ✅ Success state - your content goes here!
@@ -265,7 +266,7 @@ function MutationsDemo() {
     },
     {
       onSuccess: (user) => {
-        console.log('User created:', user)
+        logger.debug('User created:', user)
       }
     }
   )

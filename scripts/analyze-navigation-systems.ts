@@ -1,6 +1,7 @@
+import { logger } from "@/lib/utils/logger"
 // Analysis of current navigation systems in the codebase
 
-console.log("=== NAVIGATION SYSTEMS ANALYSIS ===")
+logger.debug("=== NAVIGATION SYSTEMS ANALYSIS ===")
 
 // 1. config/navigation.ts has multiple exports:
 //    - navigationItems (flat list)
@@ -24,7 +25,7 @@ const currentNavigationSystems = {
   "components/MainLayout.tsx": "Uses navItems from config",
 }
 
-console.log("Current systems:", currentNavigationSystems)
+logger.debug("Current systems:", currentNavigationSystems)
 
 // The issue: Multiple navigation systems are conflicting
 // Solution: Use ONE consistent system throughout

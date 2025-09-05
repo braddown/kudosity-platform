@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { logger } from "@/lib/utils/logger"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -144,7 +145,7 @@ export function MessageHistory() {
       }
       
     } catch (error) {
-      console.error('Failed to load messages:', error)
+      logger.error('Failed to load messages:', error)
     } finally {
       if (!isAutoRefresh) {
         setLoading(false)

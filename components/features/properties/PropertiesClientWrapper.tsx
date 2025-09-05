@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Loader2, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import CustomFieldsManager from "./CustomFieldsManager"
+import { logger } from "@/lib/utils/logger"
 
 type PropertyCategory = "System" | "Contact" | "Custom"
 
@@ -80,7 +81,7 @@ export default function PropertiesClientWrapper() {
       const { data, error } = await profilesApi.getTableSchema()
 
       if (error) {
-        console.warn("Schema fetch error, using fallback:", error)
+        logger.warn("Schema fetch error, using fallback:", error)
       }
 
       if (data) {
@@ -98,7 +99,7 @@ export default function PropertiesClientWrapper() {
         setProperties(transformedProperties)
       }
     } catch (err) {
-      console.error("Error fetching table schema:", err)
+      logger.error("Error fetching table schema:", err)
       setError(err instanceof Error ? err.message : "Failed to fetch properties")
     } finally {
       setLoading(false)
@@ -112,7 +113,7 @@ export default function PropertiesClientWrapper() {
         setCustomFields(data)
       }
     } catch (err) {
-      console.error("Error fetching custom fields schema:", err)
+      logger.error("Error fetching custom fields schema:", err)
     }
   }
 

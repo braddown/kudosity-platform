@@ -29,6 +29,7 @@ import {
   Filter,
   Download,
 } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 import { format, formatDistanceToNow } from "date-fns"
 import { supabase } from "@/lib/supabase"
 import { Label } from "@/components/ui/label"
@@ -599,7 +600,7 @@ function Logs() {
         })
       }
     } catch (error) {
-      console.error("Error checking table status:", error)
+      logger.error("Error checking table status:", error)
     }
   }, [])
 
@@ -631,7 +632,7 @@ function Logs() {
       }
 
       if (error) {
-        console.error("Error loading saved filters:", error)
+        logger.error("Error loading saved filters:", error)
         setSavedFilters([])
         return
       }
@@ -643,7 +644,7 @@ function Logs() {
         needsRLSFix: false,
       })
     } catch (error) {
-      console.error("Error loading saved filters:", error)
+      logger.error("Error loading saved filters:", error)
       setSavedFilters([])
     }
   }, [currentUserId])
@@ -685,7 +686,7 @@ function Logs() {
       }
 
       if (error) {
-        console.error("Error saving filter:", error)
+        logger.error("Error saving filter:", error)
         return
       }
 
@@ -695,9 +696,9 @@ function Logs() {
       // Reset form
       setSaveFilterName("")
 
-      console.log("Filter saved successfully!")
+      logger.debug("Filter saved successfully!")
     } catch (error) {
-      console.error("Error saving filter:", error)
+      logger.error("Error saving filter:", error)
     }
   }
 
@@ -710,9 +711,9 @@ function Logs() {
       setCurrentFilterName(savedFilter.name) // Set the current filter name
       setPage(1)
 
-      console.log(`Loaded filter: ${savedFilter.name}`)
+      logger.debug(`Loaded filter: ${savedFilter.name}`)
     } catch (error) {
-      console.error("Error loading filter:", error)
+      logger.error("Error loading filter:", error)
     }
   }
 
@@ -721,15 +722,15 @@ function Logs() {
     try {
       const { success, error } = await logFiltersApi.deleteLogFilter(filterId)
       if (error) {
-        console.error("Error deleting filter:", error)
+        logger.error("Error deleting filter:", error)
         return
       }
 
       // Reload saved filters
       await loadSavedFilters()
-      console.log("Filter deleted successfully!")
+      logger.debug("Filter deleted successfully!")
     } catch (error) {
-      console.error("Error deleting filter:", error)
+      logger.error("Error deleting filter:", error)
     }
   }
 
@@ -737,9 +738,9 @@ function Logs() {
   const copySqlToClipboard = async (sql: string) => {
     try {
       await navigator.clipboard.writeText(sql)
-      console.log("SQL copied to clipboard!")
+      logger.debug("SQL copied to clipboard!")
     } catch (error) {
-      console.error("Failed to copy SQL:", error)
+      logger.error("Failed to copy SQL:", error)
     }
   }
 
@@ -765,14 +766,14 @@ function Logs() {
       const { count, error } = await countQuery
 
       if (error) {
-        console.error("Error getting count:", error)
+        logger.error("Error getting count:", error)
         throw error
       }
 
-      console.log(`Total record count: ${count}`)
+      logger.debug(`Total record count: ${count}`)
       return count || 0
     } catch (error) {
-      console.error("Error in getTotalRecordCount:", error)
+      logger.error("Error in getTotalRecordCount:", error)
       return 0
     }
   }, [searchTerm, selectedTypes])
@@ -787,14 +788,14 @@ function Logs() {
       const { count, error } = await supabase.from("logs").select("*", { count: "exact", head: true })
 
       if (error) {
-        console.error("Error getting total database count:", error)
+        logger.error("Error getting total database count:", error)
         throw error
       }
 
-      console.log(`Total database records: ${count}`)
+      logger.debug(`Total database records: ${count}`)
       return count || 0
     } catch (error) {
-      console.error("Error in getTotalDatabaseRecords:", error)
+      logger.error("Error in getTotalDatabaseRecords:", error)
       return 0
     }
   }, [])
@@ -806,7 +807,7 @@ function Logs() {
         throw new Error("Supabase client is not initialized")
       }
 
-      console.log("🔍 Fetching all logs for filtering...")
+      logger.debug("🔍 Fetching all logs for filtering...")
 
       // Build query with basic filters (search and event type)
       let query = supabase.from("logs").select("*")
@@ -827,14 +828,14 @@ function Logs() {
       const { data, error } = await query
 
       if (error) {
-        console.error("❌ Query execution failed:", error)
+        logger.error("❌ Query execution failed:", error)
         throw error
       }
 
-      console.log(`✅ Fetched ${data?.length || 0} logs for filtering`)
+      logger.debug(`✅ Fetched ${data?.length || 0} logs for filtering`)
       return data || []
     } catch (error) {
-      console.error("💥 Error in fetchAllLogs:", error)
+      logger.error("💥 Error in fetchAllLogs:", error)
       return []
     }
   }, [searchTerm, selectedTypes, sortConfig])
@@ -879,22 +880,22 @@ function Logs() {
     setErrorMessage(null)
 
     try {
-      console.log(`🔍 Fetching logs for page ${page}, pageSize ${pageSize}...`)
+      logger.debug(`🔍 Fetching logs for page ${page}, pageSize ${pageSize}...`)
 
       if (!supabase) {
         throw new Error("Supabase client is not initialized")
       }
 
       // Test basic connection first
-      console.log("🔗 Testing basic connection...")
+      logger.debug("🔗 Testing basic connection...")
       const { data: testData, error: testError } = await supabase.from("logs").select("id").limit(1)
 
       if (testError) {
-        console.error("❌ Basic connection test failed:", testError)
+        logger.error("❌ Basic connection test failed:", testError)
         throw new Error(`Connection test failed: ${testError.message}`)
       }
 
-      console.log("✅ Basic connection successful")
+      logger.debug("✅ Basic connection successful")
 
       // Fetch all logs for filtering
       const allLogsData = await fetchAllLogs()
@@ -911,16 +912,14 @@ function Logs() {
       const offset = (page - 1) * pageSize
       const paginatedLogs = filteredLogs.slice(offset, offset + pageSize)
 
-      console.log(
-        `✅ Query successful: received ${paginatedLogs.length} records (${filteredLogs.length} total after filtering)`,
-      )
+      logger.debug(`✅ Query successful: received ${paginatedLogs.length} records (${filteredLogs.length} total after filtering)`, )
 
       setLogs(paginatedLogs)
       setDebugInfo(
         `✅ Success: Page ${page}/${Math.ceil(filteredLogs.length / pageSize)}, Records: ${paginatedLogs.length}/${filteredLogs.length}`,
       )
     } catch (error) {
-      console.error("💥 Error in fetchLogs:", error)
+      logger.error("💥 Error in fetchLogs:", error)
       setErrorMessage(`Error: ${error.message || "Failed to fetch logs"}`)
       setLogs([])
       setDebugInfo(`❌ Error: ${error.message}`)
@@ -939,21 +938,21 @@ function Logs() {
   const fetchEventTypes = useCallback(async () => {
     try {
       if (!supabase) {
-        console.error("Supabase client is not initialized")
+        logger.error("Supabase client is not initialized")
         return
       }
 
       const { data, error } = await supabase.from("logs").select("event_type")
 
       if (error) {
-        console.error("Error fetching event types:", error)
+        logger.error("Error fetching event types:", error)
         return
       }
 
       const uniqueTypes = Array.from(new Set(data.map((log) => log.event_type).filter(Boolean)))
       setEventTypes(uniqueTypes)
     } catch (error) {
-      console.error("Error fetching event types:", error)
+      logger.error("Error fetching event types:", error)
     }
   }, [])
 
@@ -1072,7 +1071,7 @@ function Logs() {
 
   // Function to handle page change
   const handlePageChange = (newPage) => {
-    console.log(`Changing page from ${page} to ${newPage}`)
+    logger.debug(`Changing page from ${page} to ${newPage}`)
     if (newPage >= 1 && newPage <= totalPages) {
       setPage(newPage)
     }
@@ -1108,13 +1107,13 @@ function Logs() {
         const { data, error } = await supabase.from("logs").select("id").limit(1)
 
         if (error) {
-          console.error("Supabase connection test failed:", error)
+          logger.error("Supabase connection test failed:", error)
           setConnectionStatus("error")
           setConnectionMessage(`Failed to connect to Supabase: ${error.message}`)
           return
         }
 
-        console.log("Supabase connection test successful")
+        logger.debug("Supabase connection test successful")
         setConnectionStatus("connected")
         setConnectionMessage("Connected to Supabase")
 
@@ -1123,7 +1122,7 @@ function Logs() {
         const totalCount = await getTotalDatabaseRecords()
         setTotalDatabaseRecords(totalCount)
       } catch (error: any) {
-        console.error("Error checking Supabase availability:", error)
+        logger.error("Error checking Supabase availability:", error)
         setConnectionStatus("error")
         setConnectionMessage(`Error checking Supabase connection: ${error.message}`)
       }

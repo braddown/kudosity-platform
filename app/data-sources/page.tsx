@@ -4,15 +4,16 @@ import MainLayout from "@/components/MainLayout"
 import { DataSources } from "@/features/settings"
 import PageLayout from "@/components/layouts/PageLayout"
 import { Plus, Upload } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 export default function DataSourcesPage() {
   const handleCreateDataSource = () => {
-    console.log("Creating new data source")
+    logger.debug("Creating new data source")
     // Add navigation or modal logic here
   }
 
   const handleImportData = () => {
-    console.log("Importing data")
+    logger.debug("Importing data")
     // Add import logic here
   }
 

@@ -1,3 +1,4 @@
+import { logger } from "@/lib/utils/logger"
 // Comprehensive Syntax Error Detection Script
 // This script will help identify common syntax errors that cause deployment failures
 
@@ -219,7 +220,7 @@ class SyntaxErrorDetector {
 
   // Main analysis function
   analyzeProject(): string {
-    console.log("🔍 Starting comprehensive syntax analysis...")
+    logger.debug("🔍 Starting comprehensive syntax analysis...")
 
     // Add common deployment issues to check
     this.checkConfigFiles()
@@ -276,7 +277,7 @@ class SyntaxErrorDetector {
       "Check that all imports have corresponding dependencies",
     )
 
-    console.log("✅ Analysis complete!")
+    logger.debug("✅ Analysis complete!")
     return this.generateReport()
   }
 }

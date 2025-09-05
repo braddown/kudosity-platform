@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { User, Mail, Calendar, Shield, Phone, Globe, Clock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { getGravatarUrlSimple, getInitials } from "@/lib/utils/gravatar"
+import { logger } from "@/lib/utils/logger"
 
 interface UserProfile {
   id: string
@@ -150,7 +151,7 @@ export default function ProfilePage() {
           .single()
         
         if (profileError) {
-          console.error('Error fetching profile:', profileError)
+          logger.error('Error fetching profile:', profileError)
         } else if (profileData) {
           setProfile({
             ...profileData,
@@ -167,7 +168,7 @@ export default function ProfilePage() {
         }
         
         // Fetch account memberships
-        console.log('Fetching memberships for user:', user.id)
+        logger.debug('Fetching memberships for user:', user.id)
         const { data: membershipData, error: membershipError } = await supabase
           .from('account_members')
           .select(`
@@ -180,17 +181,17 @@ export default function ProfilePage() {
           .order('joined_at', { ascending: false })
         
         if (membershipError) {
-          console.error('Error fetching memberships:', membershipError)
+          logger.error('Error fetching memberships:', membershipError)
         } else if (membershipData) {
-          console.log('Memberships found:', membershipData)
+          logger.debug('Memberships found:', membershipData)
           setMemberships(membershipData)
         } else {
-          console.log('No memberships found')
+          logger.debug('No memberships found')
         }
         
 
       } catch (error) {
-        console.error('Error:', error)
+        logger.error('Error:', error)
         toast({
           title: "Error",
           description: "Failed to load profile data.",
@@ -280,7 +281,7 @@ export default function ProfilePage() {
                 
                 // Activity logging successful
               } catch (err) {
-                console.error('Failed to log user activity:', err)
+                logger.error('Failed to log user activity:', err)
               }
               
               toast({
@@ -300,7 +301,7 @@ export default function ProfilePage() {
                 updated_at: new Date().toISOString(),
               })
             } catch (error) {
-              console.error('Error saving:', error)
+              logger.error('Error saving:', error)
               toast({
                 title: "Error",
                 description: "Failed to save profile changes.",

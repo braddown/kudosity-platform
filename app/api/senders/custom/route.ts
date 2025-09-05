@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/auth/server'
+import { logger } from "@/lib/utils/logger"
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
       use_case = 'marketing'
     } = body
 
-    console.log('Creating sender with use_case:', use_case)
+    logger.debug('Creating sender with use_case:', use_case)
 
     // Validate required fields
     if (!rawSenderId) {
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('Validating sender:', { rawSenderId, type })
+    logger.debug('Validating sender:', { rawSenderId, type })
 
     let sender_id = rawSenderId
 
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
     } else if (type === 'mobile_number') {
       // Clean the mobile number first
       const cleanedNumber = rawSenderId.replace(/[\s\-\(\)]/g, '')
-      console.log('Cleaned mobile number:', cleanedNumber)
+      logger.debug('Cleaned mobile number:', cleanedNumber)
       
       // Mobile number: international format validation (more flexible)
       // Allow 8-15 digits after country code, with optional + prefix
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
       
       // Use cleaned version with + prefix
       sender_id = cleanedNumber.startsWith('+') ? cleanedNumber : '+' + cleanedNumber
-      console.log('Final sender_id:', sender_id)
+      logger.debug('Final sender_id:', sender_id)
     }
 
     // Check if sender_id already exists for this account
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      console.error('Database insert error:', insertError)
+      logger.error('Database insert error:', insertError)
       return NextResponse.json({ 
         error: 'Failed to save custom sender to database',
         details: insertError.message
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Error adding custom sender:', error)
+    logger.error('Error adding custom sender:', error)
     return NextResponse.json({ 
       error: 'Failed to add custom sender',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -186,7 +187,7 @@ export async function PUT(request: NextRequest) {
       rejection_reason
     } = body
 
-    console.log('Updating sender:', id, 'with description:', description, 'and use_case:', use_case)
+    logger.debug('Updating sender:', id, 'with description:', description, 'and use_case:', use_case)
 
     // Validate required fields
     if (!id) {
@@ -209,7 +210,7 @@ export async function PUT(request: NextRequest) {
       updateData.approval_date = new Date().toISOString()
     }
 
-    console.log('Database update data:', updateData)
+    logger.debug('Database update data:', updateData)
 
     const { data: updatedSender, error: updateError } = await supabase
       .from('senders')
@@ -220,7 +221,7 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (updateError) {
-      console.error('Database update error:', updateError)
+      logger.error('Database update error:', updateError)
       return NextResponse.json({ 
         error: 'Failed to update sender',
         details: updateError.message
@@ -233,7 +234,7 @@ export async function PUT(request: NextRequest) {
       }, { status: 404 })
     }
 
-    console.log('Successfully updated sender:', updatedSender.sender_id)
+    logger.debug('Successfully updated sender:', updatedSender.sender_id)
 
     return NextResponse.json({ 
       success: true,
@@ -242,7 +243,7 @@ export async function PUT(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Error updating sender:', error)
+    logger.error('Error updating sender:', error)
     return NextResponse.json({ 
       error: 'Failed to update sender',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -295,7 +296,7 @@ export async function DELETE(request: NextRequest) {
       .single()
 
     if (deleteError) {
-      console.error('Database delete error:', deleteError)
+      logger.error('Database delete error:', deleteError)
       return NextResponse.json({ 
         error: 'Failed to delete sender',
         details: deleteError.message
@@ -315,7 +316,7 @@ export async function DELETE(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Error deleting sender:', error)
+    logger.error('Error deleting sender:', error)
     return NextResponse.json({ 
       error: 'Failed to delete sender',
       details: error instanceof Error ? error.message : 'Unknown error'

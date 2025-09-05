@@ -35,6 +35,7 @@ import {
   Zap,
   Database,
 } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 const ActionMenu = ({
   item,
@@ -229,11 +230,11 @@ export default function DevelopersPage() {
   }
 
   const handleDeleteApiKey = (apiKey) => {
-    console.log("Delete API Key:", apiKey)
+    logger.debug("Delete API Key:", apiKey)
   }
 
   const handleDeleteWebhook = (webhook) => {
-    console.log("Delete Webhook:", webhook)
+    logger.debug("Delete Webhook:", webhook)
   }
 
   const handleSendTestMessage = () => {

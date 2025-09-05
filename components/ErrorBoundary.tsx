@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { logger } from "@/lib/utils/logger"
 
 export default function ErrorBoundary({
   error,
@@ -12,7 +13,7 @@ export default function ErrorBoundary({
 }) {
   useEffect(() => {
     // Log the error to an error reporting service
-    console.error("Error boundary caught error:", error)
+    logger.error("Error boundary caught error:", error)
   }, [error])
 
   return (

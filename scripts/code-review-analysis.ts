@@ -1,3 +1,4 @@
+import { logger } from "@/lib/utils/logger"
 // Current navigation items from the working system
 const activeNavigationRoutes = [
   "/overview",
@@ -75,8 +76,8 @@ const databaseComponents = [
   "lib/chat-api.ts",
 ]
 
-console.log("=== CODE REVIEW ANALYSIS ===")
-console.log("Active Navigation Routes:", activeNavigationRoutes.length)
-console.log("Active Components:", activeComponents.length)
-console.log("Core Components:", coreComponents.length)
-console.log("Database Components:", databaseComponents.length)
+logger.debug("=== CODE REVIEW ANALYSIS ===")
+logger.debug("Active Navigation Routes:", activeNavigationRoutes.length)
+logger.debug("Active Components:", activeComponents.length)
+logger.debug("Core Components:", coreComponents.length)
+logger.debug("Database Components:", databaseComponents.length)

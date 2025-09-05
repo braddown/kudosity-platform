@@ -23,6 +23,7 @@ import {
   Clock,
   AlertTriangle,
 } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 import { KudosityTable, type KudosityTableColumn } from "@/components/KudosityTable"
 
 interface Webhook {
@@ -157,7 +158,7 @@ export default function Webhooks() {
   }
 
   const handleDeleteWebhook = (webhook: Webhook) => {
-    console.log("Delete Webhook:", webhook)
+    logger.debug("Delete Webhook:", webhook)
   }
 
   const resetDialog = () => {

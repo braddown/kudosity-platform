@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { logger } from "@/lib/utils/logger"
 
 // Create Supabase client directly in the API route
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -8,7 +9,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PU
 // Remove any line breaks from the key
 const cleanKey = supabaseKey?.replace(/\s+/g, '') || ''
 
-console.log('Creating Supabase client with URL:', supabaseUrl)
+logger.debug('Creating Supabase client with URL:', supabaseUrl)
 const supabase = createClient(supabaseUrl, cleanKey, {
   auth: {
     autoRefreshToken: false,
@@ -64,7 +65,7 @@ export async function GET(
     const { data: memberships, error, count } = await query
 
     if (error) {
-      console.error('Error fetching list members:', error)
+      logger.error('Error fetching list members:', error)
       return NextResponse.json({ error: 'Failed to fetch list members' }, { status: 500 })
     }
 
@@ -102,7 +103,7 @@ export async function GET(
       }
     })
   } catch (error) {
-    console.error('Error in GET /api/lists/[id]/members:', error)
+    logger.error('Error in GET /api/lists/[id]/members:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -115,37 +116,37 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  console.log('=== POST /api/lists/[id]/members CALLED ===')
+  logger.debug('=== POST /api/lists/[id]/members CALLED ===')
   
   if (!supabase) {
-    console.error('Supabase client not initialized')
+    logger.error('Supabase client not initialized')
     return NextResponse.json({ error: 'Database connection error' }, { status: 500 })
   }
   
   try {
     const { id: listId } = params
-    console.log('POST /api/lists/[id]/members - listId:', listId)
+    logger.debug('POST /api/lists/[id]/members - listId:', listId)
     
     let body;
     try {
       body = await request.json()
-      console.log('Successfully parsed request body')
+      logger.debug('Successfully parsed request body')
     } catch (parseError) {
-      console.error('Error parsing request body:', parseError)
+      logger.error('Error parsing request body:', parseError)
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
     
     const { profile_ids, added_by } = body
-    console.log('Request body:', { profile_ids, added_by })
+    logger.debug('Request body:', { profile_ids, added_by })
 
     // Validate input
     if (!Array.isArray(profile_ids) || profile_ids.length === 0) {
-      console.error('Invalid profile_ids:', profile_ids)
+      logger.error('Invalid profile_ids:', profile_ids)
       return NextResponse.json({ error: 'profile_ids must be a non-empty array' }, { status: 400 })
     }
 
     // Check if list exists
-    console.log('Checking if list exists with ID:', listId)
+    logger.debug('Checking if list exists with ID:', listId)
     let listExists, listError;
     
     try {
@@ -158,8 +159,8 @@ export async function POST(
       listExists = result.data;
       listError = result.error;
     } catch (dbError: any) {
-      console.error('Database operation failed:', dbError)
-      console.error('Error stack:', dbError.stack)
+      logger.error('Database operation failed:', dbError)
+      logger.error('Error stack:', dbError.stack)
       return NextResponse.json({ 
         error: 'Database connection failed',
         details: dbError.message || 'Unknown database error'
@@ -167,8 +168,8 @@ export async function POST(
     }
 
     if (listError) {
-      console.error('Error checking list existence:', listError)
-      console.error('List error details:', {
+      logger.error('Error checking list existence:', listError)
+      logger.error('List error details:', {
         code: listError.code,
         message: listError.message,
         details: listError.details,
@@ -183,18 +184,18 @@ export async function POST(
       }, { status: 500 })
     }
     
-    console.log('List found:', listExists)
+    logger.debug('List found:', listExists)
 
     // Check which CDP profiles exist
-    console.log('Checking CDP profiles with IDs:', profile_ids)
+    logger.debug('Checking CDP profiles with IDs:', profile_ids)
     const { data: existingProfiles, error: profilesError } = await supabase
       .from('cdp_profiles')
       .select('id')
       .in('id', profile_ids)
 
     if (profilesError) {
-      console.error('Error checking profiles:', profilesError)
-      console.error('Profile error details:', {
+      logger.error('Error checking profiles:', profilesError)
+      logger.error('Profile error details:', {
         code: profilesError.code,
         message: profilesError.message,
         details: profilesError.details,
@@ -203,21 +204,21 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to verify profiles' }, { status: 500 })
     }
 
-    console.log('Existing profiles found:', existingProfiles)
+    logger.debug('Existing profiles found:', existingProfiles)
     const validProfileIds = existingProfiles?.map(p => p.id) || []
     const invalidProfileIds = profile_ids.filter(id => !validProfileIds.includes(id))
 
-    console.log('Valid profile IDs:', validProfileIds)
-    console.log('Invalid profile IDs:', invalidProfileIds)
+    logger.debug('Valid profile IDs:', validProfileIds)
+    logger.debug('Invalid profile IDs:', invalidProfileIds)
 
     // Instead of failing, just warn about invalid profiles and continue with valid ones
     if (invalidProfileIds.length > 0) {
-      console.warn('Warning: Some profile IDs are invalid and will be skipped:', invalidProfileIds)
+      logger.warn('Warning: Some profile IDs are invalid and will be skipped:', invalidProfileIds)
     }
 
     // If no valid profiles, return error
     if (validProfileIds.length === 0) {
-      console.error('No valid profiles to add')
+      logger.error('No valid profiles to add')
       return NextResponse.json({
         error: 'No valid profiles found',
         invalid_profiles: invalidProfileIds
@@ -232,7 +233,7 @@ export async function POST(
       .in('profile_id', validProfileIds)
 
     if (checkError) {
-      console.error('Error checking existing memberships:', checkError)
+      logger.error('Error checking existing memberships:', checkError)
       return NextResponse.json({ error: 'Failed to check existing memberships' }, { status: 500 })
     }
 
@@ -256,7 +257,7 @@ export async function POST(
     }))
 
     // Insert new memberships
-    console.log('Inserting memberships:', memberships)
+    logger.debug('Inserting memberships:', memberships)
     const { data: newMemberships, error: insertError } = await supabase
       .from('list_memberships')
       .insert(memberships)
@@ -275,8 +276,8 @@ export async function POST(
       `)
 
     if (insertError) {
-      console.error('Error adding members to list:', insertError)
-      console.error('Insert error details:', {
+      logger.error('Error adding members to list:', insertError)
+      logger.error('Insert error details:', {
         message: insertError.message,
         details: insertError.details,
         hint: insertError.hint,
@@ -338,7 +339,7 @@ export async function POST(
       invalid_profiles: invalidProfileIds
     }, { status: 201 })
   } catch (error) {
-    console.error('Error in POST /api/lists/[id]/members:', error)
+    logger.error('Error in POST /api/lists/[id]/members:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -372,7 +373,7 @@ export async function DELETE(
       .in('profile_id', profile_ids)
 
     if (updateError) {
-      console.error('Error removing members from list:', updateError)
+      logger.error('Error removing members from list:', updateError)
       return NextResponse.json({ error: 'Failed to remove members from list' }, { status: 500 })
     }
 
@@ -424,7 +425,7 @@ export async function DELETE(
       message: `Successfully removed ${profile_ids.length} profiles from the list`
     })
   } catch (error) {
-    console.error('Error in DELETE /api/lists/[id]/members:', error)
+    logger.error('Error in DELETE /api/lists/[id]/members:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

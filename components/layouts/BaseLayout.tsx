@@ -1,5 +1,6 @@
 "use client"
 
+import { logger } from "@/lib/utils/logger"
 import type { ReactNode } from "react"
 
 interface BaseLayoutProps {
@@ -22,7 +23,7 @@ interface HeaderProps {
 // DEPRECATED: This component is kept to prevent breaking changes
 // TODO: Find all usages and replace with the preferred Header component
 export function Header({ children, className = "", sticky = false }: HeaderProps) {
-  console.warn("Warning: Using deprecated Header component from BaseLayout.tsx. Please update your imports.")
+  logger.warn("Warning: Using deprecated Header component from BaseLayout.tsx. Please update your imports.")
   return (
     <header
       className={`w-full py-4 px-6 flex justify-between items-center border-b border-gray-200 bg-white

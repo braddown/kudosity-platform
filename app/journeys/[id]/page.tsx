@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import MainLayout from "@/components/MainLayout"
 import { EditPageHeader } from "@/components/EditPageHeader"
 import { JourneyEditor } from "@/features/journeys"
+import { logger } from "@/lib/utils/logger"
 
 export default function JourneyDetailPage() {
   const params = useParams()
@@ -21,7 +22,7 @@ export default function JourneyDetailPage() {
         await journeyEditorRef.current.save()
         // Show success message or redirect
       } catch (error) {
-        console.error("Failed to save journey:", error)
+        logger.error("Failed to save journey:", error)
       } finally {
         setIsSaving(false)
       }

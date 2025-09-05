@@ -4,6 +4,7 @@ import { Calendar, FileEdit, MessageSquare, Shield, ShieldCheck, ShieldX, Chevro
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { logger } from "@/lib/utils/logger"
 
 interface ProfileActivityTimelineProps {
   profile?: any
@@ -52,14 +53,14 @@ export function ProfileActivityTimeline({
         })
 
         if (!response.ok) {
-          console.error('Error fetching activity logs:', await response.text())
+          logger.error('Error fetching activity logs:', await response.text())
           setActivityLogs([])
         } else {
           const result = await response.json()
           setActivityLogs(result.data || [])
         }
       } catch (err) {
-        console.error('Exception fetching activity logs:', err)
+        logger.error('Exception fetching activity logs:', err)
         setActivityLogs([])
       } finally {
         setLoading(false)

@@ -1,6 +1,7 @@
 import { BaseRepository } from './BaseRepository'
 import { RepositoryResponse, QueryOptions } from './types'
 import { supabase } from '@/lib/supabase'
+import { logger } from "@/lib/utils/logger"
 
 /**
  * Segment entity interface
@@ -277,13 +278,13 @@ export class SegmentsRepository extends BaseRepository<Segment> {
         // .match(segment.filter_criteria) // Would need proper filter parsing
       
       if (error) {
-        console.error('Error calculating segment size:', error)
+        logger.error('Error calculating segment size:', error)
         return this.createResponse(null, this.handleSupabaseError(error, 'calculateSegmentSize'))
       }
 
       return this.createResponse(count || 0)
     } catch (error: any) {
-      console.error('Error calculating segment size:', error)
+      logger.error('Error calculating segment size:', error)
       return this.createResponse(null, this.handleSupabaseError(error, 'calculateSegmentSize'))
     }
   }

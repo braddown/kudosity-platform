@@ -5,6 +5,7 @@ import MainLayout from "@/components/MainLayout"
 import { TouchpointMessage } from "@/features/touchpoints"
 import PageLayout from "@/components/layouts/PageLayout"
 import { Save, Send } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 export default function TouchpointDetailPage() {
   const params = useParams()
@@ -22,13 +23,13 @@ export default function TouchpointDetailPage() {
             label: "Save Draft",
             icon: <Save className="h-4 w-4" />,
             variant: "outline",
-            onClick: () => console.log("Save draft"),
+            onClick: () => logger.debug("Save draft"),
           },
           {
             label: "Activate",
             icon: <Send className="h-4 w-4" />,
             variant: "default",
-            onClick: () => console.log("Activate touchpoint"),
+            onClick: () => logger.debug("Activate touchpoint"),
           },
         ]}
       >

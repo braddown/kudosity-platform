@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/auth/server'
 import { cookies } from 'next/headers'
+import { logger } from "@/lib/utils/logger"
 
 // Get a single profile by ID
 export async function GET(
@@ -54,7 +55,7 @@ export async function GET(
       .maybeSingle()
 
     if (profileError) {
-      console.error('Error fetching profile:', profileError)
+      logger.error('Error fetching profile:', profileError)
       return NextResponse.json(
         { error: 'Failed to fetch profile', details: profileError.message },
         { status: 500 }
@@ -62,7 +63,7 @@ export async function GET(
     }
 
     if (!profile) {
-      console.log(`Profile not found: ${params.id} for account: ${accountId}`)
+      logger.debug(`Profile not found: ${params.id} for account: ${accountId}`)
       return NextResponse.json(
         { error: 'Profile not found', details: `No profile exists with ID ${params.id}` },
         { status: 404 }
@@ -71,7 +72,7 @@ export async function GET(
 
     return NextResponse.json({ data: profile })
   } catch (error: any) {
-    console.error('CDP Profile API error:', error)
+    logger.error('CDP Profile API error:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: error.message },
       { status: 500 }
@@ -133,7 +134,7 @@ export async function PUT(
       .maybeSingle()
 
     if (fetchError) {
-      console.error('Error fetching current profile:', fetchError)
+      logger.error('Error fetching current profile:', fetchError)
       return NextResponse.json(
         { error: 'Failed to fetch profile', details: fetchError.message },
         { status: 500 }
@@ -161,7 +162,7 @@ export async function PUT(
       .maybeSingle()
 
     if (updateError) {
-      console.error('Error updating profile:', updateError)
+      logger.error('Error updating profile:', updateError)
       return NextResponse.json(
         { error: 'Failed to update profile', details: updateError.message },
         { status: 500 }
@@ -259,7 +260,7 @@ export async function PUT(
 
       // Only log if there are actual changes
       if (loggedChanges.length > 0) {
-        console.log('Logging individual activities for changes:', loggedChanges)
+        logger.debug('Logging individual activities for changes:', loggedChanges)
         
         // Get user's name for logging
         const { data: userProfile } = await supabase
@@ -329,9 +330,9 @@ export async function PUT(
             .insert(activityEntries)
             
           if (logError) {
-            console.error('Failed to log profile activities:', logError)
+            logger.error('Failed to log profile activities:', logError)
           } else {
-            console.log(`Successfully logged ${activityEntries.length} profile activity entries`)
+            logger.debug(`Successfully logged ${activityEntries.length} profile activity entries`)
           }
 
           // Also log to user activity log for settings/users activity tab
@@ -360,22 +361,22 @@ export async function PUT(
             .insert(userActivityEntries)
 
           if (userLogError) {
-            console.error('Failed to log user activities:', userLogError)
+            logger.error('Failed to log user activities:', userLogError)
           } else {
-            console.log(`Successfully logged ${userActivityEntries.length} user activity entries`)
+            logger.debug(`Successfully logged ${userActivityEntries.length} user activity entries`)
           }
         }
       } else {
-        console.log('No changes detected, skipping activity log')
+        logger.debug('No changes detected, skipping activity log')
       }
     } catch (activityError) {
-      console.error('Error logging profile update activity:', activityError)
+      logger.error('Error logging profile update activity:', activityError)
       // Don't fail the update if activity logging fails
     }
 
     return NextResponse.json({ data: updatedProfile })
   } catch (error: any) {
-    console.error('CDP Update Profile API error:', error)
+    logger.error('CDP Update Profile API error:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: error.message },
       { status: 500 }
@@ -491,12 +492,12 @@ export async function DELETE(
           created_at: new Date().toISOString()
         })
     } catch (logError) {
-      console.error('Error logging destruction activity:', logError)
+      logger.error('Error logging destruction activity:', logError)
       // Continue with deletion even if logging fails
     }
 
     // Start a transaction to delete all related data
-    console.log(`Starting permanent deletion of profile ${params.id}`)
+    logger.debug(`Starting permanent deletion of profile ${params.id}`)
 
     // 1. Delete from cdp_contacts (if any)
     const { error: contactsError } = await supabase
@@ -505,7 +506,7 @@ export async function DELETE(
       .eq('profile_id', params.id)
     
     if (contactsError) {
-      console.error('Error deleting contacts:', contactsError)
+      logger.error('Error deleting contacts:', contactsError)
       // Continue with deletion even if no contacts exist
     }
 
@@ -516,7 +517,7 @@ export async function DELETE(
       .eq('profile_id', params.id)
     
     if (activitiesError) {
-      console.error('Error deleting activities:', activitiesError)
+      logger.error('Error deleting activities:', activitiesError)
       // Continue with deletion
     }
 
@@ -527,7 +528,7 @@ export async function DELETE(
       .eq('target_profile_id', params.id)
     
     if (mergeLogError) {
-      console.error('Error deleting merge logs:', mergeLogError)
+      logger.error('Error deleting merge logs:', mergeLogError)
       // Continue with deletion
     }
 
@@ -538,7 +539,7 @@ export async function DELETE(
       .eq('profile_id', params.id)
     
     if (activityLogError) {
-      console.error('Error deleting activity logs:', activityLogError)
+      logger.error('Error deleting activity logs:', activityLogError)
       // Continue with deletion
     }
 
@@ -549,7 +550,7 @@ export async function DELETE(
       .eq('contact_id', params.id)
     
     if (listMembershipsError) {
-      console.error('Error deleting list memberships:', listMembershipsError)
+      logger.error('Error deleting list memberships:', listMembershipsError)
       // Continue with deletion
     }
 
@@ -581,17 +582,17 @@ export async function DELETE(
     const { error: deleteError } = await deleteQuery
 
     if (deleteError) {
-      console.error('Error deleting profile:', deleteError)
+      logger.error('Error deleting profile:', deleteError)
       return NextResponse.json(
         { error: 'Failed to delete profile', details: deleteError.message },
         { status: 500 }
       )
     }
 
-    console.log(`Successfully destroyed profile ${params.id} and all related data`)
+    logger.debug(`Successfully destroyed profile ${params.id} and all related data`)
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('CDP Delete Profile API error:', error)
+    logger.error('CDP Delete Profile API error:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: error.message },
       { status: 500 }

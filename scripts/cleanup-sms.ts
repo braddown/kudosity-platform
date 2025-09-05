@@ -1,5 +1,6 @@
+import { logger } from "@/lib/utils/logger"
 // Script to identify and remove SMS-related code
-console.log("Cleaning up SMS-related components and references...")
+logger.debug("Cleaning up SMS-related components and references...")
 
 // List of SMS-related files that should be removed:
 const smsFiles = [
@@ -17,6 +18,6 @@ const smsImports = [
   "from '@/components/SMSBroadcast'",
 ]
 
-console.log("Files to remove:", smsFiles)
-console.log("Imports to clean up:", smsImports)
-console.log("SMS cleanup completed")
+logger.debug("Files to remove:", smsFiles)
+logger.debug("Imports to clean up:", smsImports)
+logger.debug("SMS cleanup completed")

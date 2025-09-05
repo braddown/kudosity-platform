@@ -1,5 +1,6 @@
 import { supabase } from "../supabase"
 import type { FilterGroup } from "@/components/Logs"
+import { logger } from "@/lib/utils/logger"
 
 export interface LogFilter {
   id: string
@@ -43,7 +44,7 @@ async function ensureTableExists() {
     const { error: testError } = await supabase.from("log_filters").select("id").limit(1)
 
     if (testError && testError.message.includes("does not exist")) {
-      console.log("log_filters table does not exist, attempting to create...")
+      logger.debug("log_filters table does not exist, attempting to create...")
 
       // Since we can't create tables directly through the client in most cases,
       // we'll return an error with instructions
@@ -149,7 +150,7 @@ ALTER TABLE log_filters DISABLE ROW LEVEL SECURITY;
     // Table exists and works
     return { success: true }
   } catch (error) {
-    console.error("Error checking table existence:", error)
+    logger.error("Error checking table existence:", error)
     return {
       success: false,
       error: error.message,
@@ -169,7 +170,7 @@ export const logFiltersApi = {
       const tableCheck = await ensureTableExists()
       if (!tableCheck.success) {
         if (tableCheck.needsTableCreation) {
-          console.warn("log_filters table does not exist. Please create it manually.")
+          logger.warn("log_filters table does not exist. Please create it manually.")
           return {
             data: [],
             error: "Table does not exist",
@@ -178,7 +179,7 @@ export const logFiltersApi = {
           }
         }
         if (tableCheck.needsRLSFix) {
-          console.warn("RLS policies are blocking access. Please fix RLS settings.")
+          logger.warn("RLS policies are blocking access. Please fix RLS settings.")
           return {
             data: [],
             error: "RLS policies need to be fixed",
@@ -199,7 +200,7 @@ export const logFiltersApi = {
 
       return { data: data || [] }
     } catch (error) {
-      console.error("Error fetching log filters:", error)
+      logger.error("Error fetching log filters:", error)
       return {
         data: [],
         error: error.message || "Failed to fetch log filters",
@@ -248,12 +249,12 @@ export const logFiltersApi = {
         tags: filter.tags || [],
       }
 
-      console.log("Attempting to insert filter:", filterToInsert)
+      logger.debug("Attempting to insert filter:", filterToInsert)
 
       const { data, error } = await supabase.from("log_filters").insert(filterToInsert).select().single()
 
       if (error) {
-        console.error("Insert error:", error)
+        logger.error("Insert error:", error)
 
         // Check if it's an RLS error
         if (error.message.includes("row-level security policy")) {
@@ -282,10 +283,10 @@ ALTER TABLE log_filters DISABLE ROW LEVEL SECURITY;
         throw error
       }
 
-      console.log("Filter saved successfully:", data)
+      logger.debug("Filter saved successfully:", data)
       return { data }
     } catch (error) {
-      console.error("Error saving log filter:", error)
+      logger.error("Error saving log filter:", error)
       return {
         data: null,
         error: error.message || "Failed to save log filter",
@@ -338,7 +339,7 @@ ALTER TABLE log_filters DISABLE ROW LEVEL SECURITY;
 
       return { data }
     } catch (error) {
-      console.error("Error updating log filter:", error)
+      logger.error("Error updating log filter:", error)
       return {
         data: null,
         error: error.message || "Failed to update log filter",
@@ -383,7 +384,7 @@ ALTER TABLE log_filters DISABLE ROW LEVEL SECURITY;
 
       return { success: true }
     } catch (error) {
-      console.error("Error deleting log filter:", error)
+      logger.error("Error deleting log filter:", error)
       return {
         success: false,
         error: error.message || "Failed to delete log filter",
@@ -412,7 +413,7 @@ ALTER TABLE log_filters DISABLE ROW LEVEL SECURITY;
         .single()
 
       if (fetchError) {
-        console.error("Error fetching current usage count:", fetchError)
+        logger.error("Error fetching current usage count:", fetchError)
         return { success: false, error: "Failed to fetch current usage count" }
       }
 
@@ -427,7 +428,7 @@ ALTER TABLE log_filters DISABLE ROW LEVEL SECURITY;
 
       if (updateError) {
         if (updateError.message.includes("row-level security policy")) {
-          console.warn("RLS policy prevented usage count update, but continuing...")
+          logger.warn("RLS policy prevented usage count update, but continuing...")
           return { success: true } // Don't fail the operation for this
         }
         throw updateError
@@ -435,7 +436,7 @@ ALTER TABLE log_filters DISABLE ROW LEVEL SECURITY;
 
       return { success: true }
     } catch (error) {
-      console.error("Error updating log filter usage:", error)
+      logger.error("Error updating log filter usage:", error)
       return {
         success: false,
         error: error.message || "Failed to update usage",
@@ -470,7 +471,7 @@ ALTER TABLE log_filters DISABLE ROW LEVEL SECURITY;
 
       return { data: data || [] }
     } catch (error) {
-      console.error("Error fetching popular log filters:", error)
+      logger.error("Error fetching popular log filters:", error)
       return {
         data: [],
         error: error.message || "Failed to fetch popular filters",

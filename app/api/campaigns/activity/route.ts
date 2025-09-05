@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { campaignsRepository } from "@/api/repositories"
+import { logger } from "@/lib/utils/logger"
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (error) {
-      console.error("Error fetching campaigns:", error)
+      logger.error("Error fetching campaigns:", error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error("Failed to fetch campaign activity:", error)
+    logger.error("Failed to fetch campaign activity:", error)
     return NextResponse.json({ error: "Failed to fetch campaign activity" }, { status: 500 })
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/auth/server"
+import { logger } from "@/lib/utils/logger"
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     
     // Log the status being used
-    console.log('Campaign status:', body.status || 'Draft')
+    logger.debug('Campaign status:', body.status || 'Draft')
     
     // Prepare campaign data
     const campaignData = {
@@ -56,13 +57,13 @@ export async function POST(request: NextRequest) {
       .single()
     
     if (error) {
-      console.error('Error saving campaign draft:', error)
+      logger.error('Error saving campaign draft:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
     
     return NextResponse.json({ success: true, campaign: data })
   } catch (error) {
-    console.error('Error in campaign creation:', error)
+    logger.error('Error in campaign creation:', error)
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Failed to save campaign' 
     }, { status: 500 })

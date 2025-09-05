@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/auth/server'
 import { NextResponse } from 'next/server'
+import { logger } from "@/lib/utils/logger"
 
 export async function GET() {
   try {
@@ -44,7 +45,7 @@ export async function GET() {
       },
     })
   } catch (error) {
-    console.error('Session error:', error)
+    logger.error('Session error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

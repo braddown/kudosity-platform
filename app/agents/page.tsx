@@ -5,17 +5,18 @@ import MainLayout from "@/components/MainLayout"
 import Agents from "@/components/Agents"
 import PageLayout from "@/components/layouts/PageLayout"
 import { Plus, Settings } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 export default function AgentsPage() {
   const router = useRouter()
 
   const handleCreateAgent = () => {
-    console.log("Creating new agent - navigating to create page")
+    logger.debug("Creating new agent - navigating to create page")
     router.push("/agents/create")
   }
 
   const handleAgentSettings = () => {
-    console.log("Opening agent settings")
+    logger.debug("Opening agent settings")
     // Add settings logic here
   }
 

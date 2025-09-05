@@ -2,11 +2,12 @@
 import Pricing from "@/components/Pricing"
 import DashboardLayout from "@/components/layouts/DashboardLayout"
 import { PhoneCall } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 export default function PricingPage() {
   const handleContactSales = () => {
     // Implement contact sales functionality here
-    console.log("Contact sales clicked")
+    logger.debug("Contact sales clicked")
     // This could open a modal, redirect to a contact form, or trigger a chat widget
   }
 

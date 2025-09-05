@@ -137,3 +137,71 @@ Always consult the relevant specialist agent documentation when working in their
 ## Database Usage
 
 Always use the Supabase MCP server when dealing with database operations. The Supabase project ID is `hgfsmeudhvsvwmzxexmv`.
+
+## Project-Specific Development Rules
+
+### Project Awareness & Context
+- Always read `prd.md` at the start of a new conversation to understand the project's architecture, goals, style, and constraints
+- Use Taskmaster MCP server before starting a new task to understand next task
+- Use consistent naming conventions, file structure, and architecture patterns as described in `specifications.md`
+- Always use MCP servers if available (Supabase, Kudosity API, Task Master)
+- Never edit or use anything in a Backup or Archive folder
+
+### Kudosity Project Documentation
+- Update `README.md` when new features are added, dependencies change, or setup steps are modified
+- Create a `key-learnings.md` file and update this whenever we solve a complex issues so that we don't repeat mistakes
+- Document project-specific architectural decisions and patterns
+
+### Authentication Best Practices (Kudosity-Specific)
+- Implement simple, direct authentication flows without complex middleware
+- Use window.location.href for post-authentication navigation
+- Implement protected routes with client-side checks
+- Keep authentication logic minimal and straightforward
+- Provide proper session handling and secure token storage
+- Favor direct approaches over complex state management for auth
+
+### API Integrations (Next.js/Supabase/Kudosity Stack)
+- NEVER make direct API calls to third-party services from the client-side
+- ALWAYS create server-side API routes in Next.js to proxy all external API calls
+- For all external API integrations:
+  - Create a dedicated route handler in `app/api/[service]/route.ts`
+  - Implement the actual third-party API calls server-side
+  - Call your own server routes from client components
+- Ensure API integrations work in local development environment
+- Implement proper error handling and response validation:
+  - Check response Content-Type before parsing JSON
+  - Handle empty responses safely
+  - Always use try/catch with detailed error logging
+  - Include both error message and any response data in logs
+  - Use proper TypeScript typing (avoid 'unknown' without type guards)
+- Add comprehensive request/response logging:
+  - Log the complete formatted URL and parameters before making API calls
+  - Safely log partial credentials (first/last few characters only) for debugging
+  - Create diagnostic endpoints that verify environment, auth, and database access
+- Handle Supabase authentication correctly:
+  - Always verify authentication session exists before accessing credentials
+  - Initialize Supabase with explicit credentials in server components
+  - Use createClientComponentClient() for client-side auth
+  - Use createServerComponentClient() for server components
+  - Ignore Next.js cookie warnings in development (known issue with App Router)
+- Validate API parameters and requests:
+  - Respect specific parameter formats for each API (e.g., Klaviyo uses page[size])
+  - Trim all user input and API keys to prevent whitespace issues
+  - Verify data after database operations with explicit confirmation
+- Use loading states to indicate API requests in progress
+- Structure API handlers with clear separation between authentication, validation, and business logic
+- Implement rate limiting, retries, and exponential backoff
+
+### Kudosity Authentication Handling
+- Prioritize local error display over redirects for authentication failures
+- Implement multiple authentication methods (session, direct API key) with clear fallback paths
+- Cache authentication tokens where appropriate, with proper expiration handling
+- Mask sensitive credentials in logs while still providing enough context for debugging
+- Show authentication status directly in the UI rather than hiding failures
+- Structure API handlers with clear separation between authentication, validation, and business logic
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

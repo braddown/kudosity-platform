@@ -4,22 +4,23 @@ import MainLayout from "@/components/MainLayout"
 import { ChatApp } from "@/features/chat"
 import PageLayout from "@/components/layouts/PageLayout"
 import { Settings, Archive, Users, MessageSquare } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 export default function ChatPage() {
   const handleChatSettings = () => {
-    console.log("Opening chat settings")
+    logger.debug("Opening chat settings")
   }
 
   const handleArchiveChats = () => {
-    console.log("Archiving old chats")
+    logger.debug("Archiving old chats")
   }
 
   const handleManageContacts = () => {
-    console.log("Managing contacts")
+    logger.debug("Managing contacts")
   }
 
   const handleNewChat = () => {
-    console.log("Starting new chat")
+    logger.debug("Starting new chat")
   }
 
   const pageActions = [

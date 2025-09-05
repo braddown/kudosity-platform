@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/auth/server'
+import { logger } from "@/lib/utils/logger"
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
     // Call Kudosity lease-number API
     const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')
     
-    console.log('Leasing number from Kudosity API...', { number, forward_url })
+    logger.debug('Leasing number from Kudosity API...', { number, forward_url })
     
     const leaseResponse = await fetch('https://api.transmitsms.com/lease-number.json', {
       method: 'POST',
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     if (!leaseResponse.ok) {
       const errorText = await leaseResponse.text()
-      console.error('Kudosity lease-number API error:', leaseResponse.status, errorText)
+      logger.error('Kudosity lease-number API error:', leaseResponse.status, errorText)
       return NextResponse.json({ 
         error: 'Failed to lease number from Kudosity',
         details: `HTTP ${leaseResponse.status}: ${errorText}`
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     const leaseData = await leaseResponse.json()
-    console.log('Kudosity lease-number response:', leaseData)
+    logger.debug('Kudosity lease-number response:', leaseData)
 
     // Check for API errors in response
     if (leaseData.error && leaseData.error.code !== 'SUCCESS') {
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      console.error('Database insert error:', insertError)
+      logger.error('Database insert error:', insertError)
       return NextResponse.json({ 
         error: 'Failed to save new sender to database',
         details: insertError.message
@@ -133,7 +134,7 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Error leasing number:', error)
+    logger.error('Error leasing number:', error)
     return NextResponse.json({ 
       error: 'Failed to lease number',
       details: error instanceof Error ? error.message : 'Unknown error'

@@ -1,26 +1,27 @@
 // Test script to verify navigation routes are working correctly
 import { navItems, getRouteFromSubitem } from "../config/navigation"
+import { logger } from "@/lib/utils/logger"
 
-console.log("=== NAVIGATION ROUTE TESTING ===")
+logger.debug("=== NAVIGATION ROUTE TESTING ===")
 
 navItems.forEach((item) => {
-  console.log(`\n${item.name}:`)
+  logger.debug(`\n${item.name}:`)
   item.subitems.forEach((subitem) => {
     const route = getRouteFromSubitem(subitem, item.name)
-    console.log(`  ${subitem} -> ${route}`)
+    logger.debug(`  ${subitem} -> ${route}`)
   })
 })
 
-console.log("\n=== SPECIAL ROUTES ===")
-console.log("Activity -> /campaigns/activity")
-console.log("Data-Sources -> /data-sources")
-console.log("Account-Settings -> /account-settings")
-console.log("Reply-Automation -> /reply-automation")
+logger.debug("\n=== SPECIAL ROUTES ===")
+logger.debug("Activity -> /campaigns/activity")
+logger.debug("Data-Sources -> /data-sources")
+logger.debug("Account-Settings -> /account-settings")
+logger.debug("Reply-Automation -> /reply-automation")
 
-console.log("\n=== NAVIGATION STRUCTURE ===")
-console.log("1. Dashboards: Overview, Performance, Logs")
-console.log("2. Audience: Profiles, Segments, Properties, Data-Sources")
-console.log("3. Messaging: Chat, Broadcast, Templates")
-console.log("4. Campaigns: Touchpoints, Journeys, Activity")
-console.log("5. Automation: Agents, Reply-Automation")
-console.log("6. Settings: Account-Settings, Pricing, Developers")
+logger.debug("\n=== NAVIGATION STRUCTURE ===")
+logger.debug("1. Dashboards: Overview, Performance, Logs")
+logger.debug("2. Audience: Profiles, Segments, Properties, Data-Sources")
+logger.debug("3. Messaging: Chat, Broadcast, Templates")
+logger.debug("4. Campaigns: Touchpoints, Journeys, Activity")
+logger.debug("5. Automation: Agents, Reply-Automation")
+logger.debug("6. Settings: Account-Settings, Pricing, Developers")

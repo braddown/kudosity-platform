@@ -10,13 +10,14 @@
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { logger } from "@/lib/utils/logger"
 
 // Get Supabase configuration from environment or use defaults
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://hgfsmeudhvsvwmzxexmv.supabase.co'
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY
 
 if (!supabaseServiceKey) {
-  console.error('❌ SUPABASE_SERVICE_ROLE_KEY or SUPABASE_KEY environment variable is required')
+  logger.error('❌ SUPABASE_SERVICE_ROLE_KEY or SUPABASE_KEY environment variable is required')
   process.exit(1)
 }
 
@@ -30,7 +31,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 
 async function runMigration(migrationFile: string) {
   try {
-    console.log(`🚀 Running migration: ${migrationFile}`)
+    logger.debug(`🚀 Running migration: ${migrationFile}`)
     
     // Read the SQL file
     const migrationPath = join(process.cwd(), 'scripts', 'migrations', migrationFile)
@@ -42,7 +43,7 @@ async function runMigration(migrationFile: string) {
       .map(stmt => stmt.trim())
       .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'))
     
-    console.log(`📄 Found ${statements.length} SQL statements to execute`)
+    logger.debug(`📄 Found ${statements.length} SQL statements to execute`)
     
     // Execute each statement
     for (let i = 0; i < statements.length; i++) {
@@ -53,7 +54,7 @@ async function runMigration(migrationFile: string) {
         continue
       }
       
-      console.log(`⏳ Executing statement ${i + 1}/${statements.length}...`)
+      logger.debug(`⏳ Executing statement ${i + 1}/${statements.length}...`)
       
       try {
         const { data, error } = await supabase.rpc('exec_sql', { 
@@ -65,25 +66,25 @@ async function runMigration(migrationFile: string) {
           const { error: directError } = await supabase.from('_').select('*').limit(0)
           
           if (directError) {
-            console.error(`❌ Failed to execute statement ${i + 1}:`, error.message)
-            console.error(`Statement: ${statement.substring(0, 100)}...`)
+            logger.error(`❌ Failed to execute statement ${i + 1}:`, error.message)
+            logger.error(`Statement: ${statement.substring(0, 100)}...`)
             throw error
           }
         }
         
-        console.log(`✅ Statement ${i + 1} executed successfully`)
+        logger.debug(`✅ Statement ${i + 1} executed successfully`)
         
       } catch (err) {
-        console.error(`❌ Error executing statement ${i + 1}:`, err)
-        console.error(`Statement: ${statement.substring(0, 200)}...`)
+        logger.error(`❌ Error executing statement ${i + 1}:`, err)
+        logger.error(`Statement: ${statement.substring(0, 200)}...`)
         throw err
       }
     }
     
-    console.log(`🎉 Migration ${migrationFile} completed successfully!`)
+    logger.debug(`🎉 Migration ${migrationFile} completed successfully!`)
     
   } catch (error) {
-    console.error(`💥 Migration failed:`, error)
+    logger.error(`💥 Migration failed:`, error)
     process.exit(1)
   }
 }
@@ -108,10 +109,10 @@ npx tsx scripts/run-migration.ts 001_create_cdp_architecture.sql
 // Run the migration
 runMigration(migrationFile)
   .then(() => {
-    console.log('✨ Migration runner completed')
+    logger.debug('✨ Migration runner completed')
     process.exit(0)
   })
   .catch((error) => {
-    console.error('💥 Migration runner failed:', error)
+    logger.error('💥 Migration runner failed:', error)
     process.exit(1)
   })

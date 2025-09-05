@@ -15,6 +15,7 @@ import { LoadingButton } from '@/components/ui/loading'
 import { LoadingMessages } from '@/lib/constants/loading-messages'
 import { useToast } from '@/components/ui/use-toast'
 import { Logo } from '@/components/Logo'
+import { logger } from "@/lib/utils/logger"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -44,7 +45,7 @@ export default function LoginPage() {
 
       router.push('/overview')
     } catch (err: any) {
-      console.error('Login error:', err)
+      logger.error('Login error:', err)
       setError(err.message || 'Invalid email or password')
     } finally {
       setLoading(false)
@@ -58,7 +59,7 @@ export default function LoginPage() {
     try {
       await signInWithProvider(provider)
     } catch (err: any) {
-      console.error('OAuth error:', err)
+      logger.error('OAuth error:', err)
       setError(err.message || 'Failed to sign in with provider')
       setLoading(false)
     }

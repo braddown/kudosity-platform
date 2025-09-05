@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
+import { logger } from "@/lib/utils/logger"
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,7 +8,7 @@ export async function POST(request: NextRequest) {
     const payload = await request.json()
     
     // Log the webhook event
-    console.log('Received Kudosity webhook:', payload)
+    logger.debug('Received Kudosity webhook:', payload)
     
     // Verify webhook signature (if Kudosity provides one)
     // const signature = request.headers.get('x-kudosity-signature')
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
       })
     
     if (eventError) {
-      console.error('Failed to store webhook event:', eventError)
+      logger.error('Failed to store webhook event:', eventError)
     }
     
     // Process the event based on type
@@ -52,13 +53,13 @@ export async function POST(request: NextRequest) {
         break
         
       default:
-        console.log('Unknown webhook event type:', payload.event_type || payload.type)
+        logger.debug('Unknown webhook event type:', payload.event_type || payload.type)
     }
     
     return NextResponse.json({ success: true })
     
   } catch (error) {
-    console.error('Webhook processing error:', error)
+    logger.error('Webhook processing error:', error)
     return NextResponse.json(
       { error: 'Failed to process webhook' },
       { status: 500 }
@@ -80,7 +81,7 @@ async function handleSmsSent(payload: any) {
     .eq('message_id', payload.message_id)
   
   if (error) {
-    console.error('Failed to update message status to sent:', error)
+    logger.error('Failed to update message status to sent:', error)
   }
 }
 
@@ -98,7 +99,7 @@ async function handleSmsDelivered(payload: any) {
     .eq('message_id', payload.message_id)
   
   if (error) {
-    console.error('Failed to update message status to delivered:', error)
+    logger.error('Failed to update message status to delivered:', error)
   }
 }
 
@@ -117,7 +118,7 @@ async function handleSmsFailed(payload: any) {
     .eq('message_id', payload.message_id)
   
   if (error) {
-    console.error('Failed to update message status to failed:', error)
+    logger.error('Failed to update message status to failed:', error)
   }
 }
 
@@ -132,7 +133,7 @@ async function handleLinkClicked(payload: any) {
     .single()
   
   if (!message) {
-    console.error('Message not found for link click:', payload.message_id)
+    logger.error('Message not found for link click:', payload.message_id)
     return
   }
   
@@ -152,7 +153,7 @@ async function handleLinkClicked(payload: any) {
     })
   
   if (clickError) {
-    console.error('Failed to record link click:', clickError)
+    logger.error('Failed to record link click:', clickError)
   }
   
   // Update message click count
@@ -167,6 +168,6 @@ async function handleLinkClicked(payload: any) {
     .eq('id', message.id)
   
   if (updateError) {
-    console.error('Failed to update message click count:', updateError)
+    logger.error('Failed to update message click count:', updateError)
   }
 }

@@ -17,6 +17,7 @@ import {
   Database,
   Search,
 } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -213,10 +214,10 @@ const useSegments = () => {
       setError(null)
 
       // First fetch all profiles to calculate accurate counts
-      console.log('SegmentList: Fetching all profiles for count calculation...')
+      logger.debug('SegmentList: Fetching all profiles for count calculation...')
       const profilesResult = await profilesApi.getProfiles()
       const profiles = profilesResult.data || []
-      console.log(`SegmentList: Received ${profiles.length} profiles from API`)
+      logger.debug(`SegmentList: Received ${profiles.length} profiles from API`)
 
       // Get custom segments from database
       const { data: customSegments, error: customError } = await segmentsApi.getSegments()
@@ -246,7 +247,7 @@ const useSegments = () => {
       setSegments(transformedSegments)
     } catch (err) {
       setError("Failed to fetch segments")
-      console.error("Error fetching segments:", err)
+      logger.error("Error fetching segments:", err)
     } finally {
       setLoading(false)
     }
@@ -339,10 +340,10 @@ export default function SegmentList() {
       }
     } else if (action === "integration") {
       // Implement integration management logic here
-      console.log("Managing integration for segment:", segment.id)
+      logger.debug("Managing integration for segment:", segment.id)
     } else {
       // Handle other actions
-      console.log(`Action: ${action}, Segment ID: ${segment.id}`)
+      logger.debug(`Action: ${action}, Segment ID: ${segment.id}`)
     }
   }
 

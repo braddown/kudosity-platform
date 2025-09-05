@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Download, UserPlus, Trash2, ArrowUpIcon, ArrowDownIcon } from "lucide-react"
 import { profilesApi } from "@/lib/api/profiles-api"
+import { logger } from "@/lib/utils/logger"
 
 interface ProfileTableData {
   id: string
@@ -65,7 +66,7 @@ const transformProfileToTableData = (profile: any): ProfileTableData => {
 }
 
 export function ProfilesTable({ onProfileSelect }: ProfilesTableProps) {
-  console.log("ProfilesTable component mounted/rendered")
+  logger.debug("ProfilesTable component mounted/rendered")
 
   const [profiles, setProfiles] = useState<ProfileTableData[]>([])
   const [selectedProfiles, setSelectedProfiles] = useState<ProfileTableData[]>([])
@@ -74,39 +75,39 @@ export function ProfilesTable({ onProfileSelect }: ProfilesTableProps) {
   const [error, setError] = useState<string | null>(null)
   const [sortConfig, setSortConfig] = useState<{ key: keyof ProfileTableData; direction: "asc" | "desc" } | null>(null)
 
-  console.log("ProfilesTable state:", { profilesCount: profiles.length, loading, error })
+  logger.debug("ProfilesTable state:", { profilesCount: profiles.length, loading, error })
 
   // Fetch profiles from Supabase
   useEffect(() => {
-    console.log("useEffect triggered in ProfilesTable")
+    logger.debug("useEffect triggered in ProfilesTable")
 
     async function fetchProfiles() {
       try {
-        console.log("Starting to fetch profiles from Supabase...")
+        logger.debug("Starting to fetch profiles from Supabase...")
         setLoading(true)
         setError(null)
 
         const result = await profilesApi.getProfiles({ limit: 100 })
 
-        console.log("API result:", result)
+        logger.debug("API result:", result)
 
         if (result.error) {
           throw new Error(`API Error: ${result.error}`)
         }
 
         if (!result.data || result.data.length === 0) {
-          console.warn("No profiles found in database")
+          logger.warn("No profiles found in database")
           setProfiles([])
           return
         }
 
-        console.log("Raw profile data:", result.data)
+        logger.debug("Raw profile data:", result.data)
         const transformedData = result.data.map(transformProfileToTableData)
-        console.log("Transformed profile data:", transformedData)
+        logger.debug("Transformed profile data:", transformedData)
 
         setProfiles(transformedData)
       } catch (err) {
-        console.error("Error fetching profiles:", err)
+        logger.error("Error fetching profiles:", err)
         setError(err instanceof Error ? err.message : "Failed to fetch profiles")
       } finally {
         setLoading(false)
@@ -343,7 +344,7 @@ export function ProfilesTable({ onProfileSelect }: ProfilesTableProps) {
       onClick: () => {
         // Export selected profiles or all profiles
         const dataToExport = selectedProfiles.length > 0 ? selectedProfiles : profiles
-        console.log("Exporting profiles:", dataToExport)
+        logger.debug("Exporting profiles:", dataToExport)
         // Implement CSV export logic here
       },
     },
@@ -356,9 +357,7 @@ export function ProfilesTable({ onProfileSelect }: ProfilesTableProps) {
         const confirmed = window.confirm(`Are you sure you want to delete ${selectedProfiles.length} profile(s)?`)
         if (confirmed) {
           // Implement bulk delete
-          console.log(
-            "Deleting profiles:",
-            selectedProfiles.map((p) => p.id),
+          logger.debug("Deleting profiles:", selectedProfiles.map((p) => p.id),
           )
           // Add actual delete logic here
         }

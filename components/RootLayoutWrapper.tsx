@@ -5,6 +5,7 @@ import { useEffect } from "react"
 import { PageHeaderProvider } from "@/components/PageHeaderContext"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
+import { logger } from "@/lib/utils/logger"
 
 interface RootLayoutWrapperProps {
   children: ReactNode
@@ -17,7 +18,7 @@ function PerformanceMonitor() {
     if (process.env.NODE_ENV === 'production') {
       // Import and initialize the performance monitor
       import('@/lib/performance/web-vitals').then(({ performanceMonitor }) => {
-        console.log('📊 Performance monitoring initialized')
+        logger.debug('📊 Performance monitoring initialized')
       })
     }
     
@@ -25,7 +26,7 @@ function PerformanceMonitor() {
     const reportWebVitals = (metric: any) => {
       if (process.env.NODE_ENV === 'production') {
         // Send to your analytics service
-        console.log('Web Vital:', metric)
+        logger.debug('Web Vital:', metric)
       }
     }
 

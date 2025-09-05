@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/utils/logger"
 
 /**
  * DELETE /api/lists/[id]/members/[contactId]
@@ -31,7 +32,7 @@ export async function DELETE(
       if (membershipError.code === 'PGRST116') {
         return NextResponse.json({ error: 'Membership not found' }, { status: 404 })
       }
-      console.error('Error checking membership:', membershipError)
+      logger.error('Error checking membership:', membershipError)
       return NextResponse.json({ error: 'Failed to verify membership' }, { status: 500 })
     }
 
@@ -46,7 +47,7 @@ export async function DELETE(
       .eq('contact_id', contactId)
 
     if (updateError) {
-      console.error('Error removing member from list:', updateError)
+      logger.error('Error removing member from list:', updateError)
       return NextResponse.json({ error: 'Failed to remove member from list' }, { status: 500 })
     }
 
@@ -75,7 +76,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Contact removed from list successfully' })
   } catch (error) {
-    console.error('Error in DELETE /api/lists/[id]/members/[contactId]:', error)
+    logger.error('Error in DELETE /api/lists/[id]/members/[contactId]:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -109,7 +110,7 @@ export async function POST(
       .single()
 
     if (checkError && checkError.code !== 'PGRST116') {
-      console.error('Error checking membership:', checkError)
+      logger.error('Error checking membership:', checkError)
       return NextResponse.json({ error: 'Failed to verify membership' }, { status: 500 })
     }
 
@@ -127,7 +128,7 @@ export async function POST(
         .eq('contact_id', contactId)
 
       if (updateError) {
-        console.error('Error reactivating membership:', updateError)
+        logger.error('Error reactivating membership:', updateError)
         return NextResponse.json({ error: 'Failed to reactivate membership' }, { status: 500 })
       }
 
@@ -169,7 +170,7 @@ export async function POST(
         })
 
       if (insertError) {
-        console.error('Error creating membership:', insertError)
+        logger.error('Error creating membership:', insertError)
         return NextResponse.json({ error: 'Failed to add contact to list' }, { status: 500 })
       }
 
@@ -205,7 +206,7 @@ export async function POST(
       return NextResponse.json({ message: 'Contact added to list successfully' }, { status: 201 })
     }
   } catch (error) {
-    console.error('Error in POST /api/lists/[id]/members/[contactId]:', error)
+    logger.error('Error in POST /api/lists/[id]/members/[contactId]:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

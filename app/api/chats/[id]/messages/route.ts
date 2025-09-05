@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/utils/logger"
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const chatId = params.id
-    console.log(`🔍 API: Fetching messages for chat ${chatId}...`)
+    logger.debug(`🔍 API: Fetching messages for chat ${chatId}...`)
 
     const { data: messages, error } = await supabase
       .from("messages")
@@ -13,14 +14,14 @@ export async function GET(request: Request, { params }: { params: { id: string }
       .order("created_at", { ascending: true })
 
     if (error) {
-      console.error("❌ API: Error fetching messages:", error)
+      logger.error("❌ API: Error fetching messages:", error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    console.log(`✅ API: Successfully fetched ${messages?.length || 0} messages for chat ${chatId}`)
+    logger.debug(`✅ API: Successfully fetched ${messages?.length || 0} messages for chat ${chatId}`)
     return NextResponse.json({ data: messages || [] })
   } catch (error) {
-    console.error("❌ API: Unexpected error fetching messages:", error)
+    logger.error("❌ API: Unexpected error fetching messages:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -31,7 +32,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const body = await request.json()
     const { content, direction = "outbound" } = body
 
-    console.log(`📤 API: Sending message to chat ${chatId}...`)
+    logger.debug(`📤 API: Sending message to chat ${chatId}...`)
 
     const { data, error } = await supabase
       .from("messages")
@@ -47,7 +48,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       .single()
 
     if (error) {
-      console.error("❌ API: Error sending message:", error)
+      logger.error("❌ API: Error sending message:", error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
@@ -59,10 +60,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
       })
       .eq("id", chatId)
 
-    console.log("✅ API: Message sent successfully:", data?.id)
+    logger.debug("✅ API: Message sent successfully:", data?.id)
     return NextResponse.json({ data })
   } catch (error) {
-    console.error("❌ API: Unexpected error sending message:", error)
+    logger.error("❌ API: Unexpected error sending message:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

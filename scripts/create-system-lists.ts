@@ -7,6 +7,7 @@
 import { createClient } from '@supabase/supabase-js'
 import * as dotenv from 'dotenv'
 import { resolve } from 'path'
+import { logger } from "@/lib/utils/logger"
 
 // Load environment variables
 dotenv.config({ path: resolve(process.cwd(), '.env.local') })
@@ -15,8 +16,8 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Missing required environment variables')
-  console.error('Please ensure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set')
+  logger.error('❌ Missing required environment variables')
+  logger.error('Please ensure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set')
   process.exit(1)
 }
 
@@ -31,7 +32,7 @@ const supabase = createClient(supabaseUrl, cleanKey, {
 })
 
 async function createSystemLists() {
-  console.log('🔧 Creating missing system lists...\n')
+  logger.debug('🔧 Creating missing system lists...\n')
 
   // Define system lists that should exist
   const systemLists = [
@@ -108,22 +109,22 @@ async function createSystemLists() {
       .select('name')
 
     if (fetchError) {
-      console.error('❌ Error fetching existing lists:', fetchError)
+      logger.error('❌ Error fetching existing lists:', fetchError)
       return
     }
 
     const existingNames = existingLists?.map(l => l.name.toLowerCase()) || []
-    console.log(`📊 Found ${existingNames.length} existing lists\n`)
+    logger.debug(`📊 Found ${existingNames.length} existing lists\n`)
 
     let created = 0
     let skipped = 0
 
     for (const list of systemLists) {
       if (existingNames.includes(list.name.toLowerCase())) {
-        console.log(`⏭️  Skipping "${list.name}" - already exists`)
+        logger.debug(`⏭️  Skipping "${list.name}" - already exists`)
         skipped++
       } else {
-        console.log(`➕ Creating "${list.name}"...`)
+        logger.debug(`➕ Creating "${list.name}"...`)
         
         const { error } = await supabase
           .from('lists')
@@ -135,9 +136,9 @@ async function createSystemLists() {
           })
 
         if (error) {
-          console.error(`   ❌ Failed to create: ${error.message}`)
+          logger.error(`   ❌ Failed to create: ${error.message}`)
         } else {
-          console.log(`   ✅ Created successfully`)
+          logger.debug(`   ✅ Created successfully`)
           created++
         }
       }
@@ -145,14 +146,14 @@ async function createSystemLists() {
 
     // Summary
     console.log('\n' + '='.repeat(60))
-    console.log('📊 SUMMARY:')
+    logger.debug('📊 SUMMARY:')
     console.log('='.repeat(60))
-    console.log(`✅ Created ${created} new system lists`)
-    console.log(`⏭️  Skipped ${skipped} existing lists`)
-    console.log('\n✨ System lists setup completed!')
+    logger.debug(`✅ Created ${created} new system lists`)
+    logger.debug(`⏭️  Skipped ${skipped} existing lists`)
+    logger.debug('\n✨ System lists setup completed!')
 
   } catch (error) {
-    console.error('❌ Unexpected error:', error)
+    logger.error('❌ Unexpected error:', error)
   }
 }
 

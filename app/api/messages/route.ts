@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/utils/logger"
 
 export async function GET(request: Request) {
   try {
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
         .order("created_at", { ascending: false })
 
       if (error) {
-        console.error("Error fetching sent messages:", error)
+        logger.error("Error fetching sent messages:", error)
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
 
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
         .order("received_at", { ascending: false })
 
       if (error) {
-        console.error("Error fetching received messages:", error)
+        logger.error("Error fetching received messages:", error)
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
 
@@ -70,12 +71,12 @@ export async function GET(request: Request) {
       ])
 
       if (sentResult.error) {
-        console.error("Error fetching sent messages:", sentResult.error)
+        logger.error("Error fetching sent messages:", sentResult.error)
         return NextResponse.json({ error: sentResult.error.message }, { status: 500 })
       }
 
       if (receivedResult.error) {
-        console.error("Error fetching received messages:", receivedResult.error)
+        logger.error("Error fetching received messages:", receivedResult.error)
         return NextResponse.json({ error: receivedResult.error.message }, { status: 500 })
       }
 
@@ -88,7 +89,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ data: allMessages })
     }
   } catch (error) {
-    console.error("Error in messages API:", error)
+    logger.error("Error in messages API:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

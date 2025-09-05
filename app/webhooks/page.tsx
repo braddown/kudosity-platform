@@ -5,6 +5,7 @@ import MainLayout from "@/components/MainLayout"
 import { Webhooks } from "@/features/settings"
 import { usePageHeader } from "@/components/PageHeaderContext"
 import { Plus } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 export default function WebhooksPage() {
   const { setPageHeader } = usePageHeader()
@@ -17,7 +18,7 @@ export default function WebhooksPage() {
           label: "Create New Webhook",
           icon: <Plus className="h-4 w-4" />,
           onClick: () => {
-            console.log("Create new webhook clicked")
+            logger.debug("Create new webhook clicked")
           },
           variant: "default",
         },

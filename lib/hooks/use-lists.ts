@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { List } from '@/api/repositories'
+import { logger } from "@/lib/utils/logger"
 
 interface UseListsOptions {
   autoFetch?: boolean
@@ -74,7 +75,7 @@ export function useListsRepository(options: UseListsOptions = {}): UseListsResul
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred'
       setError(errorMessage)
-      console.error('Error fetching lists:', err)
+      logger.error('Error fetching lists:', err)
     } finally {
       setLoading(false)
     }
@@ -112,7 +113,7 @@ export function useListsRepository(options: UseListsOptions = {}): UseListsResul
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create list'
       setError(errorMessage)
-      console.error('Error creating list:', err)
+      logger.error('Error creating list:', err)
       return null
     }
   }, [])
@@ -153,7 +154,7 @@ export function useListsRepository(options: UseListsOptions = {}): UseListsResul
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update list'
       setError(errorMessage)
-      console.error('Error updating list:', err)
+      logger.error('Error updating list:', err)
       return null
     }
   }, [fetchLists])
@@ -190,7 +191,7 @@ export function useListsRepository(options: UseListsOptions = {}): UseListsResul
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete list'
       setError(errorMessage)
-      console.error('Error deleting list:', err)
+      logger.error('Error deleting list:', err)
       return false
     }
   }, [lists])
@@ -224,7 +225,7 @@ export function useListsRepository(options: UseListsOptions = {}): UseListsResul
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Search failed'
       setError(errorMessage)
-      console.error('Error searching lists:', err)
+      logger.error('Error searching lists:', err)
     } finally {
       setLoading(false)
     }
@@ -276,7 +277,7 @@ export function useListRepository(listId: string | null) {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch list'
       setError(errorMessage)
-      console.error('Error fetching list:', err)
+      logger.error('Error fetching list:', err)
     } finally {
       setLoading(false)
     }

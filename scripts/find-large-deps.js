@@ -1,3 +1,4 @@
+import { logger } from "@/lib/utils/logger"
 const { execSync } = require("child_process")
 const fs = require("fs")
 
@@ -6,8 +7,8 @@ const output = execSync("npm list --json").toString()
 const deps = JSON.parse(output)
 
 // Get package sizes
-console.log("Analyzing package sizes...")
-console.log("This may take a moment...")
+logger.debug("Analyzing package sizes...")
+logger.debug("This may take a moment...")
 
 const packageSizes = {}
 
@@ -20,7 +21,7 @@ function getPackageSize(packageName) {
     const size = Number.parseInt(output.split("\t")[0])
     return size
   } catch (error) {
-    console.error(`Error getting size for ${packageName}:`, error.message)
+    logger.error(`Error getting size for ${packageName}:`, error.message)
     return 0
   }
 }
@@ -42,23 +43,23 @@ const sortedPackages = Object.entries(packageSizes)
   .filter(([_, size]) => size > 0)
 
 // Output results
-console.log("\n=== PACKAGE SIZE ANALYSIS ===")
-console.log("Largest packages:")
+logger.debug("\n=== PACKAGE SIZE ANALYSIS ===")
+logger.debug("Largest packages:")
 sortedPackages.slice(0, 20).forEach(([pkg, size]) => {
-  console.log(`${pkg}: ${(size / 1024).toFixed(2)} MB`)
+  logger.debug(`${pkg}: ${(size / 1024).toFixed(2)} MB`)
 })
 
 // Suggest alternatives for large packages
-console.log("\nPossible optimizations:")
+logger.debug("\nPossible optimizations:")
 sortedPackages.forEach(([pkg, size]) => {
   if (size > 10000) {
     // More than ~10MB
     if (pkg === "recharts") {
-      console.log("- Consider replacing " + pkg + " with a lighter alternative like 'chart.js' or 'lightweight-charts'")
+      logger.debug("- Consider replacing " + pkg + " with a lighter alternative like 'chart.js' or 'lightweight-charts'")
     } else if (pkg === "@faker-js/faker") {
-      console.log("- Move " + pkg + " to devDependencies if it's only used for development")
+      logger.debug("- Move " + pkg + " to devDependencies if it's only used for development")
     } else if (pkg.includes("ui") || pkg.includes("components")) {
-      console.log("- Consider code-splitting or lazy loading " + pkg + " components")
+      logger.debug("- Consider code-splitting or lazy loading " + pkg + " components")
     }
   }
 })

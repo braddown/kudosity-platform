@@ -21,6 +21,7 @@ import {
   TrendingUp,
   Eye,
 } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 import { formatDistanceToNow } from "date-fns"
 import { LoadingSection } from "@/components/ui/loading"
 
@@ -112,7 +113,7 @@ export function CampaignActivityTable({ campaigns, loading, onRefresh }: Campaig
   }
 
   const handleAction = (action: string, campaignId: string) => {
-    console.log(`${action} campaign ${campaignId}`)
+    logger.debug(`${action} campaign ${campaignId}`)
     // Implement actions like pause, resume, stop, etc.
   }
 

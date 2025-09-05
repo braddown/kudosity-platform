@@ -26,6 +26,7 @@ import {
   Search,
   X
 } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 interface List {
   id: string
@@ -144,7 +145,7 @@ export default function ListsComponent() {
               return { ...list, member_count: memberCount }
             }
           } catch (error) {
-            console.error(`Error fetching members for list ${list.name}:`, error)
+            logger.error(`Error fetching members for list ${list.name}:`, error)
           }
         }
         
@@ -155,7 +156,7 @@ export default function ListsComponent() {
       setLists(listsWithCounts)
       setLoading(false)
     } catch (err: any) {
-      console.error('❌ Fetch error:', err)
+      logger.error('❌ Fetch error:', err)
       setError(err.message)
       setLoading(false)
     }
@@ -183,7 +184,7 @@ export default function ListsComponent() {
   }, [])
 
   // Debug logging
-  console.log('🚀 Component state:', { lists, loading, error, type: typeof lists, length: lists?.length })
+  logger.debug('🚀 Component state:', { lists, loading, error, type: typeof lists, length: lists?.length })
 
   const [expandedList, setExpandedList] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -262,7 +263,7 @@ export default function ListsComponent() {
       refetch()
       
     } catch (err) {
-      console.error("Error creating list:", err)
+      logger.error("Error creating list:", err)
       toast({
         title: "Error",
         description: "Failed to create list",
@@ -276,7 +277,7 @@ export default function ListsComponent() {
   const handleAction = async (action: string, list: List) => {
     if (action === "edit") {
       // TODO: Implement edit functionality
-      console.log("Edit list:", list.id)
+      logger.debug("Edit list:", list.id)
     } else if (action === "delete") {
       if (list.type === 'System') {
         toast({
@@ -312,7 +313,7 @@ export default function ListsComponent() {
       }
     } else if (action === "send") {
       // TODO: Implement send message functionality
-      console.log("Send message to list:", list.id)
+      logger.debug("Send message to list:", list.id)
     }
   }
 

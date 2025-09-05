@@ -1,3 +1,4 @@
+import { logger } from "@/lib/utils/logger"
 // Node.js Build Analysis Script
 const fs = require("fs")
 const path = require("path")
@@ -75,12 +76,12 @@ function findLargestFiles(dirPath, limit = 10) {
   return files.sort((a, b) => b.size - a.size).slice(0, limit)
 }
 
-console.log("=== BUILD SIZE ANALYSIS ===")
+logger.debug("=== BUILD SIZE ANALYSIS ===")
 
 // Check if .next directory exists
 const nextDir = ".next"
 if (!fs.existsSync(nextDir)) {
-  console.log('No .next directory found. Run "npm run build" first.')
+  logger.debug('No .next directory found. Run "npm run build" first.')
   process.exit(1)
 }
 
@@ -118,18 +119,18 @@ if (fs.existsSync(staticDir)) {
   const totalJsSize = jsFiles.reduce((sum, file) => sum + file.size, 0)
   const totalCssSize = cssFiles.reduce((sum, file) => sum + file.size, 0)
 
-  console.log(`Total JS size: ${formatBytes(totalJsSize)}`)
-  console.log(`Total CSS size: ${formatBytes(totalCssSize)}`)
+  logger.debug(`Total JS size: ${formatBytes(totalJsSize)}`)
+  logger.debug(`Total CSS size: ${formatBytes(totalCssSize)}`)
 
-  console.log("\nLargest files:")
+  logger.debug("\nLargest files:")
   const largestFiles = findLargestFiles(staticDir, 10)
 
   largestFiles.forEach((file, index) => {
     const relativePath = path.relative(process.cwd(), file.path)
-    console.log(`${index + 1}. ${relativePath} - ${formatBytes(file.size)}`)
+    logger.debug(`${index + 1}. ${relativePath} - ${formatBytes(file.size)}`)
   })
 } else {
-  console.log("No static directory found in .next")
+  logger.debug("No static directory found in .next")
 }
 
-console.log("\nNote: This analysis shows the current build output sizes.")
+logger.debug("\nNote: This analysis shows the current build output sizes.")

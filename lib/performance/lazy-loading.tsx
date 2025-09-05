@@ -10,6 +10,7 @@ import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent } from '@/components/ui/card'
 import { performanceMonitor } from './web-vitals'
+import { logger } from "@/lib/utils/logger"
 
 // Loading component variants
 interface LoadingProps {
@@ -140,7 +141,7 @@ export function createLazyComponent<T extends ComponentType<any>>(
       return module
     } catch (error) {
       performanceMonitor.endMeasurement(measurementId)
-      console.error(`Failed to load lazy component: ${name}`, error)
+      logger.error(`Failed to load lazy component: ${name}`, error)
       throw error
     }
   })
@@ -150,7 +151,7 @@ export function createLazyComponent<T extends ComponentType<any>>(
     // Preload after a short delay to not block initial render
     setTimeout(() => {
       importFn().catch(error => {
-        console.error(`Failed to preload component: ${name}`, error)
+        logger.error(`Failed to preload component: ${name}`, error)
       })
     }, 100)
   }
@@ -191,7 +192,7 @@ export function createDynamicComponent<T extends ComponentType<any>>(
         return module
       } catch (error) {
         performanceMonitor.endMeasurement(measurementId)
-        console.error(`Failed to load dynamic component: ${name}`, error)
+        logger.error(`Failed to load dynamic component: ${name}`, error)
         throw error
       }
     },
@@ -252,7 +253,7 @@ class ErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Lazy component error:', error, errorInfo)
+    logger.error('Lazy component error:', error, errorInfo)
     
     // Record error metric
     performanceMonitor.startMeasurement('component_error', {
@@ -329,11 +330,11 @@ export const preloadComponent = (componentImport: () => Promise<any>, name?: str
     componentImport()
       .then(() => {
         performanceMonitor.endMeasurement(measurementId)
-        console.log(`✅ Preloaded component: ${name || 'component'}`)
+        logger.debug(`✅ Preloaded component: ${name || 'component'}`)
       })
       .catch(error => {
         performanceMonitor.endMeasurement(measurementId)
-        console.error(`❌ Failed to preload component: ${name || 'component'}`, error)
+        logger.error(`❌ Failed to preload component: ${name || 'component'}`, error)
       })
   }
 }
@@ -353,7 +354,7 @@ export const preloadRouteComponents = (routes: string[]) => {
           preloadComponent(() => import('@/components/features/campaigns'), 'CampaignsPage')
           break
         default:
-          console.log(`No preload configured for route: ${route}`)
+          logger.debug(`No preload configured for route: ${route}`)
       }
     })
   }

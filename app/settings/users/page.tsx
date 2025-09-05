@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Edit, Trash2, Plus, Shield, User, Activity, UserPlus, Settings, Users } from "lucide-react"
 import Link from "next/link"
+import { logger } from "@/lib/utils/logger"
 import { usePageHeader } from "@/components/PageHeaderContext"
 import { createClient } from "@/lib/auth/client"
 import { useToast } from "@/components/ui/use-toast"
@@ -91,12 +92,12 @@ export default function UsersSettingsPage() {
         .limit(50)
       
       if (activityError) {
-        console.error('Error fetching activities from Supabase:', activityError)
+        logger.error('Error fetching activities from Supabase:', activityError)
         setActivities([])
         return
       }
       
-      console.log('Activity data fetched:', activityData)
+      logger.debug('Activity data fetched:', activityData)
       
       if (activityData && activityData.length > 0) {
         // Get unique user IDs
@@ -126,14 +127,14 @@ export default function UsersSettingsPage() {
             email: ''
           }
         }))
-        console.log('Formatted activities:', formattedActivities)
+        logger.debug('Formatted activities:', formattedActivities)
         setActivities(formattedActivities)
       } else {
-        console.log('No activities found, setting empty array')
+        logger.debug('No activities found, setting empty array')
         setActivities([])
       }
     } catch (error) {
-      console.error('Error fetching activities:', error)
+      logger.error('Error fetching activities:', error)
       setActivities([])
     }
   }
@@ -165,7 +166,7 @@ export default function UsersSettingsPage() {
           
           if (membershipData) {
             accountId = membershipData.account_id
-            console.log('Found account from membership:', accountId)
+            logger.debug('Found account from membership:', accountId)
           }
         }
         
@@ -174,7 +175,7 @@ export default function UsersSettingsPage() {
           const cookies = document.cookie.split('; ')
           const accountCookie = cookies.find(c => c.startsWith('current_account='))
           accountId = accountCookie?.split('=')[1]
-          console.log('Using account from cookie:', accountId)
+          logger.debug('Using account from cookie:', accountId)
         }
         
         if (!accountId) {
@@ -190,8 +191,8 @@ export default function UsersSettingsPage() {
         setCurrentAccountId(accountId)
         
         // Fetch account members directly
-        console.log('Fetching members for account:', accountId)
-        console.log('Current user:', user)
+        logger.debug('Fetching members for account:', accountId)
+        logger.debug('Current user:', user)
         
         // First, let's try a simple query
         const { data: testData, error: testError } = await supabase
@@ -199,7 +200,7 @@ export default function UsersSettingsPage() {
           .select('*')
           .eq('account_id', accountId)
         
-        console.log('Test query result:', testData, testError)
+        logger.debug('Test query result:', testData, testError)
         
         // Now the full query
         const { data: membersData, error: membersError } = await supabase
@@ -215,11 +216,11 @@ export default function UsersSettingsPage() {
           .eq('account_id', accountId)
           .order('joined_at', { ascending: true })
         
-        console.log('Members data:', membersData)
-        console.log('Members error:', membersError)
+        logger.debug('Members data:', membersData)
+        logger.debug('Members error:', membersError)
         
         if (membersError) {
-          console.error('Error fetching users:', membersError)
+          logger.error('Error fetching users:', membersError)
           toast({
             title: "Error",
             description: `Failed to load users: ${membersError.message}`,
@@ -247,7 +248,7 @@ export default function UsersSettingsPage() {
         await fetchActivityData(accountId)
         
       } catch (error) {
-        console.error('Error:', error)
+        logger.error('Error:', error)
         toast({
           title: "Error",
           description: "An unexpected error occurred.",

@@ -1,6 +1,7 @@
 // Simple script to check for common deployment issues
 import fs from "fs"
 import path from "path"
+import { logger } from "@/lib/utils/logger"
 
 // Check for required environment variables
 const requiredEnvVars = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
@@ -8,12 +9,12 @@ const requiredEnvVars = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_
 const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar])
 
 if (missingEnvVars.length > 0) {
-  console.error("❌ Missing required environment variables:")
+  logger.error("❌ Missing required environment variables:")
   missingEnvVars.forEach((envVar) => {
-    console.error(`  - ${envVar}`)
+    logger.error(`  - ${envVar}`)
   })
 } else {
-  console.log("✅ All required environment variables are set")
+  logger.debug("✅ All required environment variables are set")
 }
 
 // Check for common deployment blockers
@@ -22,9 +23,9 @@ const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"))
 
 // Check for build script
 if (!packageJson.scripts?.build) {
-  console.error("❌ Missing build script in package.json")
+  logger.error("❌ Missing build script in package.json")
 } else {
-  console.log("✅ Build script found in package.json")
+  logger.debug("✅ Build script found in package.json")
 }
 
 // Check for dependencies that might cause issues
@@ -34,12 +35,12 @@ const foundProblematicDeps = Object.keys(packageJson.dependencies || {})
   .filter((dep) => problematicDeps.includes(dep))
 
 if (foundProblematicDeps.length > 0) {
-  console.warn("⚠️ Found potentially problematic dependencies:")
+  logger.warn("⚠️ Found potentially problematic dependencies:")
   foundProblematicDeps.forEach((dep) => {
-    console.warn(`  - ${dep}`)
+    logger.warn(`  - ${dep}`)
   })
 } else {
-  console.log("✅ No problematic dependencies found")
+  logger.debug("✅ No problematic dependencies found")
 }
 
 // Check for large files that might cause deployment issues
@@ -64,12 +65,12 @@ function checkDirectoryForLargeFiles(dir) {
 checkDirectoryForLargeFiles(process.cwd())
 
 if (largeFiles.length > 0) {
-  console.warn("⚠️ Found large files that might cause deployment issues:")
+  logger.warn("⚠️ Found large files that might cause deployment issues:")
   largeFiles.forEach((file) => {
-    console.warn(`  - ${file}`)
+    logger.warn(`  - ${file}`)
   })
 } else {
-  console.log("✅ No large files found")
+  logger.debug("✅ No large files found")
 }
 
-console.log("\n✨ Deployment check completed")
+logger.debug("\n✨ Deployment check completed")

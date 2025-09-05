@@ -18,6 +18,7 @@ import {
   restoreProfile,
   deleteProfile,
 } from "@/lib/api/profiles-api"
+import { logger } from "@/lib/utils/logger"
 import { segmentsApi } from "@/lib/api/segments-api"
 import PageLayout from "@/components/layouts/PageLayout"
 import { Button } from "@/components/ui/button"
@@ -28,6 +29,8 @@ import { SegmentListDropdown } from "@/components/features/profiles/SegmentListD
 import { ProfileAdvancedFilters } from "@/components/features/profiles/ProfileAdvancedFilters"
 import { ProfileImportExport } from "@/components/features/profiles/ProfileImportExport"
 import { LoadingSection } from "@/components/ui/loading"
+import { FilterGroup, FilterEngine } from '@/components/ui/unified-filter-builder'
+import { profileFilterFields, mergeFieldDefinitions, createCustomFieldDefinition } from '@/lib/utils/filter-definitions'
 
 interface Profile {
   id: string
@@ -73,16 +76,7 @@ interface Profile {
   account_id?: string
 }
 
-interface FilterCondition {
-  field: string
-  operator: string
-  value: string
-}
-
-interface FilterGroup {
-  id: string
-  conditions: FilterCondition[]
-}
+// Using unified filter types from UnifiedFilterBuilder
 
 interface Segment {
   id: string
@@ -213,8 +207,9 @@ export default function ProfilesPage() {
     { id: '1', conditions: [] }
   ])
   const [showInlineFilter, setShowInlineFilter] = useState(false)
-  const [customFields, setCustomFields] = useState<FieldDefinition[]>([])
-  const [allAvailableFields, setAllAvailableFields] = useState<FieldDefinition[]>(availableFields)
+  const [customFields, setCustomFields] = useState<any[]>([])
+  const [allAvailableFields, setAllAvailableFields] = useState<any[]>(availableFields)
+  const [unifiedFieldDefinitions, setUnifiedFieldDefinitions] = useState(profileFilterFields)
   const [segments, setSegments] = useState<Segment[]>([])
   const [lists, setLists] = useState<any[]>([])
   const [selectedSegment, setSelectedSegment] = useState<string | null>(null)
@@ -239,7 +234,7 @@ export default function ProfilesPage() {
         setProfiles(result.data)
       }
     } catch (error) {
-      console.error('Error fetching profiles:', error)
+      logger.error('Error fetching profiles:', error)
     }
   }
 
@@ -250,7 +245,7 @@ export default function ProfilesPage() {
         setSegments(result.data)
       }
     } catch (error) {
-      console.error('Error fetching segments:', error)
+      logger.error('Error fetching segments:', error)
     }
   }
 
@@ -273,9 +268,19 @@ export default function ProfilesPage() {
             }))
             setCustomFields(customFieldOptions)
             setAllAvailableFields([...availableFields, ...customFieldOptions])
+            
+            // Convert to unified field definitions
+            const unifiedCustomFields = data.custom_fields.map((field: any) => 
+              createCustomFieldDefinition(
+                `custom_fields.${field.name}`,
+                field.display_name || field.name,
+                'string'
+              )
+            )
+            setUnifiedFieldDefinitions(mergeFieldDefinitions(profileFilterFields, unifiedCustomFields))
           }
         } catch (error) {
-          console.error("Error fetching custom fields:", error)
+          logger.error("Error fetching custom fields:", error)
         }
       } finally {
         setLoading(false)
@@ -405,12 +410,12 @@ export default function ProfilesPage() {
     return filtered
   }
 
-  // Apply filters based on filter groups or selected segment
+  // Apply filters using the unified FilterEngine (much simpler!)
   const applyFilters = (filterGroups: FilterGroup[], profileType: string, searchTerm: string) => {
     // Check if there's an explicit status filter for deleted items
     const hasDeletedFilter = filterGroups.some(group =>
       group.conditions.some(c => 
-        c.field === 'status' && (c.value === 'Deleted' || c.value === 'deleted')
+        c.field === 'status' && (String(c.value).toLowerCase() === 'deleted')
       )
     )
     
@@ -427,22 +432,17 @@ export default function ProfilesPage() {
       filtered = filtered.filter((profile) => {
         switch (profileType) {
           case "active":
-            // Active lifecycle status - check both fields for compatibility (case-insensitive)
             const activeStage = profile.lifecycle_stage?.toLowerCase() || profile.status?.toLowerCase()
             return activeStage === 'active'
           case "archived":
-            // Inactive lifecycle status - check both fields for compatibility (case-insensitive)
             const archivedStage = profile.lifecycle_stage?.toLowerCase() || profile.status?.toLowerCase()
             return archivedStage === 'inactive'
           case "deleted":
-            // Soft deleted profiles - check both fields for compatibility (case-insensitive)
             const deletedStage = profile.lifecycle_stage?.toLowerCase() || profile.status?.toLowerCase()
             return deletedStage === 'deleted'
           case "marketing":
-            // Profiles with ANY marketing channel enabled (regardless of status)
             return profile.status !== 'destroyed' && hasMarketingChannel(profile)
           case "unsubscribed":
-            // Profiles with ALL marketing channels disabled (regardless of status)
             return profile.status !== 'destroyed' && allMarketingRevoked(profile)
           default:
             return true
@@ -459,103 +459,19 @@ export default function ProfilesPage() {
       )
     }
 
-    // Apply filter groups (groups are OR'd together, conditions within a group are AND'd)
-    const hasActiveFilters = filterGroups.some(group => 
-      group.conditions.some(c => c.value && c.value.trim() !== "")
-    )
-    
-    if (hasActiveFilters) {
-      filtered = filtered.filter((profile) => {
-        // Evaluate a single condition
-        const evaluateCondition = (condition: FilterCondition): boolean => {
-          // Skip empty filter conditions
-          if (!condition.value || condition.value.trim() === "") {
-            return true
-          }
+    // Use FilterEngine for complex filtering (much cleaner!)
+    if (filterGroups.length > 0) {
+      // Handle custom fields by transforming profiles data
+      const transformedProfiles = filtered.map(profile => ({
+        ...profile,
+        // Flatten custom fields for FilterEngine compatibility
+        ...Object.keys(profile.custom_fields || {}).reduce((acc, key) => {
+          acc[`custom_fields.${key}`] = profile.custom_fields?.[key]
+          return acc
+        }, {} as Record<string, any>)
+      }))
 
-          let fieldValue: any
-
-          // Handle custom fields
-          if (condition.field.startsWith("custom_fields.")) {
-            const customFieldKey = condition.field.replace("custom_fields.", "")
-            fieldValue = profile.custom_fields?.[customFieldKey]
-          } else if (condition.field === "tags") {
-            fieldValue = profile.tags
-          } else {
-            fieldValue = profile[condition.field as keyof Profile]
-          }
-
-          // Handle null/undefined values based on operator
-          if (fieldValue === undefined || fieldValue === null) {
-            switch (condition.operator) {
-              case "exists":
-              case "is_not_empty":
-                return false
-              case "not_exists":
-              case "is_empty":
-                return true
-              case "equals":
-              case "is":
-                return condition.value === "" || condition.value.toLowerCase() === "null"
-              default:
-                return false
-            }
-          }
-
-          // Handle array fields like tags
-          if (Array.isArray(fieldValue)) {
-            const arrayValue = fieldValue.join(" ").toLowerCase()
-            const conditionValue = condition.value.toLowerCase()
-
-            switch (condition.operator) {
-              case "contains":
-                return arrayValue.includes(conditionValue)
-              case "equals":
-                return fieldValue.includes(condition.value)
-              default:
-                return arrayValue.includes(conditionValue)
-            }
-          }
-
-          const profileValue = String(fieldValue).toLowerCase()
-          const conditionValue = condition.value.toLowerCase()
-
-          switch (condition.operator) {
-            case "contains":
-              return profileValue.includes(conditionValue)
-            case "equals":
-              return profileValue === conditionValue
-            case "starts with":
-              return profileValue.startsWith(conditionValue)
-            case "ends with":
-              return profileValue.endsWith(conditionValue)
-            case "is":
-              return profileValue === conditionValue
-            case "is not":
-              return profileValue !== conditionValue
-            case "greater than":
-              return Number(fieldValue) > Number(condition.value)
-            case "less than":
-              return Number(fieldValue) < Number(condition.value)
-            case "exists":
-              return fieldValue !== null && fieldValue !== undefined && fieldValue !== ""
-            case "not exists":
-              return fieldValue === null || fieldValue === undefined || fieldValue === ""
-            default:
-              return true
-          }
-        }
-
-        // Evaluate filter groups: OR between groups, AND within each group
-        return filterGroups.some(group => {
-          // Skip empty groups
-          const activeConditions = group.conditions.filter(c => c.value && c.value.trim() !== "")
-          if (activeConditions.length === 0) return false
-          
-          // All conditions within a group must be true (AND)
-          return activeConditions.every(evaluateCondition)
-        })
-      })
+      filtered = FilterEngine.filterData(transformedProfiles, filterGroups, unifiedFieldDefinitions)
     }
 
     return filtered
@@ -704,11 +620,11 @@ export default function ProfilesPage() {
             
             setFilteredProfiles(listFiltered)
           } else {
-            console.error('Failed to fetch list members:', response.status)
+            logger.error('Failed to fetch list members:', response.status)
             setFilteredProfiles([])
           }
         } catch (error) {
-          console.error('Error fetching list members:', error)
+          logger.error('Error fetching list members:', error)
           setFilteredProfiles([])
         }
       }
@@ -991,7 +907,7 @@ export default function ProfilesPage() {
         alert(`Segment "${segmentName}" ${isUpdatingExisting ? 'updated' : 'saved'} successfully!`)
       }
     } catch (error) {
-      console.error("Error saving segment:", error)
+      logger.error("Error saving segment:", error)
       alert("Failed to save segment. Please try again.")
     } finally {
       setIsSavingSegment(false)
@@ -1034,6 +950,81 @@ export default function ProfilesPage() {
     setShowInlineFilter(false)
     // Force refresh of filtered profiles
     setFilteredProfiles(profiles)
+  }
+
+  // CSV Export Helper
+  const exportProfilesToCSV = (profiles: Profile[]) => {
+    if (profiles.length === 0) return ''
+    
+    // Get all possible field names
+    const fieldNames = new Set<string>()
+    profiles.forEach(profile => {
+      Object.keys(profile).forEach(key => fieldNames.add(key))
+      if (profile.custom_fields) {
+        Object.keys(profile.custom_fields).forEach(key => fieldNames.add(`custom_fields.${key}`))
+      }
+    })
+    
+    const headers = Array.from(fieldNames)
+    const rows = profiles.map(profile => {
+      return headers.map(header => {
+        if (header.startsWith('custom_fields.')) {
+          const fieldName = header.replace('custom_fields.', '')
+          return profile.custom_fields?.[fieldName] || ''
+        }
+        const value = profile[header as keyof Profile]
+        if (Array.isArray(value)) return value.join(';')
+        if (typeof value === 'object' && value !== null) return JSON.stringify(value)
+        return value || ''
+      })
+    })
+    
+    const csvContent = [headers.join(','), ...rows.map(row => 
+      row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+    )].join('\n')
+    
+    return csvContent
+  }
+  
+  // CSV Download Helper
+  const downloadCSV = (csvContent: string, filename: string) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', filename)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+  }
+  
+  // File Import Handler
+  const handleFileImport = async (file: File) => {
+    try {
+      const text = await file.text()
+      logger.info('File imported:', { filename: file.name, size: file.size })
+      toast({
+        title: "Import Started",
+        description: `Processing ${file.name}...`,
+      })
+      
+      // Here you would implement the actual CSV parsing and profile creation
+      // For now, just show a placeholder message
+      toast({
+        title: "Import Feature",
+        description: "CSV import functionality will be implemented here",
+      })
+    } catch (error) {
+      logger.error('Error importing file:', error)
+      toast({
+        title: "Import Error",
+        description: "Failed to import file. Please check the format and try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   const columns: DataTableColumn<Profile>[] = [
@@ -1206,7 +1197,7 @@ export default function ProfilesPage() {
         // TODO: Implement tag dialog
         const tag = prompt(`Enter tag to add to ${selectedProfiles.length} profiles:`)
         if (tag) {
-          console.log(`Adding tag "${tag}" to ${selectedProfiles.length} profiles`)
+          logger.debug(`Adding tag "${tag}" to ${selectedProfiles.length} profiles`)
           toast({
             title: "Tags added",
             description: `Added "${tag}" to ${selectedProfiles.length} profiles`,
@@ -1300,13 +1291,13 @@ export default function ProfilesPage() {
               const result = await deleteProfile(profile.id)
               if (result.error) {
                 errorCount++
-                console.error(`Failed to destroy profile ${profile.id}:`, result.error)
+                logger.error(`Failed to destroy profile ${profile.id}:`, result.error)
               } else {
                 successCount++
               }
             } catch (error) {
               errorCount++
-              console.error(`Error destroying profile ${profile.id}:`, error)
+              logger.error(`Error destroying profile ${profile.id}:`, error)
             }
           }
           
@@ -1507,7 +1498,7 @@ export default function ProfilesPage() {
       // Clear selection
       setSelectedProfiles([]);
     } catch (error) {
-      console.error('Error adding profiles to list:', error);
+      logger.error('Error adding profiles to list:', error);
       toast({
         title: "Error",
         description: "Failed to add profiles to list",
@@ -1735,6 +1726,51 @@ export default function ProfilesPage() {
                     <Filter className="h-4 w-4 mr-2" />
                     Filter
                   </Button>
+                  
+                  {/* Import/Export buttons for selected segment */}
+                  {(selectedSegment || filteredProfiles.length > 0) && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          // Trigger export for current filtered profiles
+                          const csvContent = exportProfilesToCSV(filteredProfiles)
+                          downloadCSV(csvContent, `profiles-${selectedSegment ? segments.find(s => s.id === selectedSegment)?.name || 'filtered' : 'all'}.csv`)
+                        }}
+                        disabled={filteredProfiles.length === 0}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Export
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          // Trigger import dialog
+                          document.getElementById('file-upload-input')?.click()
+                        }}
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Import
+                      </Button>
+                      
+                      {/* Hidden file input for import */}
+                      <input
+                        id="file-upload-input"
+                        type="file"
+                        accept=".csv,.xlsx,.xls"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            handleFileImport(file)
+                          }
+                        }}
+                      />
+                    </>
+                  )}
                 </div>
               }
               filterOptions={filterOptions}
@@ -1807,7 +1843,7 @@ export default function ProfilesPage() {
                     description: `${profile.first_name} ${profile.last_name} has been marked as deleted.`,
                   })
                 } catch (error) {
-                  console.error("Error deleting profile:", error)
+                  logger.error("Error deleting profile:", error)
                   toast({
                     title: "Failed to delete profile",
                     description: "Please try again.",
@@ -1862,7 +1898,7 @@ export default function ProfilesPage() {
                     description: `${profile.first_name} ${profile.last_name} has been restored.`,
                   })
                 } catch (error) {
-                  console.error("Error restoring profile:", error)
+                  logger.error("Error restoring profile:", error)
                   toast({
                     title: "Failed to restore profile",
                     description: "Please try again.",
@@ -1909,7 +1945,7 @@ export default function ProfilesPage() {
                     description: `${profile.first_name} ${profile.last_name} has been permanently removed.`,
                   })
                 } catch (error) {
-                  console.error("Error destroying profile:", error)
+                  logger.error("Error destroying profile:", error)
                   toast({
                     title: "Failed to destroy profile",
                     description: "Please try again.",

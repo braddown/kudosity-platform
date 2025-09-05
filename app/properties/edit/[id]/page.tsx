@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { profilesApi } from "@/lib/api/profiles-api"
 import { Save, X, Info } from "lucide-react"
 import PageLayout from "@/components/layouts/PageLayout"
+import { logger } from "@/lib/utils/logger"
 
 type PropertyDataType = "string" | "number" | "boolean" | "date"
 
@@ -135,7 +136,7 @@ export default function EditPropertyPage() {
     try {
       setLoading(true)
       // For now, just show success since we can't easily modify existing columns
-      console.log("Property would be updated:", formData)
+      logger.debug("Property would be updated:", formData)
 
       // In a real implementation, you'd call an API to update the column
       // This is complex for existing columns, so we'll just show a message

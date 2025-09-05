@@ -11,6 +11,7 @@ import { UserPlus, Filter, Tag, UserX, Trash2, List, Download, Upload, Plus, X }
 import { useRouter, useSearchParams } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 import {
+import { logger } from "@/lib/utils/logger"
   getProfiles,
   createProfile,
   updateProfile,
@@ -569,7 +570,7 @@ export default function ProfilesPage() {
           })
 
           if (segmentResult.data) {
-            console.log(`Created segment "${segmentNameFromImport}" for uploaded list`)
+            logger.debug(`Created segment "${segmentNameFromImport}" for uploaded list`)
 
             // Refresh segments list
             const segmentsResult = await segmentsApi.getSegments()
@@ -579,11 +580,11 @@ export default function ProfilesPage() {
 
             segmentCreationMessage = `\n\n✅ Segment "${segmentNameFromImport}" created with ${allProfileIds.length} profiles`
           } else if (segmentResult.error) {
-            console.warn(`Failed to create segment: ${segmentResult.error}`)
+            logger.warn(`Failed to create segment: ${segmentResult.error}`)
             segmentCreationMessage = `\n\n⚠️ Failed to create segment: ${segmentResult.error}`
           }
         } catch (error) {
-          console.error("Error creating segment:", error)
+          logger.error("Error creating segment:", error)
           segmentCreationMessage = `\n\n⚠️ Error creating segment: ${error}`
         }
       }
@@ -612,7 +613,7 @@ export default function ProfilesPage() {
       setCreateSegmentFromImport(true)
       setSegmentNameFromImport("")
     } catch (error) {
-      console.error("Import error:", error)
+      logger.error("Import error:", error)
       alert("Import failed. Please try again.")
     } finally {
       setIsProcessing(false)
@@ -628,15 +629,15 @@ export default function ProfilesPage() {
         const result = await getProfiles()
 
         if (result.error) {
-          console.error("Error fetching profiles:", result.error)
+          logger.error("Error fetching profiles:", result.error)
           return
         }
 
-        console.log(`Loaded ${result.data?.length || 0} profiles from database`)
+        logger.debug(`Loaded ${result.data?.length || 0} profiles from database`)
         setProfiles(result.data || [])
         setFilteredProfiles(result.data || [])
       } catch (error) {
-        console.error("Error fetching profiles:", error)
+        logger.error("Error fetching profiles:", error)
       } finally {
         setLoading(false)
       }
@@ -670,7 +671,7 @@ export default function ProfilesPage() {
           setSegments(segmentsWithCounts)
         }
       } catch (error) {
-        console.error("Error fetching segments:", error)
+        logger.error("Error fetching segments:", error)
       }
     }
 
@@ -682,7 +683,7 @@ export default function ProfilesPage() {
           setLists(data)
         }
       } catch (error) {
-        console.error('Error fetching lists:', error)
+        logger.error('Error fetching lists:', error)
       }
     }
 
@@ -742,7 +743,7 @@ export default function ProfilesPage() {
           setAllAvailableFields([...availableFields, ...customFieldOptions])
         }
       } catch (error) {
-        console.error("Error fetching custom fields:", error)
+        logger.error("Error fetching custom fields:", error)
       }
     }
 
@@ -1168,11 +1169,11 @@ export default function ProfilesPage() {
             
             setFilteredProfiles(listFiltered)
           } else {
-            console.error('Failed to fetch list members:', response.status)
+            logger.error('Failed to fetch list members:', response.status)
             setFilteredProfiles([])
           }
         } catch (error) {
-          console.error('Error fetching list members:', error)
+          logger.error('Error fetching list members:', error)
           setFilteredProfiles([])
         }
       }
@@ -1455,7 +1456,7 @@ export default function ProfilesPage() {
         alert(`Segment "${segmentName}" ${isUpdatingExisting ? 'updated' : 'saved'} successfully!`)
       }
     } catch (error) {
-      console.error("Error saving segment:", error)
+      logger.error("Error saving segment:", error)
       alert("Failed to save segment. Please try again.")
     } finally {
       setIsSavingSegment(false)
@@ -1682,7 +1683,7 @@ export default function ProfilesPage() {
         // TODO: Implement tag dialog
         const tag = prompt(`Enter tag to add to ${selectedProfiles.length} profiles:`)
         if (tag) {
-          console.log(`Adding tag "${tag}" to ${selectedProfiles.length} profiles`)
+          logger.debug(`Adding tag "${tag}" to ${selectedProfiles.length} profiles`)
           toast({
             title: "Tags added",
             description: `Added "${tag}" to ${selectedProfiles.length} profiles`,
@@ -1776,13 +1777,13 @@ export default function ProfilesPage() {
               const result = await deleteProfile(profile.id)
               if (result.error) {
                 errorCount++
-                console.error(`Failed to destroy profile ${profile.id}:`, result.error)
+                logger.error(`Failed to destroy profile ${profile.id}:`, result.error)
               } else {
                 successCount++
               }
             } catch (error) {
               errorCount++
-              console.error(`Error destroying profile ${profile.id}:`, error)
+              logger.error(`Error destroying profile ${profile.id}:`, error)
             }
           }
           
@@ -1983,7 +1984,7 @@ export default function ProfilesPage() {
       // Clear selection
       setSelectedProfiles([]);
     } catch (error) {
-      console.error('Error adding profiles to list:', error);
+      logger.error('Error adding profiles to list:', error);
       toast({
         title: "Error",
         description: "Failed to add profiles to list",
@@ -2470,7 +2471,7 @@ export default function ProfilesPage() {
                     description: `${profile.first_name} ${profile.last_name} has been marked as deleted.`,
                   })
                 } catch (error) {
-                  console.error("Error deleting profile:", error)
+                  logger.error("Error deleting profile:", error)
                   toast({
                     title: "Failed to delete profile",
                     description: "Please try again.",
@@ -2525,7 +2526,7 @@ export default function ProfilesPage() {
                     description: `${profile.first_name} ${profile.last_name} has been restored.`,
                   })
                 } catch (error) {
-                  console.error("Error restoring profile:", error)
+                  logger.error("Error restoring profile:", error)
                   toast({
                     title: "Failed to restore profile",
                     description: "Please try again.",
@@ -2572,7 +2573,7 @@ export default function ProfilesPage() {
                     description: `${profile.first_name} ${profile.last_name} has been permanently removed.`,
                   })
                 } catch (error) {
-                  console.error("Error destroying profile:", error)
+                  logger.error("Error destroying profile:", error)
                   toast({
                     title: "Failed to destroy profile",
                     description: "Please try again.",

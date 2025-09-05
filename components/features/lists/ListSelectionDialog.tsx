@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { logger } from "@/lib/utils/logger"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -62,11 +63,11 @@ export function ListSelectionDialog({
         const data = await response.json()
         setLists(Array.isArray(data) ? data : [])
       } else {
-        console.error("Failed to fetch lists")
+        logger.error("Failed to fetch lists")
         setLists([])
       }
     } catch (error) {
-      console.error("Error fetching lists:", error)
+      logger.error("Error fetching lists:", error)
       setLists([])
       toast({
         title: "Error",
@@ -139,7 +140,7 @@ export function ListSelectionDialog({
       setSelectedOption("existing")
       onClose()
     } catch (error) {
-      console.error("Error processing list selection:", error)
+      logger.error("Error processing list selection:", error)
       toast({
         title: "Error",
         description: "Failed to process list selection",

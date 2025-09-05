@@ -17,6 +17,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useAsyncData } from './use-async-data'
 import { supabase } from '@/lib/supabase'
 import { logFiltersApi, type LogFilter } from '@/api/log-filters-api'
+import { logger } from "@/lib/utils/logger"
 
 // Types for logs management
 export interface FilterCondition {
@@ -199,7 +200,7 @@ export function useLogs(options: UseLogsOptions = {}): UseLogsResult {
       const { data, error } = await supabase.from('logs').select('id').limit(1)
 
       if (error) {
-        console.error('Connection test failed:', error)
+        logger.error('Connection test failed:', error)
         setConnectionStatus({
           status: 'error',
           message: `Failed to connect: ${error.message}`,
@@ -235,14 +236,14 @@ export function useLogs(options: UseLogsOptions = {}): UseLogsResult {
         .not('event_type', 'is', null)
 
       if (error) {
-        console.error('Error fetching event types:', error)
+        logger.error('Error fetching event types:', error)
         return
       }
 
       const uniqueTypes = Array.from(new Set(data?.map(item => item.event_type) || []))
       setAvailableEventTypes(uniqueTypes.filter(Boolean))
     } catch (error) {
-      console.error('Exception fetching event types:', error)
+      logger.error('Exception fetching event types:', error)
     }
   }, [])
 
@@ -285,7 +286,7 @@ export function useLogs(options: UseLogsOptions = {}): UseLogsResult {
 
       return data || []
     } catch (error) {
-      console.error('Error fetching all logs:', error)
+      logger.error('Error fetching all logs:', error)
       return []
     }
   }, [filters, sortConfig])
@@ -504,7 +505,7 @@ export function useLogs(options: UseLogsOptions = {}): UseLogsResult {
         setSavedFilters(result.data)
       }
     } catch (error) {
-      console.error('Error loading saved filters:', error)
+      logger.error('Error loading saved filters:', error)
     }
   }, [userId])
 
@@ -531,7 +532,7 @@ export function useLogs(options: UseLogsOptions = {}): UseLogsResult {
       await loadSavedFilters()
       return true
     } catch (error) {
-      console.error('Error saving filter:', error)
+      logger.error('Error saving filter:', error)
       return false
     }
   }, [filters.advancedFilters, userId, loadSavedFilters])
@@ -556,7 +557,7 @@ export function useLogs(options: UseLogsOptions = {}): UseLogsResult {
       await loadSavedFilters()
       return true
     } catch (error) {
-      console.error('Error deleting filter:', error)
+      logger.error('Error deleting filter:', error)
       return false
     }
   }, [loadSavedFilters])
@@ -602,7 +603,7 @@ export function useLogs(options: UseLogsOptions = {}): UseLogsResult {
 
       return count || 0
     } catch (error) {
-      console.error('Error getting total database records:', error)
+      logger.error('Error getting total database records:', error)
       return 0
     }
   }, [])
@@ -647,7 +648,7 @@ export function useLogs(options: UseLogsOptions = {}): UseLogsResult {
         URL.revokeObjectURL(url)
       }
     } catch (error) {
-      console.error('Error exporting logs:', error)
+      logger.error('Error exporting logs:', error)
     }
   }, [allLogs, logs])
 

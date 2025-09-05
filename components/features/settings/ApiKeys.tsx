@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Checkbox } from "@/components/ui/checkbox"
 import { MoreHorizontal, Edit, Trash2, Copy } from "lucide-react"
 import { KudosityTable, type KudosityTableColumn } from "@/components/KudosityTable"
+import { logger } from "@/lib/utils/logger"
 
 interface ApiKey {
   id: number
@@ -128,7 +129,7 @@ export default function ApiKeys() {
   }
 
   const handleDeleteApiKey = (apiKey: ApiKey) => {
-    console.log("Delete API Key:", apiKey)
+    logger.debug("Delete API Key:", apiKey)
   }
 
   const resetDialog = () => {

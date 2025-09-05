@@ -2,6 +2,7 @@
 
 import React from "react"
 import { Button } from "@/components/ui/button"
+import { logger } from "@/lib/utils/logger"
 
 interface Props {
   children: React.ReactNode
@@ -23,7 +24,7 @@ export class ProfileEditErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("ProfileEdit error:", error, errorInfo)
+    logger.error("ProfileEdit error:", error, errorInfo)
   }
 
   render() {

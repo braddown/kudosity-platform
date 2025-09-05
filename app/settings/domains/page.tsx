@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Edit, Trash2, Plus } from "lucide-react"
 import { usePageHeader } from "@/components/PageHeaderContext"
+import { logger } from "@/lib/utils/logger"
 import { useEffect } from "react"
 
 export default function DomainsSettingsPage() {
@@ -20,7 +21,7 @@ export default function DomainsSettingsPage() {
         {
           label: "Add New Domain",
           icon: <Plus className="h-4 w-4" />,
-          onClick: () => console.log("Add domain"),
+          onClick: () => logger.debug("Add domain"),
         },
       ],
     })

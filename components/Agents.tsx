@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Edit, Trash2, Bot, MessageSquare, Settings, Zap } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
+import { logger } from "@/lib/utils/logger"
 
 interface Agent {
   id: string
@@ -124,12 +125,12 @@ const Agents: React.FC = () => {
   )
 
   const handleCreateAgent = () => {
-    console.log("Navigating to create agent page...")
+    logger.debug("Navigating to create agent page...")
     router.push("/agents/create")
   }
 
   const handleEditAgent = (agent: Agent) => {
-    console.log("Navigating to edit agent page for:", agent.id)
+    logger.debug("Navigating to edit agent page for:", agent.id)
     router.push(`/agents/edit/${agent.id}`)
   }
 

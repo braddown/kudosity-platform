@@ -4,6 +4,7 @@ import React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Bell } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 interface NotificationPreferencesProps {
   profile: any
@@ -30,8 +31,8 @@ export function NotificationPreferences({
 }: NotificationPreferencesProps) {
   const preferences = profile.notification_preferences || {}
   
-  console.log("🔍 NotificationPreferences - profile:", profile)
-  console.log("🔍 NotificationPreferences - preferences:", preferences)
+  logger.debug("🔍 NotificationPreferences - profile:", profile)
+  logger.debug("🔍 NotificationPreferences - preferences:", preferences)
   
   // Format date for display
   const formatDate = (dateString: string | undefined) => {

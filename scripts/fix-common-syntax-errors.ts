@@ -1,3 +1,4 @@
+import { logger } from "@/lib/utils/logger"
 // Script to fix common syntax errors that cause deployment failures
 
 interface FixAction {
@@ -115,14 +116,14 @@ export default function RootLayout`,
   }
 
   runFixes(): string {
-    console.log("🔧 Generating syntax error fixes...")
+    logger.debug("🔧 Generating syntax error fixes...")
 
     this.fixNextConfig()
     this.fixTypeScriptIssues()
     this.fixImportExportIssues()
     this.fixReactJSXIssues()
 
-    console.log("✅ Fix recommendations generated!")
+    logger.debug("✅ Fix recommendations generated!")
     return this.generateFixReport()
   }
 }

@@ -1,5 +1,6 @@
 "use client"
 
+import { logger } from "@/lib/utils/logger"
 import type React from "react"
 import { useState, useEffect } from "react"
 
@@ -60,7 +61,7 @@ const Performance: React.FC = () => {
       setData(logsResult.data || [])
       setMessages(messagesResult.data || [])
     } catch (error) {
-      console.error("Error fetching data:", error)
+      logger.error("Error fetching data:", error)
       setError(error.message)
     } finally {
       setLoading(false)

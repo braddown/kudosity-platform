@@ -4,15 +4,16 @@ import MainLayout from "@/components/MainLayout"
 import PerformanceClientWrapper from "@/components/PerformanceClientWrapper"
 import PageLayout from "@/components/layouts/PageLayout"
 import { Download, RefreshCw } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 export default function PerformancePage() {
   const handleExportReport = () => {
-    console.log("Exporting performance report")
+    logger.debug("Exporting performance report")
     // Add export logic here
   }
 
   const handleRefreshData = () => {
-    console.log("Refreshing performance data")
+    logger.debug("Refreshing performance data")
     // Add refresh logic here
   }
 

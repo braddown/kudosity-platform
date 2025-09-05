@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import EnhancedPageLayout from "@/components/layouts/EnhancedPageLayout"
 import { useProfiles, type Profile } from "@/hooks/useProfiles"
+import { logger } from "@/lib/utils/logger"
 
 interface ProfilePageRefactoredProps {
   profileId: string
@@ -102,7 +103,7 @@ export default function ProfilePageRefactored({
         onSaveError?.()
       }
     } catch (err) {
-      console.error('Failed to save profile:', err)
+      logger.error('Failed to save profile:', err)
       onSaveError?.()
     } finally {
       setSaving(false)

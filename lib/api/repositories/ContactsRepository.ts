@@ -1,6 +1,7 @@
 import { BaseRepository } from './BaseRepository'
 import { RepositoryResponse, QueryOptions } from './types'
 import { supabase } from '@/lib/supabase'
+import { logger } from "@/lib/utils/logger"
 
 /**
  * Contact entity interface
@@ -188,7 +189,7 @@ export class ContactsRepository extends BaseRepository<Contact> {
     })
 
     if (error) {
-      console.error('Error adding tags to contacts:', error)
+      logger.error('Error adding tags to contacts:', error)
       return this.createResponse(null, this.handleSupabaseError(error, 'addTagsToContacts'))
     }
     return this.createResponse(null)
@@ -207,7 +208,7 @@ export class ContactsRepository extends BaseRepository<Contact> {
     })
 
     if (error) {
-      console.error('Error removing tags from contacts:', error)
+      logger.error('Error removing tags from contacts:', error)
       return this.createResponse(null, this.handleSupabaseError(error, 'removeTagsFromContacts'))
     }
     return this.createResponse(null)

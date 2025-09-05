@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/auth/server'
+import { logger } from "@/lib/utils/logger"
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,13 +21,13 @@ export async function GET(request: NextRequest) {
       .limit(100)
 
     if (error) {
-      console.error('Error fetching inbound messages:', error)
+      logger.error('Error fetching inbound messages:', error)
       return NextResponse.json({ error: 'Failed to fetch inbound messages' }, { status: 500 })
     }
 
     return NextResponse.json({ messages: messages || [] })
   } catch (error) {
-    console.error('Error in inbound-messages API:', error)
+    logger.error('Error in inbound-messages API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

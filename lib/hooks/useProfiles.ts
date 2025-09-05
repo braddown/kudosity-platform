@@ -15,6 +15,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useAsyncData } from './use-async-data'
 import { supabase } from '@/lib/supabase'
+import { logger } from "@/lib/utils/logger"
 
 // Types
 export interface Profile {
@@ -324,7 +325,7 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
 
       return mappedProfile
     } catch (error) {
-      console.error('Failed to create profile:', error)
+      logger.error('Failed to create profile:', error)
       return null
     }
   }, [optimistic, refetch])
@@ -392,7 +393,7 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
 
       return mappedProfile
     } catch (error) {
-      console.error('Failed to update profile:', error)
+      logger.error('Failed to update profile:', error)
       return null
     }
   }, [refetch])
@@ -418,7 +419,7 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
       refetch()
       return true
     } catch (error) {
-      console.error('Failed to delete profile:', error)
+      logger.error('Failed to delete profile:', error)
       return false
     }
   }, [refetch])
@@ -471,7 +472,7 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
       refetch()
       return mappedProfile
     } catch (error) {
-      console.error('Failed to restore profile:', error)
+      logger.error('Failed to restore profile:', error)
       return null
     }
   }, [refetch])
@@ -522,7 +523,7 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
 
       return mappedProfile
     } catch (error) {
-      console.error('Failed to get profile:', error)
+      logger.error('Failed to get profile:', error)
       return null
     }
   }, [])
@@ -599,14 +600,14 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
         .in("id", ids)
       
       if (error) {
-        console.error('Failed to bulk delete profiles:', error.message)
+        logger.error('Failed to bulk delete profiles:', error.message)
         return false
       }
 
       refetch()
       return true
     } catch (error) {
-      console.error('Failed to bulk delete profiles:', error)
+      logger.error('Failed to bulk delete profiles:', error)
       return false
     }
   }, [refetch])
@@ -639,14 +640,14 @@ export function useProfiles(options: UseProfilesOptions = {}): UseProfilesResult
         .in("id", ids)
       
       if (error) {
-        console.error('Failed to bulk update profiles:', error.message)
+        logger.error('Failed to bulk update profiles:', error.message)
         return false
       }
 
       refetch()
       return true
     } catch (error) {
-      console.error('Failed to bulk update profiles:', error)
+      logger.error('Failed to bulk update profiles:', error)
       return false
     }
   }, [refetch])

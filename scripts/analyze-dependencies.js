@@ -1,3 +1,4 @@
+import { logger } from "@/lib/utils/logger"
 /**
  * This script analyzes the project to find unused dependencies
  * Run with: node scripts/analyze-dependencies.js
@@ -49,14 +50,14 @@ Object.keys(dependencies).forEach((dep) => {
   }
 })
 
-console.log("=== DEPENDENCY ANALYSIS ===")
-console.log(`Total dependencies: ${Object.keys(dependencies).length}`)
-console.log(`Used dependencies: ${usedDependencies.size}`)
-console.log(`Potentially unused dependencies: ${unusedDependencies.size}`)
-console.log("\nPotentially unused dependencies:")
+logger.debug("=== DEPENDENCY ANALYSIS ===")
+logger.debug(`Total dependencies: ${Object.keys(dependencies).length}`)
+logger.debug(`Used dependencies: ${usedDependencies.size}`)
+logger.debug(`Potentially unused dependencies: ${unusedDependencies.size}`)
+logger.debug("\nPotentially unused dependencies:")
 Array.from(unusedDependencies).forEach((dep) => {
-  console.log(`- ${dep}`)
+  logger.debug(`- ${dep}`)
 })
 
-console.log("\nNote: This is a basic analysis and may have false positives.")
-console.log("Some dependencies might be used indirectly or via dynamic imports.")
+logger.debug("\nNote: This is a basic analysis and may have false positives.")
+logger.debug("Some dependencies might be used indirectly or via dynamic imports.")

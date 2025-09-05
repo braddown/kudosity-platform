@@ -6,6 +6,7 @@ import { X } from "lucide-react"
 import MainLayout from "@/components/MainLayout"
 import BroadcastMessageEnhancedOrdered, { BroadcastMessageEnhancedOrderedRef } from "@/components/features/campaigns/BroadcastMessageEnhancedOrdered"
 import PageLayout from "@/components/layouts/PageLayout"
+import { logger } from "@/lib/utils/logger"
 
 export default function BroadcastPage() {
   const router = useRouter()
@@ -31,7 +32,7 @@ export default function BroadcastPage() {
         await formRef.current.saveDraft()
         router.push("/campaigns/activity")
       } catch (error) {
-        console.error("Failed to save draft:", error)
+        logger.error("Failed to save draft:", error)
       } finally {
         setIsSaving(false)
       }

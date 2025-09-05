@@ -113,7 +113,7 @@ export const getProfiles = async (options?: {
 // Get a single profile by ID
 export const getProfile = async (id: string) => {
   try {
-    console.log("Fetching profile by ID:", id)
+    logger.debug("Fetching profile by ID:", id)
 
     const response = await fetch(`/api/cdp-profiles/${id}`, {
       method: 'GET',
@@ -125,15 +125,15 @@ export const getProfile = async (id: string) => {
 
     if (!response.ok) {
       const errorData = await response.json()
-      console.error("Error fetching profile:", errorData)
+      logger.error("Error fetching profile:", errorData)
       return { data: null, error: errorData.error || 'Failed to fetch profile' }
     }
 
     const result = await response.json()
-    console.log("Successfully fetched profile:", result.data)
+    logger.debug("Successfully fetched profile:", result.data)
     return { data: result.data, error: null }
   } catch (error: any) {
-    console.error("Get profile API error:", error)
+    logger.error("Get profile API error:", error)
     return { data: null, error: error.message || "Failed to fetch profile" }
   }
 }
@@ -141,19 +141,19 @@ export const getProfile = async (id: string) => {
 // Create a new profile
 export const createProfile = async (profileData: any) => {
   try {
-    console.log("Creating profile:", profileData)
+    logger.debug("Creating profile:", profileData)
 
     const { data, error } = await supabase.from("cdp_profiles").insert([profileData]).select().single()
 
     if (error) {
-      console.error("Error creating profile:", error)
+      logger.error("Error creating profile:", error)
       return { data: null, error: error.message }
     }
 
-    console.log("Successfully created profile:", data)
+    logger.debug("Successfully created profile:", data)
     return { data, error: null }
   } catch (error: any) {
-    console.error("Create profile API error:", error)
+    logger.error("Create profile API error:", error)
     return { data: null, error: error.message || "Failed to create profile" }
   }
 }
@@ -161,7 +161,7 @@ export const createProfile = async (profileData: any) => {
 // Update an existing profile
 export const updateProfile = async (id: string, profileData: any) => {
   try {
-    console.log("Updating profile:", id, profileData)
+    logger.debug("Updating profile:", id, profileData)
 
     const response = await fetch(`/api/cdp-profiles/${id}`, {
       method: 'PUT',
@@ -174,15 +174,15 @@ export const updateProfile = async (id: string, profileData: any) => {
 
     if (!response.ok) {
       const errorData = await response.json()
-      console.error("Error updating profile:", errorData)
+      logger.error("Error updating profile:", errorData)
       return { data: null, error: errorData.error || 'Failed to update profile' }
     }
 
     const result = await response.json()
-    console.log("Successfully updated profile:", result.data)
+    logger.debug("Successfully updated profile:", result.data)
     return { data: result.data, error: null }
   } catch (error: any) {
-    console.error("Update profile API error:", error)
+    logger.error("Update profile API error:", error)
     return { data: null, error: error.message || "Failed to update profile" }
   }
 }
@@ -190,7 +190,7 @@ export const updateProfile = async (id: string, profileData: any) => {
 // Soft delete a profile (mark as inactive)
 export const softDeleteProfile = async (id: string) => {
   try {
-    console.log("Soft deleting profile:", id)
+    logger.debug("Soft deleting profile:", id)
 
     // First, let's just update without selecting to avoid the multiple rows issue
     const { error: updateError } = await supabase
@@ -213,7 +213,7 @@ export const softDeleteProfile = async (id: string) => {
       .eq("id", id)
 
     if (updateError) {
-      console.error("Error soft deleting profile:", updateError)
+      logger.error("Error soft deleting profile:", updateError)
       return { data: null, error: updateError.message }
     }
 
@@ -253,7 +253,7 @@ export const softDeleteProfile = async (id: string) => {
         })
       })
     } catch (activityError) {
-      console.error("Error logging activity:", activityError)
+      logger.error("Error logging activity:", activityError)
       // Don't fail the deletion if activity logging fails
     }
 
@@ -265,15 +265,15 @@ export const softDeleteProfile = async (id: string) => {
       .single()
 
     if (selectError) {
-      console.error("Error fetching updated profile:", selectError)
+      logger.error("Error fetching updated profile:", selectError)
       // Even if select fails, the update succeeded
       return { data: { id, status: "deleted" }, error: null }
     }
 
-    console.log("Successfully soft deleted profile:", data)
+    logger.debug("Successfully soft deleted profile:", data)
     return { data, error: null }
   } catch (error: any) {
-    console.error("Soft delete profile API error:", error)
+    logger.error("Soft delete profile API error:", error)
     return { data: null, error: error.message || "Failed to soft delete profile" }
   }
 }
@@ -281,7 +281,7 @@ export const softDeleteProfile = async (id: string) => {
 // Restore a soft-deleted profile
 export const restoreProfile = async (id: string) => {
   try {
-    console.log("Restoring profile:", id)
+    logger.debug("Restoring profile:", id)
 
     const { data, error } = await supabase
       .from("cdp_profiles")
@@ -311,15 +311,15 @@ export const restoreProfile = async (id: string) => {
           })
         })
       } catch (activityError) {
-        console.error("Error logging restore activity:", activityError)
+        logger.error("Error logging restore activity:", activityError)
         // Don't fail the restore if activity logging fails
       }
     }
 
-    console.log("Successfully restored profile:", data)
+    logger.debug("Successfully restored profile:", data)
     return { data, error: null }
   } catch (error: any) {
-    console.error("Restore profile API error:", error)
+    logger.error("Restore profile API error:", error)
     return { data: null, error: error.message || "Failed to restore profile" }
   }
 }
@@ -327,7 +327,7 @@ export const restoreProfile = async (id: string) => {
 // Permanently delete a profile
 export const deleteProfile = async (id: string) => {
   try {
-    console.log("Permanently deleting profile:", id)
+    logger.debug("Permanently deleting profile:", id)
 
     const response = await fetch(`/api/cdp-profiles/${id}`, {
       method: 'DELETE',
@@ -339,14 +339,14 @@ export const deleteProfile = async (id: string) => {
 
     if (!response.ok) {
       const errorData = await response.json()
-      console.error("Error deleting profile:", errorData)
+      logger.error("Error deleting profile:", errorData)
       return { data: null, error: errorData.error || 'Failed to delete profile' }
     }
 
-    console.log("Successfully deleted profile:", id)
+    logger.debug("Successfully deleted profile:", id)
     return { data: { id }, error: null }
   } catch (error: any) {
-    console.error("Delete profile API error:", error)
+    logger.error("Delete profile API error:", error)
     return { data: null, error: error.message || "Failed to delete profile" }
   }
 }
@@ -354,7 +354,7 @@ export const deleteProfile = async (id: string) => {
 // Get profiles count for summary cards
 export const getProfilesCount = async () => {
   try {
-    console.log("Getting profiles count...")
+    logger.debug("Getting profiles count...")
 
     const { count, error } = await supabase
       .from("cdp_profiles")
@@ -362,14 +362,14 @@ export const getProfilesCount = async () => {
       .neq("id", "00000000-0000-0000-0000-000000000000") // Exclude metadata profile
 
     if (error) {
-      console.error("Error getting profiles count:", error)
+      logger.error("Error getting profiles count:", error)
       return { count: 0, error: error.message }
     }
 
-    console.log(`Total profiles count: ${count}`)
+    logger.debug(`Total profiles count: ${count}`)
     return { count: count || 0, error: null }
   } catch (error: any) {
-    console.error("Profiles count API error:", error)
+    logger.error("Profiles count API error:", error)
     return { count: 0, error: error.message || "Failed to get profiles count" }
   }
 }
@@ -377,7 +377,7 @@ export const getProfilesCount = async () => {
 // Get table schema for properties management - Updated for CDP structure
 export const getTableSchema = async () => {
   try {
-    console.log("Getting CDP profiles table schema...")
+    logger.debug("Getting CDP profiles table schema...")
 
     // Define the schema based on our CDP structure
     const columns = [
@@ -426,10 +426,10 @@ export const getTableSchema = async () => {
       { column_name: "data_retention_date", data_type: "timestamp with time zone", is_nullable: "YES" },
     ]
 
-    console.log("Successfully retrieved CDP profiles table schema")
+    logger.debug("Successfully retrieved CDP profiles table schema")
     return { data: columns, error: null }
   } catch (error: any) {
-    console.error("Get table schema API error:", error)
+    logger.error("Get table schema API error:", error)
     return { data: null, error: error.message || "Failed to get table schema" }
   }
 }
@@ -457,7 +457,7 @@ const getCustomFieldDefinitions = async () => {
 
     return {}
   } catch (error) {
-    console.log("No custom field definitions found")
+    logger.debug("No custom field definitions found")
     return {}
   }
 }
@@ -471,7 +471,7 @@ const saveCustomFieldDefinitions = async (definitions: any) => {
       .limit(1)
 
     if (fetchError) {
-      console.error("Error fetching profiles for metadata storage:", fetchError)
+      logger.error("Error fetching profiles for metadata storage:", fetchError)
       return false
     }
 
@@ -489,7 +489,7 @@ const saveCustomFieldDefinitions = async (definitions: any) => {
         .eq("id", profile.id)
 
       if (updateError) {
-        console.error("Error updating profile with field definitions:", updateError)
+        logger.error("Error updating profile with field definitions:", updateError)
         return false
       }
 
@@ -510,14 +510,14 @@ const saveCustomFieldDefinitions = async (definitions: any) => {
       ])
 
       if (insertError) {
-        console.error("Error creating metadata profile:", insertError)
+        logger.error("Error creating metadata profile:", insertError)
         return false
       }
 
       return true
     }
   } catch (error) {
-    console.error("Error saving custom field definitions:", error)
+    logger.error("Error saving custom field definitions:", error)
     return false
   }
 }
@@ -525,7 +525,7 @@ const saveCustomFieldDefinitions = async (definitions: any) => {
 // Get custom fields schema from custom_field_definitions table
 export const getCustomFieldsSchema = async () => {
   try {
-    console.log("Getting custom fields schema from custom_field_definitions table...")
+    logger.debug("Getting custom fields schema from custom_field_definitions table...")
 
     // Get field definitions from the dedicated table
     const { data: fieldDefinitions, error } = await supabase
@@ -534,16 +534,16 @@ export const getCustomFieldsSchema = async () => {
       .order("created_at", { ascending: true })
 
     if (error) {
-      console.error("Error getting custom fields schema:", error)
+      logger.error("Error getting custom fields schema:", error)
       return { data: {}, error: error.message }
     }
 
     // Transform the data into the expected format
     const schema: Record<string, any> = {}
     
-    console.log(`Found ${fieldDefinitions?.length || 0} field definitions`)
+    logger.debug(`Found ${fieldDefinitions?.length || 0} field definitions`)
     fieldDefinitions?.forEach((field) => {
-      console.log(`Processing field: key="${field.key}", type="${field.type}", label="${field.label}"`)
+      logger.debug(`Processing field: key="${field.key}", type="${field.type}", label="${field.label}"`)
       schema[field.key] = {
         key: field.key,
         label: field.label,
@@ -558,17 +558,17 @@ export const getCustomFieldsSchema = async () => {
 
     // Fallback: Also check for legacy field definitions stored in profiles (for backward compatibility)
     if (Object.keys(schema).length === 0) {
-      console.log("No field definitions found in table, checking legacy profile storage...")
+      logger.debug("No field definitions found in table, checking legacy profile storage...")
       const storedDefinitions = await getCustomFieldDefinitions()
       Object.entries(storedDefinitions).forEach(([key, definition]) => {
         schema[key] = definition
       })
     }
 
-    console.log(`Found ${Object.keys(schema).length} custom fields`)
+    logger.debug(`Found ${Object.keys(schema).length} custom fields`)
     return { data: schema, error: null }
   } catch (error: any) {
-    console.error("Error getting custom fields schema:", error)
+    logger.error("Error getting custom fields schema:", error)
     return { data: {}, error: error.message || "Failed to get custom fields schema" }
   }
 }
@@ -576,7 +576,7 @@ export const getCustomFieldsSchema = async () => {
 // Create a custom field - stores definition in custom_field_definitions table
 export const createCustomField = async (fieldData: any) => {
   try {
-    console.log("Creating custom field:", fieldData)
+    logger.debug("Creating custom field:", fieldData)
 
     // Get the current account from cookies
     const currentAccountId = document.cookie
@@ -606,7 +606,7 @@ export const createCustomField = async (fieldData: any) => {
       .single()
 
     if (insertError) {
-      console.error("Error inserting field definition:", insertError)
+      logger.error("Error inserting field definition:", insertError)
       throw new Error(`Failed to create field definition: ${insertError.message}`)
     }
 
@@ -625,15 +625,15 @@ export const createCustomField = async (fieldData: any) => {
         },
       }
       await saveCustomFieldDefinitions(updatedDefinitions)
-      console.log("Also saved to legacy profile storage for backward compatibility")
+      logger.debug("Also saved to legacy profile storage for backward compatibility")
     } catch (legacyError) {
-      console.warn("Failed to save to legacy storage, but field definition was created successfully:", legacyError)
+      logger.warn("Failed to save to legacy storage, but field definition was created successfully:", legacyError)
     }
 
-    console.log("Custom field created successfully")
+    logger.debug("Custom field created successfully")
     return { data: insertedField, error: null }
   } catch (error: any) {
-    console.error("Error creating custom field:", error)
+    logger.error("Error creating custom field:", error)
     return { data: null, error: error.message || "Failed to create custom field" }
   }
 }
@@ -641,7 +641,7 @@ export const createCustomField = async (fieldData: any) => {
 // Update a custom field definition
 export const updateCustomField = async (fieldKey: string, fieldData: any) => {
   try {
-    console.log("Updating custom field:", fieldKey, fieldData)
+    logger.debug("Updating custom field:", fieldKey, fieldData)
 
     // Get the current account from cookies
     const currentAccountId = document.cookie
@@ -671,13 +671,13 @@ export const updateCustomField = async (fieldKey: string, fieldData: any) => {
       .single()
 
     if (updateError) {
-      console.error("Error updating field definition:", updateError)
+      logger.error("Error updating field definition:", updateError)
       throw new Error(`Failed to update field definition: ${updateError.message}`)
     }
 
     // If the key changed, we need to update all profile data
     if (fieldKey !== fieldData.key) {
-      console.log(`Field key changed from '${fieldKey}' to '${fieldData.key}', updating profile data...`)
+      logger.debug(`Field key changed from '${fieldKey}' to '${fieldData.key}', updating profile data...`)
       
       const { data: profiles, error: fetchError } = await supabase
         .from("cdp_profiles")
@@ -685,7 +685,7 @@ export const updateCustomField = async (fieldKey: string, fieldData: any) => {
         .not("custom_fields", "is", null)
 
       if (fetchError) {
-        console.error("Error fetching profiles for key update:", fetchError)
+        logger.error("Error fetching profiles for key update:", fetchError)
       } else {
         let updateCount = 0
         for (const profile of profiles || []) {
@@ -711,7 +711,7 @@ export const updateCustomField = async (fieldKey: string, fieldData: any) => {
             }
           }
         }
-        console.log(`Updated field key in ${updateCount} profiles`)
+        logger.debug(`Updated field key in ${updateCount} profiles`)
       }
     }
 
@@ -733,14 +733,14 @@ export const updateCustomField = async (fieldKey: string, fieldData: any) => {
         },
       }
       await saveCustomFieldDefinitions(updatedDefinitions)
-      console.log("Also updated legacy profile storage for backward compatibility")
+      logger.debug("Also updated legacy profile storage for backward compatibility")
     } catch (legacyError) {
-      console.warn("Failed to update legacy storage, but field definition was updated successfully:", legacyError)
+      logger.warn("Failed to update legacy storage, but field definition was updated successfully:", legacyError)
     }
 
     return { data: updatedField, error: null }
   } catch (error: any) {
-    console.error("Error updating custom field:", error)
+    logger.error("Error updating custom field:", error)
     return { data: null, error: error.message || "Failed to update custom field" }
   }
 }
@@ -748,7 +748,7 @@ export const updateCustomField = async (fieldKey: string, fieldData: any) => {
 // Delete a custom field - removes it from all profiles and definitions
 export const deleteCustomField = async (fieldKey: string) => {
   try {
-    console.log("Deleting custom field:", fieldKey)
+    logger.debug("Deleting custom field:", fieldKey)
 
     // Step 1: Remove field definition from custom_field_definitions table
     const { error: deleteDefinitionError } = await supabase
@@ -757,11 +757,11 @@ export const deleteCustomField = async (fieldKey: string) => {
       .eq("key", fieldKey)
 
     if (deleteDefinitionError) {
-      console.error("Error deleting field definition:", deleteDefinitionError)
+      logger.error("Error deleting field definition:", deleteDefinitionError)
       throw new Error(`Failed to delete field definition: ${deleteDefinitionError.message}`)
     }
 
-    console.log(`Deleted field definition for '${fieldKey}' from custom_field_definitions table`)
+    logger.debug(`Deleted field definition for '${fieldKey}' from custom_field_definitions table`)
 
     // Step 2: Remove field from stored field definitions in profiles (legacy support)
     const existingDefinitions = await getCustomFieldDefinitions()
@@ -769,7 +769,7 @@ export const deleteCustomField = async (fieldKey: string) => {
       const updatedDefinitions = { ...existingDefinitions }
       delete updatedDefinitions[fieldKey]
       await saveCustomFieldDefinitions(updatedDefinitions)
-      console.log(`Removed '${fieldKey}' from profile-stored field definitions`)
+      logger.debug(`Removed '${fieldKey}' from profile-stored field definitions`)
     }
 
     // Step 3: Remove field data from all profiles
@@ -781,7 +781,7 @@ export const deleteCustomField = async (fieldKey: string) => {
       throw new Error(`Failed to fetch profiles: ${fetchError.message}`)
     }
     
-    console.log(`Checking ${allProfiles?.length || 0} profiles for field '${fieldKey}'`)
+    logger.debug(`Checking ${allProfiles?.length || 0} profiles for field '${fieldKey}'`)
     
     let updateCount = 0
     let foundCount = 0
@@ -806,7 +806,7 @@ export const deleteCustomField = async (fieldKey: string) => {
           .eq("id", profile.id)
           
         if (updateError) {
-          console.error(`Failed to update profile ${profile.id}:`, updateError)
+          logger.error(`Failed to update profile ${profile.id}:`, updateError)
           continue // Continue with other profiles instead of failing completely
         }
         
@@ -814,15 +814,15 @@ export const deleteCustomField = async (fieldKey: string) => {
         
         // Log progress for large operations
         if (updateCount % 50 === 0) {
-          console.log(`Updated ${updateCount} profiles so far...`)
+          logger.debug(`Updated ${updateCount} profiles so far...`)
         }
       }
     }
     
-    console.log(`Found ${foundCount} profiles with field '${fieldKey}', successfully updated ${updateCount} profiles`)
+    logger.debug(`Found ${foundCount} profiles with field '${fieldKey}', successfully updated ${updateCount} profiles`)
     return { data: { key: fieldKey, removedFromProfiles: updateCount }, error: null }
   } catch (error: any) {
-    console.error("Error deleting custom field:", error)
+    logger.error("Error deleting custom field:", error)
     return { data: null, error: error.message || "Failed to delete custom field" }
   }
 }

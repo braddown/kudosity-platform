@@ -1,6 +1,7 @@
 import { BaseRepository } from './BaseRepository'
 import { RepositoryResponse, QueryOptions } from './types'
 import { supabase } from '@/lib/supabase'
+import { logger } from "@/lib/utils/logger"
 
 /**
  * Campaign entity interface
@@ -249,13 +250,13 @@ export class CampaignsRepository extends BaseRepository<Campaign> {
         .select('*', { count: 'exact', head: true })
       
       if (error) {
-        console.error('Error getting campaigns count:', error)
+        logger.error('Error getting campaigns count:', error)
         return { count: null }
       }
       
       return { count: count || 0 }
     } catch (error) {
-      console.error('Error in getCampaignsCount:', error)
+      logger.error('Error in getCampaignsCount:', error)
       return { count: null }
     }
   }

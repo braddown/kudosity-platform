@@ -16,6 +16,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { toast } from "sonner"
 import { MoreHorizontal, Edit, Trash2, Plus, Phone, Hash, Loader2 } from "lucide-react"
 import { usePageHeader } from "@/components/PageHeaderContext"
+import { logger } from "@/lib/utils/logger"
 import { useEffect, useState } from "react"
 
 interface Sender {
@@ -88,11 +89,11 @@ export default function SendersSettingsPage() {
       
       // Auto-sync with Kudosity first if requested
       if (autoSync) {
-        console.log('Auto-syncing with Kudosity...')
+        logger.debug('Auto-syncing with Kudosity...')
         try {
           await fetch('/api/senders/sync', { method: 'POST' })
         } catch (error) {
-          console.error('Auto-sync failed:', error)
+          logger.error('Auto-sync failed:', error)
           // Don't show error to user for auto-sync failures
         }
       }
@@ -105,10 +106,10 @@ export default function SendersSettingsPage() {
         return
       }
       
-      console.log('Loaded', data.senders?.length || 0, 'senders')
+      logger.debug('Loaded', data.senders?.length || 0, 'senders')
       setSenders(data.senders || [])
     } catch (error) {
-      console.error('Error fetching senders:', error)
+      logger.error('Error fetching senders:', error)
       toast.error("Failed to fetch senders")
     } finally {
       setLoading(false)
@@ -130,7 +131,7 @@ export default function SendersSettingsPage() {
       setAvailableNumbers(data.numbers || [])
       setAvailablePagination(data.pagination)
     } catch (error) {
-      console.error('Error fetching available numbers:', error)
+      logger.error('Error fetching available numbers:', error)
       toast.error("Failed to fetch available numbers")
     } finally {
       setLoadingAvailable(false)
@@ -180,7 +181,7 @@ export default function SendersSettingsPage() {
       
       await fetchSenders(false)
     } catch (error) {
-      console.error('Error adding custom sender:', error)
+      logger.error('Error adding custom sender:', error)
       toast.error("Failed to add custom sender")
     }
   }
@@ -203,7 +204,7 @@ export default function SendersSettingsPage() {
         use_case: editingSender.use_case
       }
       
-      console.log('Updating sender:', updateData.id, 'with description:', updateData.description)
+      logger.debug('Updating sender:', updateData.id, 'with description:', updateData.description)
       
       const response = await fetch('/api/senders/custom', {
         method: 'PUT',
@@ -213,10 +214,10 @@ export default function SendersSettingsPage() {
       
       const data = await response.json()
       
-      console.log('Update successful for sender:', data.sender?.sender_id)
+      logger.debug('Update successful for sender:', data.sender?.sender_id)
       
       if (data.error) {
-        console.error('Update error:', data.error)
+        logger.error('Update error:', data.error)
         toast.error(data.error)
         return
       }
@@ -240,7 +241,7 @@ export default function SendersSettingsPage() {
       // Still fetch fresh data to ensure consistency
       await fetchSenders(false)
     } catch (error) {
-      console.error('Error updating sender:', error)
+      logger.error('Error updating sender:', error)
       toast.error("Failed to update sender")
     }
   }
@@ -286,7 +287,7 @@ export default function SendersSettingsPage() {
       
       await fetchSenders(false)
     } catch (error) {
-      console.error('Error leasing virtual number:', error)
+      logger.error('Error leasing virtual number:', error)
       toast.error("Failed to lease virtual number")
       setLeasingStep('confirm')
     }
@@ -310,7 +311,7 @@ export default function SendersSettingsPage() {
       
       await fetchSenders(false)
     } catch (error) {
-      console.error('Error deleting sender:', error)
+      logger.error('Error deleting sender:', error)
       toast.error("Failed to delete sender")
     }
   }

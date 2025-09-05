@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { toast } from '@/components/ui/use-toast'
 import { profilesApi } from '@/lib/api/profiles-api'
+import { logger } from "@/lib/utils/logger"
 
 interface UseProfileFormOptions {
   profile: any
@@ -102,7 +103,7 @@ export function useProfileForm({
       }
       
       // Log activity via API
-      console.log(`Attempting to log consent activity: ${description}`)
+      logger.debug(`Attempting to log consent activity: ${description}`)
       const response = await fetch(`/api/cdp-profiles/${profile.id}/activity`, {
         method: 'POST',
         headers: {
@@ -124,15 +125,15 @@ export function useProfileForm({
       
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('Failed to log consent activity via API:', errorText)
+        logger.error('Failed to log consent activity via API:', errorText)
       } else {
         const result = await response.json()
-        console.log(`Successfully logged consent activity:`, result)
+        logger.debug(`Successfully logged consent activity:`, result)
       }
       
-      console.log(`Logged activity: ${description}`)
+      logger.debug(`Logged activity: ${description}`)
     } catch (error) {
-      console.error('Failed to log activity:', error)
+      logger.error('Failed to log activity:', error)
     }
   }
 
@@ -205,7 +206,7 @@ export function useProfileForm({
       const description = `Updated ${formattedName} from "${formattedOldValue}" to "${formattedNewValue}"`
       
       // Log activity via API
-      console.log(`Attempting to log property update for ${propertyName}`)
+      logger.debug(`Attempting to log property update for ${propertyName}`)
       const response = await fetch(`/api/cdp-profiles/${profile.id}/activity`, {
         method: 'POST',
         headers: {
@@ -227,13 +228,13 @@ export function useProfileForm({
       
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('Failed to log property update via API:', errorText)
+        logger.error('Failed to log property update via API:', errorText)
       } else {
         const result = await response.json()
-        console.log(`Successfully logged property update:`, result)
+        logger.debug(`Successfully logged property update:`, result)
       }
     } catch (error) {
-      console.error('Failed to log property update:', error)
+      logger.error('Failed to log property update:', error)
     }
   }
 
@@ -298,14 +299,14 @@ export function useProfileForm({
         await logPropertyUpdate('tags', oldTags, newTags, 'contact')
       }
 
-      console.log('Property change logging completed')
+      logger.debug('Property change logging completed')
     } catch (error) {
-      console.error('Failed to log property changes:', error)
+      logger.error('Failed to log property changes:', error)
     }
   }
 
   const handleToggleChange = (name: string, checked: boolean) => {
-    console.log(`🔄 Toggle change: ${name} = ${checked}`)
+    logger.debug(`🔄 Toggle change: ${name} = ${checked}`)
     
     setEditedProfile((prev: any) => {
       const newProfile = { ...(prev || profile) }
@@ -315,19 +316,19 @@ export function useProfileForm({
         const currentPrefs = newProfile.notification_preferences || {}
         const previousValue = currentPrefs[name]
         
-        console.log(`📊 Previous value for ${name}: ${previousValue}`)
-        console.log(`📊 New value for ${name}: ${checked}`)
+        logger.debug(`📊 Previous value for ${name}: ${previousValue}`)
+        logger.debug(`📊 New value for ${name}: ${checked}`)
         
         // Only proceed if the value actually changed to prevent duplicate logs
         if (previousValue !== checked) {
           currentPrefs[name] = checked
           
-          console.log(`✅ Updated notification preferences:`, currentPrefs)
+          logger.debug(`✅ Updated notification preferences:`, currentPrefs)
           
           // If the profile status is 'deleted' and we're activating any channel, change status to 'active'
           const currentStatus = (newProfile.status || profile?.status || '').toLowerCase()
           if (currentStatus === 'deleted' && checked === true) {
-            console.log(`🔄 Reactivating profile: changing status from 'deleted' to 'active'`)
+            logger.debug(`🔄 Reactivating profile: changing status from 'deleted' to 'active'`)
             newProfile.status = 'active'
           }
           
@@ -347,18 +348,18 @@ export function useProfileForm({
               [isMarketing ? 'consent_date' : 'activation_date']: new Date().toISOString(),
               [isMarketing ? 'consent_source' : 'activation_source']: 'Brad Down: Manual'
             }
-            console.log(`📅 Updated ${infoKey} with new timestamp:`, currentPrefs[infoKey])
+            logger.debug(`📅 Updated ${infoKey} with new timestamp:`, currentPrefs[infoKey])
           }
           
           newProfile.notification_preferences = currentPrefs
         } else {
-          console.log(`⚠️ No change detected for ${name}, skipping update`)
+          logger.debug(`⚠️ No change detected for ${name}, skipping update`)
         }
       } else {
         newProfile[name] = checked
       }
 
-      console.log(`🎯 Final profile state for ${name}:`, newProfile.notification_preferences?.[name])
+      logger.debug(`🎯 Final profile state for ${name}:`, newProfile.notification_preferences?.[name])
       return newProfile
     })
   }
@@ -381,13 +382,13 @@ export function useProfileForm({
   const handleSaveWithProfile = async (profileToSave: any) => {
     if (!profile || saving) return // Prevent multiple simultaneous saves
 
-    console.log("🚀 handleSaveWithProfile called with:", profileToSave)
+    logger.debug("🚀 handleSaveWithProfile called with:", profileToSave)
     
     setSaving(true)
     try {
       await performSave(profileToSave)
     } catch (err) {
-      console.error("Exception saving profile:", err)
+      logger.error("Exception saving profile:", err)
       const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred"
       
       toast({
@@ -410,7 +411,7 @@ export function useProfileForm({
 
     // Check if there are actually any changes to save
     if (!editedProfile) {
-      console.log("No changes to save")
+      logger.debug("No changes to save")
       toast({
         title: "No changes",
         description: "No changes have been made to save.",
@@ -485,8 +486,8 @@ export function useProfileForm({
     // Add notification preferences if they exist (unless already set by deleted status)
     if (finalProfileToSave.notification_preferences !== undefined && !cdpProfileUpdate.notification_preferences) {
       cdpProfileUpdate.notification_preferences = finalProfileToSave.notification_preferences
-      console.log(`💾 Saving notification preferences:`, finalProfileToSave.notification_preferences)
-      console.log(`💾 Full cdpProfileUpdate object:`, cdpProfileUpdate)
+      logger.debug(`💾 Saving notification preferences:`, finalProfileToSave.notification_preferences)
+      logger.debug(`💾 Full cdpProfileUpdate object:`, cdpProfileUpdate)
     }
     if (finalProfileToSave.tags !== undefined) cdpProfileUpdate.tags = finalProfileToSave.tags
 
@@ -495,23 +496,23 @@ export function useProfileForm({
     if (finalProfileToSave.merge_status !== undefined) cdpProfileUpdate.merge_status = finalProfileToSave.merge_status
     if (finalProfileToSave.data_retention_date !== undefined) cdpProfileUpdate.data_retention_date = finalProfileToSave.data_retention_date
 
-    console.log("Saving profile changes...")
-    console.log("Status being saved:", cdpProfileUpdate.status)
-    console.log("Full update object:", JSON.stringify(cdpProfileUpdate, null, 2))
+    logger.debug("Saving profile changes...")
+    logger.debug("Status being saved:", cdpProfileUpdate.status)
+    logger.debug("Full update object:", JSON.stringify(cdpProfileUpdate, null, 2))
     
     // Use the profiles API instead of direct Supabase call
     const { data, error } = await profilesApi.updateProfile(profile.id, cdpProfileUpdate)
 
     if (data) {
-      console.log("Profile saved successfully")
-      console.log("🔍 Returned profile status:", data.status)
-      console.log("🔍 Saved data notification_preferences:", data.notification_preferences)
+      logger.debug("Profile saved successfully")
+      logger.debug("🔍 Returned profile status:", data.status)
+      logger.debug("🔍 Saved data notification_preferences:", data.notification_preferences)
       
       // Activity logging is now handled automatically by the PUT endpoint
     }
 
     if (error) {
-      console.error("Database update error:", error)
+      logger.error("Database update error:", error)
       toast({
         title: "Error saving profile",
         description: error || "Failed to save profile",
@@ -522,7 +523,7 @@ export function useProfileForm({
     }
 
     if (!data) {
-      console.error("No data returned from update")
+      logger.error("No data returned from update")
       toast({
         title: "Error saving profile",
         description: "Profile not found or no changes made",
@@ -537,8 +538,8 @@ export function useProfileForm({
 
     // Update the original profile data with the saved values
     if (onProfileUpdate && data) {
-      console.log("🔄 Calling onProfileUpdate with:", data)
-      console.log("🔄 Updated notification_preferences:", data.notification_preferences)
+      logger.debug("🔄 Calling onProfileUpdate with:", data)
+      logger.debug("🔄 Updated notification_preferences:", data.notification_preferences)
       // Use setTimeout to ensure state update happens in next tick
       setTimeout(() => {
         onProfileUpdate(data)

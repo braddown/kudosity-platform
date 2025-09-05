@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { logger } from "@/lib/utils/logger"
 
 type PropertyCategory = "System" | "Contact" | "Custom" | "Scoring"
 
@@ -197,7 +198,7 @@ export const PropertiesComponent = forwardRef<PropertiesComponentRef>((props, re
 
   // Add debug logging
   useEffect(() => {
-    console.log("PropertiesComponent mounted, starting data fetch...")
+    logger.debug("PropertiesComponent mounted, starting data fetch...")
     fetchTableSchema()
   }, [])
 
@@ -214,11 +215,11 @@ export const PropertiesComponent = forwardRef<PropertiesComponentRef>((props, re
       setLoading(true)
       setError(null)
 
-      console.log("Fetching table schema...")
+      logger.debug("Fetching table schema...")
       const { data, error } = await profilesApi.getTableSchema()
 
       if (error) {
-        console.warn("Schema fetch error:", error)
+        logger.warn("Schema fetch error:", error)
         setError("Failed to fetch schema: " + error)
         return
       }
@@ -251,7 +252,7 @@ export const PropertiesComponent = forwardRef<PropertiesComponentRef>((props, re
           transformedProperties.push(baseProperty)
         })
 
-        console.log("Base properties:", transformedProperties)
+        logger.debug("Base properties:", transformedProperties)
         setProperties(transformedProperties)
 
         // Now fetch and add custom fields
@@ -260,7 +261,7 @@ export const PropertiesComponent = forwardRef<PropertiesComponentRef>((props, re
         setError("No schema data returned")
       }
     } catch (err) {
-      console.error("Error processing schema:", err)
+      logger.error("Error processing schema:", err)
       setError(err instanceof Error ? err.message : "Failed to process properties")
     } finally {
       setLoading(false)
@@ -269,11 +270,11 @@ export const PropertiesComponent = forwardRef<PropertiesComponentRef>((props, re
 
   const fetchAndMergeCustomFields = async (baseProperties: Property[]) => {
     try {
-      console.log("Fetching custom fields schema...")
+      logger.debug("Fetching custom fields schema...")
       const { data, error } = await profilesApi.getCustomFieldsSchema()
 
       if (data && Object.keys(data).length > 0) {
-        console.log("Custom fields data:", data)
+        logger.debug("Custom fields data:", data)
 
         // Convert object format to the format expected by this component
         const customFieldsObj: Record<string, CustomField> = {}
@@ -309,22 +310,22 @@ export const PropertiesComponent = forwardRef<PropertiesComponentRef>((props, re
           }
         })
 
-        console.log("Custom field properties:", customFieldProperties)
+        logger.debug("Custom field properties:", customFieldProperties)
 
         // Merge base properties with custom field properties
         const allProperties = [...baseProperties, ...customFieldProperties]
-        console.log("All properties combined:", allProperties)
+        logger.debug("All properties combined:", allProperties)
         setProperties(allProperties)
       } else if (error) {
-        console.warn("Custom fields fetch error:", error)
+        logger.warn("Custom fields fetch error:", error)
         // Still set the base properties even if custom fields fail
         setProperties(baseProperties)
       } else {
-        console.log("No custom fields found, using base properties only")
+        logger.debug("No custom fields found, using base properties only")
         setProperties(baseProperties)
       }
     } catch (err) {
-      console.error("Error fetching custom fields schema:", err)
+      logger.error("Error fetching custom fields schema:", err)
       // Still set the base properties even if custom fields fail
       setProperties(baseProperties)
     }
@@ -342,7 +343,7 @@ export const PropertiesComponent = forwardRef<PropertiesComponentRef>((props, re
   )
 
   const handleEdit = (property: Property) => {
-    console.log("Editing property:", property) // Debug log
+    logger.debug("Editing property:", property) // Debug log
 
     if (property.isCustomField) {
       // Extract field key from apiName (format: category.field_name)
@@ -421,14 +422,14 @@ export const PropertiesComponent = forwardRef<PropertiesComponentRef>((props, re
     }
 
     try {
-      console.log(`Attempting to delete custom field: ${fieldKey}`)
+      logger.debug(`Attempting to delete custom field: ${fieldKey}`)
       
       const result = await profilesApi.deleteCustomField(fieldKey)
       
-      console.log(`Delete result:`, result)
+      logger.debug(`Delete result:`, result)
       
       if (result.error) {
-        console.error(`Delete failed with error: ${result.error}`)
+        logger.error(`Delete failed with error: ${result.error}`)
         toast({
           variant: "destructive",
           title: "Delete Failed",
@@ -438,7 +439,7 @@ export const PropertiesComponent = forwardRef<PropertiesComponentRef>((props, re
       }
 
       if (result.data) {
-        console.log(`Delete successful: ${result.data.removedFromProfiles} profiles updated`)
+        logger.debug(`Delete successful: ${result.data.removedFromProfiles} profiles updated`)
         
         // Immediately update local state
         const updatedFields = { ...customFields }
@@ -458,16 +459,16 @@ export const PropertiesComponent = forwardRef<PropertiesComponentRef>((props, re
         // Refresh the data after a delay to ensure database changes are committed
         setTimeout(async () => {
           try {
-            console.log("Refreshing data after delete operation...")
+            logger.debug("Refreshing data after delete operation...")
             await refreshData()
-            console.log("Data refreshed after delete")
+            logger.debug("Data refreshed after delete")
           } catch (refreshErr) {
-            console.warn("Failed to refresh data after delete:", refreshErr)
+            logger.warn("Failed to refresh data after delete:", refreshErr)
           }
         }, 1500) // Reduced delay to 1.5 seconds for faster feedback
         
       } else {
-        console.error("Delete returned no data")
+        logger.error("Delete returned no data")
         toast({
           variant: "destructive",
           title: "Delete Warning",
@@ -475,7 +476,7 @@ export const PropertiesComponent = forwardRef<PropertiesComponentRef>((props, re
         })
       }
     } catch (err) {
-      console.error("Exception during delete:", err)
+      logger.error("Exception during delete:", err)
       const errorMessage = err instanceof Error ? err.message : "Failed to delete field"
       toast({
         variant: "destructive",

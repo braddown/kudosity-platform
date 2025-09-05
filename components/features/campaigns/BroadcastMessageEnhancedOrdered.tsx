@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Slider } from "@/components/ui/slider"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { toast } from "sonner"
+import { logger } from "@/lib/utils/logger"
 
 // Types
 interface Template {
@@ -259,7 +260,7 @@ const BroadcastMessageEnhancedOrdered = forwardRef<BroadcastMessageEnhancedOrder
       const segments = result.data || []
       setSegments(Array.isArray(segments) ? segments : [])
     } catch (error) {
-      console.error("Failed to load segments:", error)
+      logger.error("Failed to load segments:", error)
       toast.error("Failed to load segments")
       setSegments([])
     }
@@ -272,11 +273,11 @@ const BroadcastMessageEnhancedOrdered = forwardRef<BroadcastMessageEnhancedOrder
         const data = await response.json()
         setSenders(Array.isArray(data.senders) ? data.senders : [])
       } else {
-        console.error("Failed to load senders, status:", response.status)
+        logger.error("Failed to load senders, status:", response.status)
         setSenders([])
       }
     } catch (error) {
-      console.error("Failed to load senders:", error)
+      logger.error("Failed to load senders:", error)
       setSenders([])
     }
   }
@@ -291,7 +292,7 @@ const BroadcastMessageEnhancedOrdered = forwardRef<BroadcastMessageEnhancedOrder
         setTemplates([])
       }
     } catch (error) {
-      console.error("Failed to load templates:", error)
+      logger.error("Failed to load templates:", error)
       setTemplates([])
     }
   }
@@ -314,11 +315,11 @@ const BroadcastMessageEnhancedOrdered = forwardRef<BroadcastMessageEnhancedOrder
         const data = await response.json()
         setTotalContacts(data.count || 0)
       } else {
-        console.error("Failed to get contact count, status:", response.status)
+        logger.error("Failed to get contact count, status:", response.status)
         setTotalContacts(0)
       }
     } catch (error) {
-      console.error("Failed to get contact count:", error)
+      logger.error("Failed to get contact count:", error)
       setTotalContacts(0)
     } finally {
       setIsLoadingContacts(false)
@@ -413,7 +414,7 @@ const BroadcastMessageEnhancedOrdered = forwardRef<BroadcastMessageEnhancedOrder
   const saveDraft = async () => {
     // Implement draft saving logic here
     // For now, just log the data
-    console.log("Saving draft:", formData)
+    logger.debug("Saving draft:", formData)
     // Simulate async save
     await new Promise(resolve => setTimeout(resolve, 1000))
     toast.success("Draft saved successfully")

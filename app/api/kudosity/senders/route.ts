@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/auth/server'
+import { logger } from "@/lib/utils/logger"
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,7 +9,7 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError) {
-      console.error('Auth error in senders API:', authError)
+      logger.error('Auth error in senders API:', authError)
       return NextResponse.json({ 
         error: 'Authentication error', 
         details: authError.message 
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
     }
     
     if (!user) {
-      console.error('No authenticated user found in senders API')
+      logger.error('No authenticated user found in senders API')
       return NextResponse.json({ 
         error: 'Unauthorized - No authenticated user found' 
       }, { status: 401 })
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('Fetching senders for account:', accountMember.account_id)
+    logger.debug('Fetching senders for account:', accountMember.account_id)
 
     // Fetch senders from database
     const { data: senders, error: sendersError } = await supabase
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: true })
 
     if (sendersError) {
-      console.error('Error fetching senders from database:', sendersError)
+      logger.error('Error fetching senders from database:', sendersError)
       return NextResponse.json({ 
         error: 'Failed to fetch senders from database',
         details: sendersError.message,
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
       last_synced_at: sender.last_synced_at
     }))
 
-    console.log(`Returning ${formattedSenders.length} senders from database`)
+    logger.debug(`Returning ${formattedSenders.length} senders from database`)
     
     return NextResponse.json({ 
       senders: formattedSenders,
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Error fetching senders:', error)
+    logger.error('Error fetching senders:', error)
     return NextResponse.json({ 
       error: 'Failed to fetch senders',
       details: error instanceof Error ? error.message : 'Unknown error',

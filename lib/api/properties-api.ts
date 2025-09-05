@@ -1,4 +1,5 @@
 import { supabase } from "../supabase"
+import { logger } from "@/lib/utils/logger"
 
 export const propertiesApi = {
   // Get all properties for a contact
@@ -13,7 +14,7 @@ export const propertiesApi = {
       if (error) throw error
       return { data: data || [] }
     } catch (error) {
-      console.error("Error fetching contact properties:", error)
+      logger.error("Error fetching contact properties:", error)
       return { data: [], error: error.message }
     }
   },
@@ -41,7 +42,7 @@ export const propertiesApi = {
 
       return { data: uniqueKeys || [] }
     } catch (error) {
-      console.error("Error fetching property keys:", error)
+      logger.error("Error fetching property keys:", error)
       return { data: [], error: error.message }
     }
   },
@@ -63,7 +64,7 @@ export const propertiesApi = {
       if (error) throw error
       return { data }
     } catch (error) {
-      console.error("Error setting contact property:", error)
+      logger.error("Error setting contact property:", error)
       return { error: error.message }
     }
   },
@@ -80,7 +81,7 @@ export const propertiesApi = {
       if (error) throw error
       return { success: true }
     } catch (error) {
-      console.error("Error deleting contact property:", error)
+      logger.error("Error deleting contact property:", error)
       return { error: error.message }
     }
   },
@@ -113,7 +114,7 @@ export const propertiesApi = {
       if (error) throw error
       return { data: data || [] }
     } catch (error) {
-      console.error("Error fetching contacts by property:", error)
+      logger.error("Error fetching contacts by property:", error)
       return { data: [], error: error.message }
     }
   },

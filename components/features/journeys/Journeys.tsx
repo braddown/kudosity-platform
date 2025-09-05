@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { logger } from "@/lib/utils/logger"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { MoreHorizontal, Copy, Trash, Pause, Play, BarChart2, Edit, Search } from "lucide-react"
@@ -117,7 +118,7 @@ export default function Journeys() {
   }
 
   const handleAction = (action: string, journeyId: number) => {
-    console.log(`${action} journey ${journeyId}`)
+    logger.debug(`${action} journey ${journeyId}`)
     // Implement actual actions here
   }
 

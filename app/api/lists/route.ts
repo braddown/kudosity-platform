@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { listsRepository } from "@/api/repositories"
+import { logger } from "@/lib/utils/logger"
 
 /**
  * GET /api/lists
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(formattedLists)
   } catch (error) {
-    console.error('Error in GET /api/lists:', error)
+    logger.error('Error in GET /api/lists:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(formattedList, { status: 201 })
   } catch (error) {
-    console.error('Error in POST /api/lists:', error)
+    logger.error('Error in POST /api/lists:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

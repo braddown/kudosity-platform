@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Building, Loader2, AlertCircle } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
+import { logger } from "@/lib/utils/logger"
 
 export default function SetupAccountPage() {
   const router = useRouter()
@@ -42,7 +43,7 @@ export default function SetupAccountPage() {
       // Redirect to overview
       router.push('/overview')
     } catch (err: any) {
-      console.error('Account setup error:', err)
+      logger.error('Account setup error:', err)
       setError(err.message || 'Failed to create account')
       setLoading(false)
     }
@@ -65,7 +66,7 @@ export default function SetupAccountPage() {
         throw new Error('User not found')
       }
     } catch (err: any) {
-      console.error('Skip error:', err)
+      logger.error('Skip error:', err)
       setError('Failed to create default workspace')
       setLoading(false)
     }

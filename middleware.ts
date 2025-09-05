@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { logger } from '@/lib/utils/logger'
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -61,11 +62,11 @@ export async function middleware(request: NextRequest) {
   
   // Debug logging for API routes
   if (isApiRoute) {
-    console.log('Middleware: API route check:', {
+    logger.debug('API route check', {
       path: request.nextUrl.pathname,
       hasUser: !!user,
       userId: user?.id
-    })
+    }, 'middleware')
   }
 
   // Public routes that don't require authentication
@@ -109,7 +110,7 @@ export async function middleware(request: NextRequest) {
   )
   
   if (!user && isApiRoute && !isAllowedApiRoute) {
-    console.log('Middleware: Blocking unauthorized API request:', request.nextUrl.pathname)
+    logger.warn('Blocking unauthorized API request', { path: request.nextUrl.pathname }, 'middleware')
     return NextResponse.json({ error: 'Unauthorized - No authenticated user found' }, { status: 401 })
   }
 
@@ -129,7 +130,7 @@ export async function middleware(request: NextRequest) {
         .eq('status', 'active')
       
       if (membershipError) {
-        console.error('Middleware: Error checking memberships:', membershipError)
+        logger.error('Error checking memberships', membershipError, 'middleware')
         // If there's an RLS error, assume user might have accounts and continue
         // The actual pages will handle the authorization
       } else if (!memberships || memberships.length === 0) {
@@ -154,7 +155,7 @@ export async function middleware(request: NextRequest) {
         }
       }
     } catch (error) {
-      console.error('Middleware: Unexpected error checking memberships:', error)
+      logger.error('Unexpected error checking memberships', error, 'middleware')
       // Continue without redirecting on error
     }
   }

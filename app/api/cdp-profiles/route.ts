@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/auth/server'
 import { cookies } from 'next/headers'
+import { logger } from "@/lib/utils/logger"
 
 // Handle both list and individual profile fetching
 export async function GET(request: NextRequest) {
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
     const { data: profiles, error: queryError, count } = await query
 
     if (queryError) {
-      console.error('Error fetching profiles:', queryError)
+      logger.error('Error fetching profiles:', queryError)
       return NextResponse.json(
         { error: 'Failed to fetch profiles', details: queryError.message },
         { status: 500 }
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
       offset
     })
   } catch (error: any) {
-    console.error('CDP Profiles API error:', error)
+    logger.error('CDP Profiles API error:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: error.message },
       { status: 500 }
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
     // Ensure account_id is set
     profileData.account_id = accountId
 
-    console.log('Creating profile with data:', JSON.stringify(profileData, null, 2))
+    logger.debug('Creating profile with data:', JSON.stringify(profileData, null, 2))
 
     const { data: profile, error: insertError } = await supabase
       .from('cdp_profiles')
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      console.error('Error creating profile:', insertError)
+      logger.error('Error creating profile:', insertError)
       return NextResponse.json(
         { error: 'Failed to create profile', details: insertError.message },
         { status: 500 }
@@ -161,7 +162,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ data: profile })
   } catch (error: any) {
-    console.error('CDP Create Profile API error:', error)
+    logger.error('CDP Create Profile API error:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: error.message },
       { status: 500 }

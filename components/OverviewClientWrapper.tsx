@@ -3,6 +3,7 @@
 import PageLayout from "@/components/layouts/PageLayout"
 import Overview from "@/components/Overview"
 import { Download } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 interface OverviewClientWrapperProps {
   data: any
@@ -10,7 +11,7 @@ interface OverviewClientWrapperProps {
 
 export default function OverviewClientWrapper({ data }: OverviewClientWrapperProps) {
   const handleExportData = () => {
-    console.log("Exporting overview data...")
+    logger.debug("Exporting overview data...")
     // TODO: Implement actual export functionality
   }
 

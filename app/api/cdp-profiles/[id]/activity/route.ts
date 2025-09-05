@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/auth/server'
 import { cookies } from 'next/headers'
+import { logger } from "@/lib/utils/logger"
 
 export async function POST(
   request: NextRequest,
@@ -37,7 +38,7 @@ export async function POST(
       .maybeSingle()
 
     if (profileError) {
-      console.error('Error fetching profile for activity:', profileError)
+      logger.error('Error fetching profile for activity:', profileError)
       return NextResponse.json(
         { error: 'Failed to fetch profile' },
         { status: 500 }
@@ -90,7 +91,7 @@ export async function POST(
       .single()
 
     if (insertError) {
-      console.error('Error inserting activity log:', insertError)
+      logger.error('Error inserting activity log:', insertError)
       // Don't fail the whole operation if activity logging fails
       // Just log the error and return success
       return NextResponse.json({ 
@@ -102,7 +103,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, activity_id: activity?.id })
   } catch (error: any) {
-    console.error('Error logging activity:', error)
+    logger.error('Error logging activity:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to log activity' },
       { status: 500 }
@@ -146,7 +147,7 @@ export async function GET(
       .maybeSingle()
 
     if (profileError) {
-      console.error('Error fetching profile for activity:', profileError)
+      logger.error('Error fetching profile for activity:', profileError)
       return NextResponse.json(
         { error: 'Failed to fetch profile' },
         { status: 500 }
@@ -169,7 +170,7 @@ export async function GET(
       .limit(50)
 
     if (fetchError) {
-      console.error('Error fetching activity logs:', fetchError)
+      logger.error('Error fetching activity logs:', fetchError)
       return NextResponse.json(
         { error: 'Failed to fetch activity history' },
         { status: 500 }
@@ -178,7 +179,7 @@ export async function GET(
 
     return NextResponse.json({ data: activities || [] })
   } catch (error: any) {
-    console.error('Error fetching activity:', error)
+    logger.error('Error fetching activity:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to fetch activity' },
       { status: 500 }

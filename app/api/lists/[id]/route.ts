@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { listsRepository } from "@/api/repositories"
+import { logger } from "@/lib/utils/logger"
 
 /**
  * GET /api/lists/[id]
@@ -48,7 +49,7 @@ export async function GET(
 
     return NextResponse.json(formattedList)
   } catch (error) {
-    console.error('Error in GET /api/lists/[id]:', error)
+    logger.error('Error in GET /api/lists/[id]:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -115,7 +116,7 @@ export async function PUT(
 
     return NextResponse.json(formattedList)
   } catch (error) {
-    console.error('Error in PUT /api/lists/[id]:', error)
+    logger.error('Error in PUT /api/lists/[id]:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -151,7 +152,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'List deleted successfully' })
   } catch (error) {
-    console.error('Error in DELETE /api/lists/[id]:', error)
+    logger.error('Error in DELETE /api/lists/[id]:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -17,6 +17,7 @@ import { LoadingMessages } from '@/lib/constants/loading-messages'
 import { useToast } from '@/components/ui/use-toast'
 import { authConfig } from '@/lib/auth/config'
 import { Logo } from '@/components/Logo'
+import { logger } from "@/lib/utils/logger"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -99,7 +100,7 @@ export default function SignupPage() {
       // Redirect directly to email verification page
       router.push('/auth/verify-email')
     } catch (err: any) {
-      console.error('Signup error:', err)
+      logger.error('Signup error:', err)
       setError(err.message || 'Failed to create account')
     } finally {
       setLoading(false)
@@ -113,7 +114,7 @@ export default function SignupPage() {
     try {
       await signInWithProvider(provider)
     } catch (err: any) {
-      console.error('OAuth error:', err)
+      logger.error('OAuth error:', err)
       setError(err.message || 'Failed to sign up with provider')
       setLoading(false)
     }

@@ -1,9 +1,10 @@
+import { logger } from "@/lib/utils/logger"
 // Chat API functions for handling chat and message operations
 export const chatApi = {
   // Get all chats with profile information
   getChats: async () => {
     try {
-      console.log("🔍 Fetching chats from API...")
+      logger.debug("🔍 Fetching chats from API...")
 
       const response = await fetch("/api/chats", {
         method: "GET",
@@ -18,10 +19,10 @@ export const chatApi = {
       }
 
       const result = await response.json()
-      console.log("✅ Chats fetched successfully:", result.data?.length || 0, "chats")
+      logger.debug("✅ Chats fetched successfully:", result.data?.length || 0, "chats")
       return { data: result.data || [] }
     } catch (error) {
-      console.error("❌ Error fetching chats:", error)
+      logger.error("❌ Error fetching chats:", error)
       return {
         data: [],
         error: error instanceof Error ? error.message : String(error),
@@ -32,7 +33,7 @@ export const chatApi = {
   // Get messages for a specific chat
   getChatMessages: async (chatId: string) => {
     try {
-      console.log(`🔍 Fetching messages for chat ${chatId}...`)
+      logger.debug(`🔍 Fetching messages for chat ${chatId}...`)
 
       const response = await fetch(`/api/chats/${chatId}/messages`, {
         method: "GET",
@@ -47,10 +48,10 @@ export const chatApi = {
       }
 
       const result = await response.json()
-      console.log("✅ Messages fetched successfully:", result.data?.length || 0, "messages")
+      logger.debug("✅ Messages fetched successfully:", result.data?.length || 0, "messages")
       return { data: result.data || [] }
     } catch (error) {
-      console.error("❌ Error fetching messages:", error)
+      logger.error("❌ Error fetching messages:", error)
       return {
         data: [],
         error: error instanceof Error ? error.message : String(error),
@@ -61,7 +62,7 @@ export const chatApi = {
   // Send a new message
   sendMessage: async (chatId: string, content: string, direction = "outbound") => {
     try {
-      console.log(`📤 Sending message to chat ${chatId}...`)
+      logger.debug(`📤 Sending message to chat ${chatId}...`)
 
       const response = await fetch(`/api/chats/${chatId}/messages`, {
         method: "POST",
@@ -80,10 +81,10 @@ export const chatApi = {
       }
 
       const result = await response.json()
-      console.log("✅ Message sent successfully:", result.data?.id)
+      logger.debug("✅ Message sent successfully:", result.data?.id)
       return { data: result.data }
     } catch (error) {
-      console.error("❌ Error sending message:", error)
+      logger.error("❌ Error sending message:", error)
       return {
         data: null,
         error: error instanceof Error ? error.message : String(error),
@@ -94,7 +95,7 @@ export const chatApi = {
   // Create a new chat
   createChat: async (profileId: string, channel = "SMS", subject?: string) => {
     try {
-      console.log(`🆕 Creating new chat for profile ${profileId}...`)
+      logger.debug(`🆕 Creating new chat for profile ${profileId}...`)
 
       const response = await fetch("/api/chats", {
         method: "POST",
@@ -114,10 +115,10 @@ export const chatApi = {
       }
 
       const result = await response.json()
-      console.log("✅ Chat created successfully:", result.data?.id)
+      logger.debug("✅ Chat created successfully:", result.data?.id)
       return { data: result.data }
     } catch (error) {
-      console.error("❌ Error creating chat:", error)
+      logger.error("❌ Error creating chat:", error)
       return {
         data: null,
         error: error instanceof Error ? error.message : String(error),

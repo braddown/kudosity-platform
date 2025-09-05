@@ -16,6 +16,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useAsyncData } from './use-async-data'
 import { supabase } from '@/lib/supabase'
+import { logger } from "@/lib/utils/logger"
 
 // Types
 export interface Campaign {
@@ -324,7 +325,7 @@ export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsRes
       refetch() // Refresh the list
       return result.data as Campaign || null
     } catch (error) {
-      console.error('Failed to create campaign:', error)
+      logger.error('Failed to create campaign:', error)
       return null
     }
   }, [refetch])
@@ -340,7 +341,7 @@ export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsRes
       refetch()
       return result.data as Campaign || null
     } catch (error) {
-      console.error('Failed to update campaign:', error)
+      logger.error('Failed to update campaign:', error)
       return null
     }
   }, [refetch])
@@ -356,7 +357,7 @@ export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsRes
       refetch()
       return true
     } catch (error) {
-      console.error('Failed to delete campaign:', error)
+      logger.error('Failed to delete campaign:', error)
       return false
     }
   }, [refetch])
@@ -391,7 +392,7 @@ export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsRes
       refetch()
       return true
     } catch (error) {
-      console.error(`Failed to ${status} campaign:`, error)
+      logger.error(`Failed to ${status} campaign:`, error)
       return false
     }
   }, [refetch])
@@ -421,7 +422,7 @@ export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsRes
 
       return result.data as CampaignMetrics || null
     } catch (error) {
-      console.error('Failed to get campaign metrics:', error)
+      logger.error('Failed to get campaign metrics:', error)
       return null
     }
   }, [])
@@ -451,7 +452,7 @@ export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsRes
 
       setTemplates(result.data || [])
     } catch (error) {
-      console.error('Failed to load templates:', error)
+      logger.error('Failed to load templates:', error)
     }
   }, [])
 

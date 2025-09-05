@@ -6,6 +6,7 @@ import PageLayout from "@/components/layouts/PageLayout"
 import { CampaignActivityTable } from "@/features/campaigns"
 import { Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { logger } from "@/lib/utils/logger"
 
 export default function CampaignActivityPage() {
   const router = useRouter()
@@ -28,17 +29,17 @@ export default function CampaignActivityPage() {
         setIsLoadingMore(true)
       }
       setError(null)
-      console.log(`🔄 Fetching campaigns page ${page}...`)
+      logger.debug(`🔄 Fetching campaigns page ${page}...`)
       
       const response = await fetch(`/api/campaigns/activity?page=${page}&limit=${pageSize}`)
-      console.log('📡 Response status:', response.status, response.statusText)
+      logger.debug('📡 Response status:', response.status, response.statusText)
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
       
       const data = await response.json()
-      console.log(`✅ Page ${page} loaded:`, data.campaigns?.length || 0, 'campaigns')
+      logger.debug(`✅ Page ${page} loaded:`, data.campaigns?.length || 0, 'campaigns')
       
       if (append) {
         setCampaigns(prev => [...prev, ...(data.campaigns || [])])
@@ -52,7 +53,7 @@ export default function CampaignActivityPage() {
       setLoading(false)
       setIsLoadingMore(false)
     } catch (err: any) {
-      console.error('❌ Failed to load campaigns:', err)
+      logger.error('❌ Failed to load campaigns:', err)
       setError(err.message || 'Failed to load campaigns')
       setLoading(false)
       setIsLoadingMore(false)
